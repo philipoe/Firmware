@@ -19,7 +19,7 @@ MODULES		+= drivers/led
 MODULES		+= drivers/px4io
 MODULES		+= drivers/px4fmu
 MODULES		+= drivers/boards/px4fmu-v1
-MODULES		+= drivers/ardrone_interface
+#MODULES		+= drivers/ardrone_interface
 MODULES		+= drivers/l3gd20
 MODULES		+= drivers/mpu6000
 MODULES		+= drivers/hmc5883
@@ -28,11 +28,11 @@ MODULES		+= drivers/ms5611
 MODULES		+= drivers/gps
 MODULES		+= drivers/hil
 #MODULES		+= drivers/blinkm
-MODULES		+= drivers/rgbled
-MODULES		+= drivers/mkblctrl
-MODULES		+= drivers/airspeed
+#MODULES		+= drivers/rgbled
+#MODULES		+= drivers/mkblctrl
+#MODULES		+= drivers/airspeed
 #MODULES		+= drivers/ets_airspeed
-MODULES		+= drivers/meas_airspeed
+#MODULES		+= drivers/meas_airspeed
 #MODULES		+= drivers/frsky_telemetry
 MODULES		+= modules/sensors
 
@@ -64,17 +64,17 @@ MODULES		+= modules/gpio_led
 #
 # Estimation modules (EKF / other filters)
 #
-MODULES		+= modules/attitude_estimator_ekf
-MODULES		+= modules/ekf_att_pos_estimator
-MODULES		+= modules/position_estimator_inav
+#MODULES		+= modules/attitude_estimator_ekf
+#MODULES		+= modules/ekf_att_pos_estimator
+#MODULES		+= modules/position_estimator_inav
 
 #
 # Vehicle Control
 #
-MODULES		+= modules/fw_pos_control_l1
-MODULES		+= modules/fw_att_control
-MODULES		+= modules/mc_att_control
-MODULES		+= modules/mc_pos_control
+#MODULES		+= modules/fw_pos_control_l1
+#MODULES		+= modules/fw_att_control
+#MODULES		+= modules/mc_att_control
+#MODULES		+= modules/mc_pos_control
 
 #
 # Logging
