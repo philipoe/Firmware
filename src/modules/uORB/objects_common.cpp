@@ -73,6 +73,12 @@ ORB_DEFINE(output_pwm, struct pwm_output_values);
 #include <drivers/drv_rc_input.h>
 ORB_DEFINE(input_rc, struct rc_input_values);
 
+#include "topics/aslctrl_parameters.h"								// added for testing ASLCTRL (PhOe)
+ORB_DEFINE(aslctrl_parameters, struct aslctrl_parameters_s);		// added for testing ASLCTRL (PhOe)
+
+#include "topics/aslctrl_data.h"									// added for testing ASLCTRL (PhOe)
+ORB_DEFINE(aslctrl_data, struct aslctrl_data_s);					// added for testing ASLCTRL (PhOe)
+
 #include "topics/vehicle_attitude.h"
 ORB_DEFINE(vehicle_attitude, struct vehicle_attitude_s);
 

@@ -88,6 +88,14 @@ MODULES		+= modules/sdlog2
 #MODULES 	+= modules/commander/commander_tests
 
 #
+# ASL functionality
+#
+#drivers
+#modules
+MODULES		+= modules/aslctrl
+#libraries
+
+#
 # Library modules
 #
 MODULES		+= modules/systemlib
