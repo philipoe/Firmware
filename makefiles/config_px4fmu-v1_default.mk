@@ -28,7 +28,6 @@ MODULES		+= drivers/ms5611
 MODULES		+= drivers/gps
 MODULES		+= drivers/hil
 MODULES		+= drivers/adis16448
-
 ####MODULES		+= drivers/adc121/adc121_cs1
 ####MODULES		+= drivers/adc121/adc121_cs2
 ####MODULES		+= drivers/adc121/adc121_cspb	

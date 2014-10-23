@@ -166,6 +166,8 @@
 
 #define FW_FILTER									false
 
+#define SPI_BUS_SPEED								1000000
+
 class ADIS16448_gyro;
 class ADIS16448_mag;
 
@@ -428,11 +430,8 @@ private:
 };
 /** driver 'main' command */
 extern "C" { __EXPORT int adis16448_main(int argc, char *argv[]); }
-
-////ADIS16448::ADIS16448(int bus, spi_dev_e device) :
-////SPI("ADIS16448", ACCEL_DEVICE_PATH, bus, device, SPIDEV_MODE3, 1000000),
 ADIS16448::ADIS16448(int bus, const char *path_accel, const char *path_gyro, const char *path_mag, spi_dev_e device) :
-	SPI("ADIS16448", path_accel, bus, device, SPIDEV_MODE3, 1000000),
+	SPI("ADIS16448", path_accel, bus, device, SPIDEV_MODE3, SPI_BUS_SPEED),
 	_gyro(new ADIS16448_gyro(this, path_gyro)),
 	_mag(new ADIS16448_mag(this, path_mag)),
 	_product(0),
