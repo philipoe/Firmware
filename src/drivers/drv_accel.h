@@ -123,4 +123,7 @@ ORB_DECLARE(sensor_accel2);
 /** get the result of a sensor self-test */
 #define ACCELIOCSELFTEST	_ACCELIOC(9)
 
+/** get the current accel type */
+#define ACCELIOCTYPE		_ACCELIOC(10)
+
 #endif /* _DRV_ACCEL_H */

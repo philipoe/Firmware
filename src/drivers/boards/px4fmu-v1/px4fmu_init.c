@@ -241,6 +241,15 @@ __EXPORT int nsh_archinitialize(void)
 		stm32_configgpio(GPIO_ADC1_IN13);	// jumperable to MPU6000 DRDY on some boards
 	#endif
 
+	#ifdef PX4_IMU_CONF_ADIS16448
+		/* Default SPI2 to 1MHz and de-assert the known chip selects. */
+		SPI_SETFREQUENCY(spi2, 10000000);
+		SPI_SETBITS(spi2, 8);
+		SPI_SETMODE(spi2, SPIDEV_MODE3);
+		SPI_SELECT(spi2, PX4_SPIDEV_ADIS, false);
+		message("[boot] Initialized SPI port2 (ADC IN12/13 blocked)\n");
+	#endif
+
 	/* Get the SPI port for the microSD slot */
 
 	message("[boot] Initializing SPI port 3\n");

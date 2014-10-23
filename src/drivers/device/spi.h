@@ -101,6 +101,30 @@ protected:
 	 */
 	int		transfer(uint8_t *send, uint8_t *recv, unsigned len);
 
+#ifdef PX4_IMU_CONF_ADIS16448
+	/**
+	 * Perform a SPI 16 bit transfer.
+	 *
+	 * If called from interrupt context, this interface does not lock
+	 * the bus and may interfere with non-interrupt-context callers.
+	 *
+	 * Clients in a mixed interrupt/non-interrupt configuration must
+	 * ensure appropriate interlocking.
+	 *
+	 * At least one of send or recv must be non-null.
+	 *
+	 * @param send		Words to send to the device, or nullptr if
+	 *			no data is to be sent.
+	 * @param recv		Words for receiving bytes from the device,
+	 *			or nullptr if no bytes are to be received.
+	 * @param len		Number of words to transfer.
+	 * @return		OK if the exchange was successful, -errno
+	 *			otherwise.
+	 */
+	int		transferword(uint16_t *send, uint16_t *recv, unsigned len);
+
+#endif
+
 	/**
 	 * Set the SPI bus frequency
 	 * This is used to change frequency on the fly. Some sensors

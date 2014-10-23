@@ -149,13 +149,13 @@
 #define BITS_FIR_128_TAP_CFG	(7<<0)
 
 
-#define ADIS16448_GYRO_DEFAULT_RATE					100 	//1000   temp set to 100Hz
+#define ADIS16448_GYRO_DEFAULT_RATE					100
 #define ADIS16448_GYRO_DEFAULT_DRIVER_FILTER_FREQ	30
 
-#define ADIS16448_ACCEL_DEFAULT_RATE				100		//1000   temp set to 100Hz
+#define ADIS16448_ACCEL_DEFAULT_RATE				100
 #define ADIS16448_ACCEL_DEFAULT_DRIVER_FILTER_FREQ	30
 
-#define ADIS16448_MAG_DEFAULT_RATE					100		//1000   temp set to 100Hz
+#define ADIS16448_MAG_DEFAULT_RATE					100
 #define ADIS16448_MAG_DEFAULT_DRIVER_FILTER_FREQ	30
 
 #define ADIS16448_ONE_G								9.80665f
@@ -168,7 +168,8 @@ class ADIS16448_mag;
 class ADIS16448 : public device::SPI
 {
 public:
-	ADIS16448(int bus, spi_dev_e device);
+	////ADIS16448(int bus, spi_dev_e device);
+	ADIS16448(int bus, const char *path_accel, const char *path_gyro, const char *path_mag, spi_dev_e device);
 	virtual ~ADIS16448();
 
 	virtual int		init();
@@ -219,6 +220,9 @@ private:
 	float				_accel_range_scale;
 	float				_accel_range_m_s2;
 	orb_advert_t		_accel_topic;
+	orb_id_t			_accel_orb_id;
+	int					_accel_class_instance;
+
 
 	RingBuffer			*_mag_reports;
 
@@ -226,10 +230,15 @@ private:
 	float				_mag_range_scale;
 	float				_mag_range_mgauss;
 	orb_advert_t		_mag_topic;
+	orb_id_t			_mag_orb_id;
+	int					_mag_class_instance;
 
-	unsigned			_reads;
 	unsigned			_sample_rate;
+	perf_counter_t		_accel_reads;
+	perf_counter_t		_gyro_reads;
+	perf_counter_t		_mag_reads;
 	perf_counter_t		_sample_perf;
+	perf_counter_t		_bad_transfers;
 
 
 	math::LowPassFilter2p	_gyro_filter_x;
@@ -363,11 +372,13 @@ private:
 class ADIS16448_gyro : public device::CDev
 {
 public:
-	ADIS16448_gyro(ADIS16448 *parent);
+	ADIS16448_gyro(ADIS16448 *parent, const char *path);
 	~ADIS16448_gyro();
 
 	virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
+
+	virtual int		init();
 
 protected:
 	friend class ADIS16448;
@@ -375,6 +386,13 @@ protected:
 	void			parent_poll_notify();
 private:
 	ADIS16448			*_parent;
+	orb_advert_t		_gyro_topic;
+	orb_id_t			_gyro_orb_id;
+	int					_gyro_class_instance;
+
+	/* do not allow to copy this class due to pointer data members */
+	ADIS16448_gyro(const ADIS16448_gyro&);
+	ADIS16448_gyro operator=(const ADIS16448_gyro&);
 
 };
 /**
@@ -383,7 +401,7 @@ private:
 class ADIS16448_mag : public device::CDev
 {
 public:
-	ADIS16448_mag(ADIS16448 *parent);
+	ADIS16448_mag(ADIS16448 *parent, const char *path);
 	~ADIS16448_mag();
 
 	virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
@@ -395,32 +413,51 @@ protected:
 	void			parent_poll_notify();
 private:
 	ADIS16448			*_parent;
+	orb_advert_t		_mag_topic;
+	orb_id_t			_mag_orb_id;
+	int					_mag_class_instance;
+
+	/* do not allow to copy this class due to pointer data members */
+	ADIS16448_mag(const ADIS16448_mag&);
+	ADIS16448_mag operator=(const ADIS16448_mag&);
 
 };
 /** driver 'main' command */
 extern "C" { __EXPORT int adis16448_main(int argc, char *argv[]); }
 
-ADIS16448::ADIS16448(int bus, spi_dev_e device) :
-	SPI("ADIS16448", ACCEL_DEVICE_PATH, bus, device, SPIDEV_MODE3, 1000000),
-	_gyro(new ADIS16448_gyro(this)),
-	_mag(new ADIS16448_mag(this)),
+////ADIS16448::ADIS16448(int bus, spi_dev_e device) :
+////SPI("ADIS16448", ACCEL_DEVICE_PATH, bus, device, SPIDEV_MODE3, 1000000),
+ADIS16448::ADIS16448(int bus, const char *path_accel, const char *path_gyro, const char *path_mag, spi_dev_e device) :
+	SPI("ADIS16448", path_accel, bus, device, SPIDEV_MODE3, 1000000),
+	_gyro(new ADIS16448_gyro(this, path_gyro)),
+	_mag(new ADIS16448_mag(this, path_mag)),
 	_product(0),
+	_call{},
 	_call_interval(0),
 	_gyro_reports(nullptr),
+	_gyro_scale{},
 	_gyro_range_scale(0.0f),
 	_gyro_range_rad_s(0.0f),
-	_gyro_topic(-1),
 	_accel_reports(nullptr),
+	_accel_scale{},
 	_accel_range_scale(0.0f),
 	_accel_range_m_s2(0.0f),
 	_accel_topic(-1),
+	_accel_orb_id(nullptr),
+	_accel_class_instance(-1),
 	_mag_reports(nullptr),
+	_mag_scale{},
 	_mag_range_scale(0.0f),
 	_mag_range_mgauss(0.0f),
 	_mag_topic(-1),
-	_reads(0),
+	_mag_orb_id(nullptr),
+	_mag_class_instance(-1),
 	_sample_rate(100),																			/* Init sampling frequency set to 100Hz */
+	_accel_reads(perf_alloc(PC_COUNT, "adis16448_accel_read")),
+	_gyro_reads(perf_alloc(PC_COUNT, "adis16448_gyro_read")),
+	_mag_reads(perf_alloc(PC_COUNT, "adis16448_mag_read")),
 	_sample_perf(perf_alloc(PC_ELAPSED, "adis16448_read")),
+	_bad_transfers(perf_alloc(PC_COUNT, "adis16448_bad_transfers")),
 	_gyro_filter_x(ADIS16448_GYRO_DEFAULT_RATE, ADIS16448_GYRO_DEFAULT_DRIVER_FILTER_FREQ),
 	_gyro_filter_y(ADIS16448_GYRO_DEFAULT_RATE, ADIS16448_GYRO_DEFAULT_DRIVER_FILTER_FREQ),
 	_gyro_filter_z(ADIS16448_GYRO_DEFAULT_RATE, ADIS16448_GYRO_DEFAULT_DRIVER_FILTER_FREQ),
@@ -478,16 +515,24 @@ ADIS16448::~ADIS16448()
 	if (_mag_reports != nullptr)
 		delete _mag_reports;
 
+	if (_accel_class_instance != -1)
+		unregister_class_devname(ACCEL_DEVICE_PATH, _accel_class_instance);
+
+	if (_mag_class_instance != -1)
+		unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
+
 	/* delete the perf counter */
 	perf_free(_sample_perf);
+	perf_free(_accel_reads);
+	perf_free(_gyro_reads);
+	perf_free(_mag_reads);
+	perf_free(_bad_transfers);
 }
 
 int
 ADIS16448::init()
 {
 	int ret;
-	int gyro_ret;
-	int mag_ret;
 
 	/* do SPI init (and probe) first */
 	ret = SPI::init();
@@ -535,37 +580,96 @@ ADIS16448::init()
 	_mag_scale.z_offset   = 0;
 	_mag_scale.z_scale    = 1.0f;
 
-	/* do CDev init for the gyro device node, keep it optional */
-	gyro_ret = _gyro->init();
+	///* do CDev init for the gyro device node, keep it optional */
+	//gyro_ret = _gyro->init();
 
-	/* do CDev init for the mag device node, keep it optional */
-	mag_ret = _mag->init();
+	/* do CDev init for the gyro device node, keep it optional */
+	ret = _gyro->init();
+	/* if probe/setup failed, bail now */
+	if (ret != OK) {
+		debug("gyro init failed");
+		return ret;
+	}
+
+	_accel_class_instance = register_class_devname(ACCEL_DEVICE_PATH);
+	_mag_class_instance = register_class_devname(MAG_DEVICE_PATH);
 
 	/* fetch an initial set of measurements for advertisement */
 	measure();
 
-	/* advertise accel topic */
-	accel_report ar;
-	_accel_reports->get(&ar);
-	_accel_topic = orb_advertise(ORB_ID(sensor_accel), &ar);
+	/* advertise sensor topic, measure manually to initialize valid report */
+	struct accel_report arp;
+	_accel_reports->get(&arp);
 
-	if (gyro_ret != OK) {
-		_gyro_topic = -1;
-	} else {
-		gyro_report gr;
-		_gyro_reports->get(&gr);
+	/* measurement will have generated a report, publish */
+	switch (_accel_class_instance) {
+		case CLASS_DEVICE_PRIMARY:
+			_accel_orb_id = ORB_ID(sensor_accel0);
+			break;
 
-		_gyro_topic = orb_advertise(ORB_ID(sensor_gyro), &gr);
+		case CLASS_DEVICE_SECONDARY:
+			_accel_orb_id = ORB_ID(sensor_accel1);
+			break;
+
+		case CLASS_DEVICE_TERTIARY:
+			_accel_orb_id = ORB_ID(sensor_accel2);
+			break;
+
 	}
 
-	/* advertise mag topic */
-	if (mag_ret != OK) {
-		_mag_topic = -1;
-	} else {
-		 mag_report mr;
-		_mag_reports->get(&mr);
+	_accel_topic = orb_advertise(_accel_orb_id, &arp);
 
-		_mag_topic = orb_advertise(ORB_ID(sensor_mag), &mr);
+	if (_accel_topic < 0) {
+		warnx("ADVERT FAIL");
+	}
+
+
+	struct mag_report mrp;
+	_mag_reports->get(&mrp);
+
+	switch (_mag_class_instance) {
+		case CLASS_DEVICE_PRIMARY:
+			_mag_orb_id = ORB_ID(sensor_mag0);
+			break;
+
+		case CLASS_DEVICE_SECONDARY:
+			_mag_orb_id = ORB_ID(sensor_mag1);
+			break;
+
+		case CLASS_DEVICE_TERTIARY:
+			_mag_orb_id = ORB_ID(sensor_mag2);
+			break;
+	}
+
+	_mag_topic = orb_advertise(_mag_orb_id, &mrp);
+
+	if (_mag_topic < 0) {
+		warnx("ADVERT FAIL");
+	}
+
+
+	struct gyro_report grp;
+	_gyro_reports->get(&grp);
+
+	switch (_gyro->_gyro_class_instance) {
+		case CLASS_DEVICE_PRIMARY:
+			_gyro->_gyro_orb_id = ORB_ID(sensor_gyro0);
+			break;
+
+		case CLASS_DEVICE_SECONDARY:
+			_gyro->_gyro_orb_id = ORB_ID(sensor_gyro1);
+			break;
+
+		case CLASS_DEVICE_TERTIARY:
+			_gyro->_gyro_orb_id = ORB_ID(sensor_gyro2);
+			break;
+
+	}
+
+	_gyro->_gyro_topic = orb_advertise(_gyro->_gyro_orb_id, &grp);
+
+	if (_gyro->_gyro_topic < 0) {
+		warnx("ADVERT FAIL");
 	}
 
 out:
@@ -608,7 +712,7 @@ ADIS16448::probe()
 	/* verify product ID */
 	switch (_product) {
 	case ADIS16448_Product:
-		debug("ADIS16448 is detected ID: 0x%02x", _product);
+		debug("ADIS16448 is detected ID: 0x%02x, Serial: 0x%02x", _product, serial_number);
 		modify_reg16(ADIS16448_GPIO_CTRL, 0x0200, 0x0002);			/* Turn on ADIS16448 adaptor board led */
 		return OK;
 	}
@@ -712,6 +816,8 @@ ADIS16448::read(struct file *filp, char *buffer, size_t buflen)
 	if (_accel_reports->empty())
 		return -EAGAIN;
 
+	perf_count(_accel_reads);
+
 	/* copy reports out of our buffer to the caller */
 	accel_report *arp = reinterpret_cast<accel_report *>(buffer);
 	int transferred = 0;
@@ -729,12 +835,12 @@ ADIS16448::read(struct file *filp, char *buffer, size_t buflen)
 int
 ADIS16448::self_test()
 {
-	if (_reads == 0) {
+	if (perf_event_count(_sample_perf) == 0) {
 		measure();
 	}
 
 	/* return 0 on success, 1 else */
-	return (_reads > 0) ? 0 : 1;
+	return (perf_event_count(_sample_perf) > 0) ? 0 : 1;
 }
 
 int
@@ -806,6 +912,8 @@ ADIS16448::gyro_read(struct file *filp, char *buffer, size_t buflen)
 	if (_gyro_reports->empty())
 		return -EAGAIN;
 
+	perf_count(_gyro_reads);
+
 	/* copy reports out of our buffer to the caller */
 	gyro_report *grp = reinterpret_cast<gyro_report *>(buffer);
 	int transferred = 0;
@@ -838,6 +946,8 @@ ADIS16448::mag_read(struct file *filp, char *buffer, size_t buflen)
 	/* if no data, error (we could block here) */
 	if (_mag_reports->empty())
 		return -EAGAIN;
+
+	perf_count(_mag_reads);
 
 	/* copy reports out of our buffer to the caller */
 	mag_report *mrp = reinterpret_cast<mag_report *>(buffer);
@@ -1332,12 +1442,10 @@ ADIS16448::measure()
 	if (OK != transferword((uint16_t *)&adis_report, ((uint16_t *)&adis_report), 13))
 			return;
 
-	/* count measurement */
-	_reads++;
-
 	/*
 	 * Convert from big to little endian
 	 */
+
 	report.gyro_x  = (int16_t) adis_report.gyro_x;
 	report.gyro_y  = (int16_t) adis_report.gyro_y;
 	report.gyro_z  = (int16_t) adis_report.gyro_z;
@@ -1378,6 +1486,7 @@ ADIS16448::measure()
 	mag_report		mrb;
 
 	grb.timestamp = arb.timestamp = mrb.timestamp = hrt_absolute_time();
+    grb.error_count = arb.error_count = mrb.error_count = 0;
 
 	/* Gyro report: */
 	grb.x_raw = report.gyro_x;
@@ -1455,7 +1564,6 @@ ADIS16448::measure()
 	arb.temperature_raw = report.temp;
 	arb.temperature 	= (report.temp * 0.07386f) + 31.0f;
 
-	
 	_gyro_reports ->force(&grb);
 	_accel_reports->force(&arb);
 	_mag_reports  ->force(&mrb);
@@ -1466,13 +1574,16 @@ ADIS16448::measure()
 	_mag->parent_poll_notify();
 
 	/* and publish for subscribers */
-	orb_publish(ORB_ID(sensor_accel), _accel_topic, &arb);
-	if (_gyro_topic != -1) {
-		orb_publish(ORB_ID(sensor_gyro), _gyro_topic, &grb);
+	if (!(_pub_blocked)) {
+		orb_publish(_accel_orb_id, _accel_topic, &arb);
 	}
 
-	if ((_mag_topic != -1) && ((adis_report.status >> 7) & 0x1)) {			/* Mag data validity bit (bit 8 DIAG_STAT) */
-		orb_publish(ORB_ID(sensor_mag), _mag_topic, &mrb);
+	if (!(_pub_blocked)) {
+		orb_publish(_gyro->_gyro_orb_id, _gyro->_gyro_topic, &grb);
+	}
+
+	if ((!(_pub_blocked)) && ((adis_report.status >> 7) & 0x1)) {			/* Mag data validity bit (bit 8 DIAG_STAT) */
+		orb_publish(_mag->_mag_orb_id, _mag->_mag_topic, &mrb);
 	}
 
 	/* stop measuring */
@@ -1514,20 +1625,46 @@ void
 ADIS16448::print_info()
 {
 	perf_print_counter(_sample_perf);
-	printf("reads:          %u\n", _reads);
+	perf_print_counter(_accel_reads);
+	perf_print_counter(_gyro_reads);
+	perf_print_counter(_mag_reads);
 	_accel_reports->print_info("accel queue");
 	_gyro_reports->print_info("gyro queue");
 	_mag_reports->print_info("mag queue");
 }
 
-ADIS16448_gyro::ADIS16448_gyro(ADIS16448 *parent) :
-	CDev("ADIS16448_gyro", GYRO_DEVICE_PATH),
-	_parent(parent)
+ADIS16448_gyro::ADIS16448_gyro(ADIS16448 *parent, const char *path) :
+	CDev("ADIS16448_gyro", path),
+	_parent(parent),
+	_gyro_topic(-1),
+	_gyro_orb_id(nullptr),
+	_gyro_class_instance(-1)
 {
 }
 
 ADIS16448_gyro::~ADIS16448_gyro()
 {
+	if (_gyro_class_instance != -1)
+		unregister_class_devname(GYRO_DEVICE_PATH, _gyro_class_instance);
+}
+
+int
+ADIS16448_gyro::init()
+{
+	int ret;
+
+	// do base class init
+	ret = CDev::init();
+
+	/* if probe/setup failed, bail now */
+	if (ret != OK) {
+		debug("gyro init failed");
+		return ret;
+	}
+
+	_gyro_class_instance = register_class_devname(GYRO_DEVICE_PATH);
+
+	return ret;
 }
 
 void
@@ -1548,14 +1685,19 @@ ADIS16448_gyro::ioctl(struct file *filp, int cmd, unsigned long arg)
 	return _parent->gyro_ioctl(filp, cmd, arg);
 }
 
-ADIS16448_mag::ADIS16448_mag(ADIS16448 *parent) :
-	CDev("ADIS16448_mag", MAG_DEVICE_PATH),
-	_parent(parent)
+ADIS16448_mag::ADIS16448_mag(ADIS16448 *parent, const char *path) :
+	CDev("ADIS16448_mag", path),
+	_parent(parent),
+	_mag_topic(-1),
+	_mag_orb_id(nullptr),
+	_mag_class_instance(-1)
 {
 }
 
 ADIS16448_mag::~ADIS16448_mag()
 {
+	if (_mag_class_instance != -1)
+		unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
 }
 
 void
