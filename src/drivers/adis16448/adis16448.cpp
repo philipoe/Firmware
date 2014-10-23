@@ -78,6 +78,10 @@
 #define DIR_READ				0x00
 #define DIR_WRITE				0x80
 
+#define ADIS16448_DEVICE_PATH_ACCEL		"/dev/adis16448_accel"
+#define ADIS16448_DEVICE_PATH_GYRO		"/dev/adis16448_gyro"
+#define ADIS16448_DEVICE_PATH_MAG		"/dev/adis16448_mag"
+
 //  ADIS16448 registers
 #define ADIS16448_FLASH_CNT  	0x00  /* Flash memory write count */
 #define ADIS16448_SUPPLY_OUT 	0x02  /* Power supply measurement */
@@ -1739,22 +1743,28 @@ void
 start()
 {
 	int fd;
+    ADIS16448 **g_dev_ptr = &g_dev;
 
-	if (g_dev != nullptr)
+	const char *path_accel 	= ADIS16448_DEVICE_PATH_ACCEL;
+	const char *path_gyro 	= ADIS16448_DEVICE_PATH_GYRO;
+	const char *path_mag 	= ADIS16448_DEVICE_PATH_MAG;
+
+	if (*g_dev_ptr != nullptr)
 		/* if already started, the still command succeeded */
 		errx(0, "already started");
 
 	/* create the driver */
-	g_dev = new ADIS16448(2, (spi_dev_e)PX4_SPIDEV_ADIS);
+	////g_dev = new ADIS16448(2, (spi_dev_e)PX4_SPIDEV_ADIS);
+	*g_dev_ptr = new ADIS16448(2, path_accel, path_gyro, path_mag, (spi_dev_e)PX4_SPIDEV_ADIS);
 
-	if (g_dev == nullptr)
+	if (*g_dev_ptr == nullptr)
 		goto fail;
 
-	if (OK != g_dev->init())
+	if (OK != (*g_dev_ptr)->init())
 		goto fail;
 
 	/* set the poll rate to default, starts automatic data collection */
-	fd = open(ACCEL_DEVICE_PATH, O_RDONLY);
+	fd = open(path_accel, O_RDONLY);
 
 	if (fd < 0)
 		goto fail;
@@ -1765,9 +1775,9 @@ start()
 	exit(0);
 fail:
 
-	if (g_dev != nullptr) {
-		delete g_dev;
-		g_dev = nullptr;
+	if (*g_dev_ptr != nullptr) {
+		delete *g_dev_ptr;
+		*g_dev_ptr = nullptr;
 	}
 
 	errx(1, "driver start failed");
@@ -1781,6 +1791,10 @@ fail:
 void
 test()
 {
+	const char *path_accel 	= ADIS16448_DEVICE_PATH_ACCEL;
+	const char *path_gyro 	= ADIS16448_DEVICE_PATH_GYRO;
+	const char *path_mag 	= ADIS16448_DEVICE_PATH_MAG;
+
 	accel_report a_report;
 	gyro_report  g_report;
 	mag_report 	 m_report;
@@ -1792,19 +1806,19 @@ test()
 
 	if (fd < 0)
 		err(1, "%s open failed (try 'adis16448 start' if the driver is not running)",
-		    ACCEL_DEVICE_PATH);
+				path_accel);
 
 	/* get the mag driver */
-	int fd_mag = open(MAG_DEVICE_PATH, O_RDONLY);
+	int fd_mag = open(path_mag, O_RDONLY);
 
 	if (fd < 0)
-		err(1, "%s open failed", MAG_DEVICE_PATH);
+		err(1, "%s open failed", path_mag);
 
 	/* get the gyro driver */
-	int fd_gyro = open(GYRO_DEVICE_PATH, O_RDONLY);
+	int fd_gyro = open(path_gyro, O_RDONLY);
 
 	if (fd_gyro < 0)
-		err(1, "%s open failed", GYRO_DEVICE_PATH);
+		err(1, "%s open failed", path_gyro);
 
 	/* reset to manual polling */
 	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_MANUAL) < 0)
@@ -1877,7 +1891,9 @@ test()
 void
 reset()
 {
-	int fd = open(ACCEL_DEVICE_PATH, O_RDONLY);
+	const char *path_accel 	= ADIS16448_DEVICE_PATH_ACCEL;
+
+	int fd = open(path_accel, O_RDONLY);
 
 	if (fd < 0)
 		err(1, "failed ");
@@ -1897,11 +1913,13 @@ reset()
 void
 info()
 {
-	if (g_dev == nullptr)
+    ADIS16448 **g_dev_ptr = &g_dev;
+
+	if (*g_dev_ptr == nullptr)
 		errx(1, "driver not running");
 
-	printf("state @ %p\n", g_dev);
-	g_dev->print_info();
+	printf("state @ %p\n", *g_dev_ptr);
+	(*g_dev_ptr)->print_info();
 
 	exit(0);
 }
@@ -1912,10 +1930,12 @@ info()
 void
 info_cal()
 {
-	if (g_dev == nullptr)
+    ADIS16448 **g_dev_ptr = &g_dev;
+
+	if (*g_dev_ptr == nullptr)
 		errx(1, "driver not running");
 
-	g_dev->print_calibration_data();
+	(*g_dev_ptr)->print_calibration_data();
 
 	exit(0);
 }
