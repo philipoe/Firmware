@@ -601,7 +601,6 @@ ADIS16448::init()
 	}
 
 	_accel_class_instance = register_class_devname(ACCEL_DEVICE_PATH);
-	_mag_class_instance = register_class_devname(MAG_DEVICE_PATH);
 
 	/* fetch an initial set of measurements for advertisement */
 	measure();
@@ -632,29 +631,6 @@ ADIS16448::init()
 		warnx("ADVERT FAIL");
 	}
 
-	struct mag_report mrp;
-	_mag_reports->get(&mrp);
-
-	switch (_mag_class_instance) {
-		case CLASS_DEVICE_PRIMARY:
-			_mag_orb_id = ORB_ID(sensor_mag0);
-			break;
-
-		case CLASS_DEVICE_SECONDARY:
-			_mag_orb_id = ORB_ID(sensor_mag1);
-			break;
-
-		case CLASS_DEVICE_TERTIARY:
-			_mag_orb_id = ORB_ID(sensor_mag2);
-			break;
-	}
-
-	_mag_topic = orb_advertise(_mag_orb_id, &mrp);
-
-	if (_mag_topic < 0) {
-		warnx("ADVERT FAIL");
-	}
-
 	struct gyro_report grp;
 	_gyro_reports->get(&grp);
 
@@ -670,7 +646,6 @@ ADIS16448::init()
 		case CLASS_DEVICE_TERTIARY:
 			_gyro->_gyro_orb_id = ORB_ID(sensor_gyro2);
 			break;
-
 	}
 
 	_gyro->_gyro_topic = orb_advertise(_gyro->_gyro_orb_id, &grp);
@@ -678,6 +653,29 @@ ADIS16448::init()
 	if (_gyro->_gyro_topic < 0) {
 		warnx("ADVERT FAIL");
 	}
+
+	struct mag_report mrp;
+		_mag_reports->get(&mrp);
+
+		switch (_mag->_mag_class_instance) {
+			case CLASS_DEVICE_PRIMARY:
+				_mag->_mag_orb_id = ORB_ID(sensor_mag0);
+				break;
+
+			case CLASS_DEVICE_SECONDARY:
+				_mag->_mag_orb_id = ORB_ID(sensor_mag1);
+				break;
+
+			case CLASS_DEVICE_TERTIARY:
+				_mag->_mag_orb_id = ORB_ID(sensor_mag2);
+				break;
+		}
+
+		_mag->_mag_topic = orb_advertise(_mag->_mag_orb_id, &mrp);
+
+		if (_mag->_mag_topic < 0) {
+			warnx("ADVERT FAIL");
+		}
 
 out:
 	return ret;
