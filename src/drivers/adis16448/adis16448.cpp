@@ -174,7 +174,6 @@ class ADIS16448_mag;
 class ADIS16448 : public device::SPI
 {
 public:
-	////ADIS16448(int bus, spi_dev_e device);
 	ADIS16448(int bus, const char *path_accel, const char *path_gyro, const char *path_mag, spi_dev_e device);
 	virtual ~ADIS16448();
 
@@ -413,6 +412,8 @@ public:
 	virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
 
+	virtual int		init();
+
 protected:
 	friend class ADIS16448;
 
@@ -583,14 +584,19 @@ ADIS16448::init()
 	_mag_scale.z_offset   = 0;
 	_mag_scale.z_scale    = 1.0f;
 
-	///* do CDev init for the gyro device node, keep it optional */
-	//gyro_ret = _gyro->init();
-
 	/* do CDev init for the gyro device node, keep it optional */
 	ret = _gyro->init();
 	/* if probe/setup failed, bail now */
 	if (ret != OK) {
 		debug("gyro init failed");
+		return ret;
+	}
+
+	/* do CDev init for the gyro device node, keep it optional */
+	ret = _mag->init();
+	/* if probe/setup failed, bail now */
+	if (ret != OK) {
+		debug("mag init failed");
 		return ret;
 	}
 
@@ -626,7 +632,6 @@ ADIS16448::init()
 		warnx("ADVERT FAIL");
 	}
 
-
 	struct mag_report mrp;
 	_mag_reports->get(&mrp);
 
@@ -649,7 +654,6 @@ ADIS16448::init()
 	if (_mag_topic < 0) {
 		warnx("ADVERT FAIL");
 	}
-
 
 	struct gyro_report grp;
 	_gyro_reports->get(&grp);
@@ -762,7 +766,6 @@ ADIS16448::_set_dlpf_filter(uint16_t desired_filter_tap)
 
 }
 
-///
 /* set IMU to factory defaults. */
 void
 ADIS16448::_set_factory_default()
@@ -770,7 +773,7 @@ ADIS16448::_set_factory_default()
 	write_reg16(ADIS16448_GLOB_CMD, 0x02);
 	warnx("Set IMU to factory default!");
 }
-///
+
 /* set the gyroscope dynamic range */
 void
 ADIS16448::_set_gyro_dyn_range(uint16_t desired_gyro_dyn_range)
@@ -1703,6 +1706,25 @@ ADIS16448_mag::~ADIS16448_mag()
 		unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
 }
 
+int
+ADIS16448_mag::init()
+{
+	int ret;
+
+	// do base class init
+	ret = CDev::init();
+
+	/* if probe/setup failed, bail now */
+	if (ret != OK) {
+		debug("mag init failed");
+		return ret;
+	}
+
+	_mag_class_instance = register_class_devname(MAG_DEVICE_PATH);
+
+	return ret;
+}
+
 void
 ADIS16448_mag::parent_poll_notify()
 {
@@ -1753,7 +1775,7 @@ start()
 		errx(0, "already started");
 
 	/* create the driver */
-	////g_dev = new ADIS16448(2, (spi_dev_e)PX4_SPIDEV_ADIS);
+
 	*g_dev_ptr = new ADIS16448(2, path_accel, path_gyro, path_mag, (spi_dev_e)PX4_SPIDEV_ADIS);
 
 	if (*g_dev_ptr == nullptr)
@@ -1801,7 +1823,7 @@ test()
 	ssize_t sz;
 
 	/* get the driver */
-	int fd = open(ACCEL_DEVICE_PATH, O_RDONLY);
+	int fd = open(path_accel, O_RDONLY);
 
 	if (fd < 0)
 		err(1, "%s open failed (try 'adis16448 start' if the driver is not running)",
@@ -1939,7 +1961,8 @@ info_cal()
 	exit(0);
 }
 
-} // namespace
+}
+// namespace
 
 int
 adis16448_main(int argc, char *argv[])
