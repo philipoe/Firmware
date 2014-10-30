@@ -78,6 +78,8 @@
 #include "mavlink_messages.h"
 #include "mavlink_main.h"
 
+#include <uORB/topics/aslctrl_data.h>	//Added by ASL/PhilippOe
+
 static uint16_t cm_uint16_from_m_float(float m);
 static void get_mavlink_mode_state(struct vehicle_status_s *status, struct position_setpoint_triplet_s *pos_sp_triplet,
 				   uint8_t *mavlink_state, uint8_t *mavlink_base_mode, uint32_t *mavlink_custom_mode);
@@ -2126,6 +2128,158 @@ protected:
 	}
 };
 
+//---------------------------------------------------
+// Added by ASL/PhilippOe
+//---------------------------------------------------
+
+class MavlinkStreamAslctrlData : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamAslctrlData::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "ASLCTRL_DATA";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_ASLCTRL_DATA;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamAslctrlData(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_ASLCTRL_DATA_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_aslctrl_data_sub;
+	uint64_t _aslctrl_data_time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamAslctrlData(MavlinkStreamAslctrlData &);
+	MavlinkStreamAslctrlData& operator = (const MavlinkStreamAslctrlData &);
+
+protected:
+	explicit MavlinkStreamAslctrlData(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_aslctrl_data_sub(_mavlink->add_orb_subscription(ORB_ID(aslctrl_data))),
+		_aslctrl_data_time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct aslctrl_data_s aslctrl_data;
+
+		if (_aslctrl_data_sub->update(&_aslctrl_data_time, &aslctrl_data)) {
+
+			mavlink_aslctrl_data_t msg;
+
+			msg.timestamp = aslctrl_data.timestamp;
+			msg.h = aslctrl_data.h;
+			msg.hRef = aslctrl_data.hRef;
+			msg.hRef_t = aslctrl_data.hRef_t;
+			msg.PitchAngle = aslctrl_data.PitchAngle * M_RAD_TO_DEG_F;
+			msg.PitchAngleRef = aslctrl_data.PitchAngleRef * M_RAD_TO_DEG_F;
+			msg.q = aslctrl_data.q;
+			msg.qRef = aslctrl_data.qRef;
+			msg.uElev = aslctrl_data.uElev;
+			msg.uThrot = aslctrl_data.uThrot;
+			msg.uThrot2 = aslctrl_data.uThrot2;
+			msg.aZ = aslctrl_data.aZ;
+			msg.AirspeedRef = aslctrl_data.AirspeedRef;
+			msg.YawAngle = aslctrl_data.YawAngle * M_RAD_TO_DEG_F;
+			msg.YawAngleRef = aslctrl_data.YawAngleRef * M_RAD_TO_DEG_F;
+			msg.RollAngle = aslctrl_data.RollAngle * M_RAD_TO_DEG_F;
+			msg.RollAngleRef = aslctrl_data.RollAngleRef * M_RAD_TO_DEG_F;
+			msg.p = aslctrl_data.p;
+			msg.pRef = aslctrl_data.pRef;
+			msg.r = aslctrl_data.r;
+			msg.rRef = aslctrl_data.rRef;
+			msg.uAil = aslctrl_data.uAil;
+			msg.uRud = aslctrl_data.uRud;
+			msg.aslctrl_mode = aslctrl_data.aslctrl_mode;
+			msg.SpoilersEngaged = (aslctrl_data.bEngageSpoilers ? 1:0);
+
+			_mavlink->send_message(MAVLINK_MSG_ID_ASLCTRL_DATA, &msg);
+
+		}
+	}
+};
+
+class MavlinkStreamAslctrlDebug : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamAslctrlDebug::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "ASLCTRL_DEBUG";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_ASLCTRL_DEBUG;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamAslctrlDebug(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_ASLCTRL_DEBUG_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_aslctrl_data_sub;
+	uint64_t _aslctrl_debug_time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamAslctrlDebug(MavlinkStreamAslctrlDebug &);
+	MavlinkStreamAslctrlDebug& operator = (const MavlinkStreamAslctrlDebug &);
+
+protected:
+	explicit MavlinkStreamAslctrlDebug(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_aslctrl_data_sub(_mavlink->add_orb_subscription(ORB_ID(aslctrl_data))),
+		_aslctrl_debug_time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct aslctrl_data_s aslctrl_data;
+
+		if (_aslctrl_data_sub->update(&_aslctrl_debug_time, &aslctrl_data)) {
+
+			mavlink_aslctrl_debug_t msg;
+
+			msg.i32_1 = 0;
+			msg.f_1 = aslctrl_data.qmax;
+			msg.f_2 = aslctrl_data.f_GainSch_Q;
+			msg.f_3 = aslctrl_data.P_kP_GainSch_E;
+			msg.f_4 = aslctrl_data.R_kP_GainSch_E;
+			msg.f_5 = aslctrl_data.PitchAngleRefCT * M_RAD_TO_DEG_F;
+			msg.f_6 = 0.0f;
+			msg.f_7 = 0.0f;
+			msg.f_8 = 0.0f;
+			msg.i8_1 = aslctrl_data.StallStatus;
+			msg.i8_2 = 0;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_ASLCTRL_DEBUG, &msg);
+		}
+	}
+};
 
 StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static),
@@ -2156,5 +2310,7 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamNamedValueFloat::new_instance, &MavlinkStreamNamedValueFloat::get_name_static),
 	new StreamListItem(&MavlinkStreamCameraCapture::new_instance, &MavlinkStreamCameraCapture::get_name_static),
 	new StreamListItem(&MavlinkStreamDistanceSensor::new_instance, &MavlinkStreamDistanceSensor::get_name_static),
+	new StreamListItem(&MavlinkStreamAslctrlData::new_instance, &MavlinkStreamAslctrlData::get_name_static),
+	new StreamListItem(&MavlinkStreamAslctrlDebug::new_instance, &MavlinkStreamAslctrlDebug::get_name_static),
 	nullptr
 };
