@@ -286,10 +286,13 @@ void TECS::_update_energies(void)
 
 void TECS::_update_throttle(float throttle_cruise, const math::Matrix<3,3> &rotMat)
 {
+	float SKE_weighting = 2.0f - constrain(_spdWeight, 0.0f, 2.0f);
+	float SPE_weighting = 2.0f - SKE_weighting;
+
 	// Calculate total energy values
-	_STE_error = _SPE_dem - _SPE_est + _SKE_dem - _SKE_est;
-	float STEdot_dem = constrain((_SPEdot_dem + _SKEdot_dem), _STEdot_min, _STEdot_max);
-	float STEdot_error = STEdot_dem - _SPEdot - _SKEdot;
+	_STE_error = (_SPE_dem-_SPE_est)*SPE_weighting + (_SKE_dem-_SKE_est)*SKE_weighting;
+	float STEdot_dem = constrain((_SPEdot_dem*SPE_weighting + _SKEdot_dem*SKE_weighting), _STEdot_min, _STEdot_max);
+	float STEdot_error = STEdot_dem - _SPEdot*SPE_weighting - _SKEdot*SKE_weighting;
 
 	// Apply 0.5 second first order filter to STEdot_error
 	// This is required to remove accelerometer noise from the  measurement
