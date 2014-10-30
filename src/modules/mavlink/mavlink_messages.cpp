@@ -303,7 +303,7 @@ protected:
 		msg.custom_mode = 0;
 		get_mavlink_mode_state(&status, &pos_sp_triplet, &msg.system_status, &msg.base_mode, &msg.custom_mode);
 		msg.type = mavlink_system.type;
-		msg.autopilot = MAV_AUTOPILOT_PX4;
+		msg.autopilot = MAV_AUTOPILOT_ASLUAV; //Modified by ASL/PhilippOe
 		msg.mavlink_version = 3;
 
 		_mavlink->send_message(MAVLINK_MSG_ID_HEARTBEAT, &msg);
