@@ -4,6 +4,7 @@
 #include <systemlib/err.h> //Debug only
 #include <math.h>
 #include <drivers/drv_hrt.h>
+#include <poll.h>
 
 //**********************************************************************
 //*** Constructors / Destructors
@@ -28,7 +29,7 @@ int subscriptions::init(void)
 	memset(&att_sp, 0, sizeof(att_sp));
 	memset(&rates_sp, 0, sizeof(rates_sp));
 	memset(&global_pos, 0, sizeof(global_pos));
-	memset(&global_pos_set_triplet, 0, sizeof(global_pos_set_triplet));
+	memset(&position_setpoint_triplet, 0, sizeof(position_setpoint_triplet));
 	memset(&manual_sp, 0, sizeof(manual_sp));
 	memset(&actuators, 0, sizeof(actuators));
 	memset(&param_update, 0, sizeof(param_update));
@@ -42,7 +43,7 @@ int subscriptions::init(void)
 	att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
 	att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
 	global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
-	global_pos_set_triplet_sub = orb_subscribe(ORB_ID(vehicle_global_position_set_triplet));
+	position_setpoint_triplet_sub = orb_subscribe(ORB_ID(position_setpoint_triplet));
 	manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
 	vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
 	vcontrol_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
@@ -80,7 +81,7 @@ int subscriptions::get_inputs(void)
 	orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
 	orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &att_sp);
 	orb_copy(ORB_ID(vehicle_global_position), global_pos_sub, &global_pos);
-	orb_copy(ORB_ID(vehicle_global_position_set_triplet), global_pos_set_triplet_sub, &global_pos_set_triplet);
+	orb_copy(ORB_ID(position_setpoint_triplet), position_setpoint_triplet_sub, &position_setpoint_triplet);
 	orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
 	orb_copy(ORB_ID(vehicle_control_mode), vcontrol_sub, &vcontrol);
 	orb_copy(ORB_ID(sensor_combined), sensors_sub, &sensors);
@@ -90,10 +91,10 @@ int subscriptions::get_inputs(void)
 
 	vehicle_status_s temp=vstatus;
 	orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
-	if(vstatus.navigation_state != temp.navigation_state)
+	if((vstatus.main_state != temp.main_state) && !vstatus.rc_signal_lost)
 	{
 		warnx("State and/or Mode changed!");
-		warnx("Main State: %d, Navigation state: %d",vstatus.main_state, vstatus.navigation_state);
+		warnx("MainState/NavState: (%d/%d). Before:(%d/%d)",vstatus.main_state, vstatus.nav_state,temp.main_state, temp.nav_state);
 		warnx("Enabled control flags : %d/%d/%d/%d (pos/att/rate/man)\n",vcontrol.flag_control_position_enabled,
 				vcontrol.flag_control_attitude_enabled,vcontrol.flag_control_rates_enabled,vcontrol.flag_control_manual_enabled);
 	}

@@ -42,7 +42,7 @@ ASLAutopilot::~ASLAutopilot()
 
 	subs.publish_actuator_outputs();
 	initialized=false;
-	//printf("flashforce3");
+	printf("flashforce3");
 }
 
 //**********************************************************************
@@ -75,8 +75,7 @@ void ASLAutopilot::update()
 	//Reset control and logging variables where necessary
 	SetCtrlData();
 
-	//Save the last mode to signify any re-initializations necessary due to a mode switch
-	ctrldata.aslctrl_last_mode=ctrldata.aslctrl_mode;
+	//SetReferences();
 
 	// check for sane values of dt to prevent large control responses
 	ctrldata.timestamp = hrt_absolute_time();
@@ -90,6 +89,11 @@ void ASLAutopilot::update()
 	//******************************************************************************************************************
 	//*** RC LOSS HANDLING
 	//******************************************************************************************************************
+
+	//Save the last mode to signify any re-initializations necessary due to a mode switch
+	ctrldata.aslctrl_last_mode=ctrldata.aslctrl_mode;
+
+	//SetControlMode();
 
 	//Check if we have RC reception.
 	if(subs.vstatus.rc_signal_lost) {
@@ -110,11 +114,11 @@ void ASLAutopilot::update()
 	//******************************************************************************************************************
 
 	//Manual feed through of the following inputs in all cases. This might might be augmented by the SAS-loop.
-	ctrldata.uRud=subs.manual_sp.yaw;
+	ctrldata.uRud=subs.manual_sp.r;
 
 	// TEMP: Determine airspeed/throttle set point here:
 	if(params.p.ASLC_VelCtrl==0 || ctrldata.aslctrl_mode < MODE_ALT) {		// Set new throttle reference if VELCTRL not activate at all (simple feed-through then))
-		ctrldata.uThrot=subs.manual_sp.throttle;
+		ctrldata.uThrot=subs.manual_sp.z;
 		ctrldata.uThrot2=subs.manual_sp.aux2;
 		ctrldata.AirspeedRef=0.0f;
 	}
@@ -123,7 +127,7 @@ void ASLAutopilot::update()
 		// Note: Do not reset uThrot here. If velocity control is not executed in this control-loop-run (e.g. because it runs
 		// 		 slower than SAS&CAS) then this would be falsly set to the manual throttle setpoint. Instead, we still want the
 		//		 velocity controlled one!
-		ctrldata.AirspeedRef=params.p.HL_Vel_vMin+subs.manual_sp.throttle*(params.p.HL_Vel_vMax-params.p.HL_Vel_vMin);
+		ctrldata.AirspeedRef=params.p.HL_Vel_vMin+subs.manual_sp.z*(params.p.HL_Vel_vMax-params.p.HL_Vel_vMin);
 	}
 
 	//******************************************************************************************************************
@@ -136,16 +140,16 @@ void ASLAutopilot::update()
 	// Run TECS update every time (should be called at >50Hz)
 	HLcontrol.TECS_Update50Hz();
 
-	if(subs.vstatus.main_state==MAIN_STATE_AUTO	&& (counter % params.p.HL_fMult == 0))
+	if(subs.vstatus.main_state==MAIN_STATE_AUTO_MISSION && (counter % params.p.HL_fMult == 0))
 	{
-		if((counter %20==0) && (params.p.ASLC_DEBUG==1)) printf("dt_wp:%8.6f\n", float(hrt_absolute_time()-t3_old)/1.0e6f);
+		if((counter %20==0) && (params.p.ASLC_DEBUG==1)) printf("dt_wp:%8.6f\n", double(hrt_absolute_time()-t3_old)/1.0e6);
 		t3_old=hrt_absolute_time();
 
 		//******************************************************************************************************************
 		//*** LOOP 1a: LATERAL AUTOPILOT
 		//******************************************************************************************************************
 		//LOOP 1a, CASE 1: Waypoint-following (WP-following AUTO via GCS, Altitude AUTO via GCS)
-		if(subs.vstatus.assisted_switch==ASSISTED_SWITCH_EASY)	{
+		if(subs.manual_sp.posctl_switch==SWITCH_POS_ON)	{
 			if(!subs.vstatus.rc_signal_lost) ctrldata.aslctrl_mode = MODE_AUTO;
 
 			RET = HLcontrol.WaypointControl_L1(ctrldata.RollAngleRef);
@@ -154,16 +158,16 @@ void ASLAutopilot::update()
 			}
 		}
 		//LOOP 1a, CASE 2: Roll Angle feed-through (only Altitude hold)
-		else if(subs.vstatus.assisted_switch==ASSISTED_SWITCH_SEATBELT) {
+		else if(subs.manual_sp.posctl_switch==SWITCH_POS_OFF) {
 			//Roll angle CAS, altitude AUTO via GCS
 			ctrldata.aslctrl_mode = MODE_ALT;
-			ctrldata.RollAngleRef=-params.p.SAS_RollPDir*subs.manual_sp.roll * params.p.CAS_RollAngleLim;;	//Scaling to reference angles
+			ctrldata.RollAngleRef=-params.p.SAS_RollPDir*subs.manual_sp.y * params.p.CAS_RollAngleLim;;	//Scaling to reference angles
 		}
 
 		//******************************************************************************************************************
 		//*** LOOP 1b&c: ALTITUDE & AIRSPEED-CTRL
 		//******************************************************************************************************************
-		ctrldata.hRef=subs.global_pos_set_triplet.current.altitude;
+		ctrldata.hRef=subs.position_setpoint_triplet.current.alt;
 		bool bReinit=(ctrldata.aslctrl_mode-ctrldata.aslctrl_last_mode > 0 ? true : false);
 
 		//Option 1b1 & 1c1: Classical, SISO alt&speed ctrl. based on the assumption of a decoupled pitch&throttle response
@@ -180,10 +184,10 @@ void ASLAutopilot::update()
 
 			//TECS Alt&Airspeed control
 			RET = HLcontrol.TECS_AltAirspeedControl(ctrldata.PitchAngleRef, ctrldata.uThrot, ctrldata.AirspeedRef, ctrldata.hRef,
-					subs.global_pos.alt, (float)subs.home_pos.alt/1.0E3f, ctrldata.hRef_t,ctrldata.AltitudeStatus, ctrldata.bEngageSpoilers,bUseAltitudeRamp, bUseThermalHighEtaMode,bReinit);
+					subs.global_pos.alt, subs.home_pos.alt, ctrldata.hRef_t,ctrldata.AltitudeStatus, ctrldata.bEngageSpoilers,bUseAltitudeRamp, bUseThermalHighEtaMode,bReinit);
 			if(params.p.ASLC_DEBUG==10) printf("RET:%i\n",RET);
 			if(RET != RET_OK && MavlinkSendOK(2)) {
-				mavlink_log_critical(mavlink_fd, "[aslctrl] ALT_CTRL ERROR: CODE %d",RET);
+				mavlink_log_critical(mavlink_fd, "[aslctrl] ALT_CTRL ERROR/WARNING: CODE %d",RET);
 			}
 		}
 	}
@@ -193,16 +197,16 @@ void ASLAutopilot::update()
 	//******************************************************************************************************************
 	// Control Augmented System (CAS) control.
 	// Attitude (Angle) Control with reference inputs from RC-transmitter.
-	if(subs.vstatus.main_state>=MAIN_STATE_EASY	&& (counter % params.p.CAS_fMult == 0))
+	if(subs.vstatus.main_state >= MODE_CAS && (counter % params.p.CAS_fMult == 0))
 	{
-		//if((counter %20==0) && (params.p.ASLC_DEBUG==2)) printf("dt_cas:%8.6f\n", float(hrt_absolute_time()-t2_old)/1.0e6f);
+		//if((counter %20==0) && (params.p.ASLC_DEBUG==2)) printf("dt_cas:%8.6f\n", double(hrt_absolute_time()-t2_old)/1.0e6f);
 		//t2_old=hrt_absolute_time();
 
-		if(subs.vstatus.main_state==MAIN_STATE_EASY && !subs.vstatus.rc_signal_lost) {
+		if(subs.vstatus.main_state == MODE_CAS && !subs.vstatus.rc_signal_lost) {
 			//We are exactly in CAS mode, update references
 			ctrldata.aslctrl_mode = MODE_CAS;
-			ctrldata.RollAngleRef = -params.p.SAS_RollPDir*subs.manual_sp.roll * params.p.CAS_RollAngleLim; //Inputs scaled to reference angles
-			ctrldata.PitchAngleRef = -params.p.SAS_PitchPDir*subs.manual_sp.pitch * params.p.CAS_PitchAngleLim;; //Inputs scaled to reference angles
+			ctrldata.RollAngleRef = -params.p.SAS_RollPDir*subs.manual_sp.y * params.p.CAS_RollAngleLim; //Inputs scaled to reference angles
+			ctrldata.PitchAngleRef = params.p.SAS_PitchPDir*subs.manual_sp.x * params.p.CAS_PitchAngleLim; //Inputs scaled to reference angles
 		}
 
 		// Perform Pitch&Roll Angle control function. This includes gain scheduling & stall protection.
@@ -227,23 +231,23 @@ void ASLAutopilot::update()
 	//******************************************************************************************************************
 	// Stability Augmented System (SAS) control
 	// Damping of roll, pitch and yaw with reference inputs from RC-transmitter.
-	if(subs.vstatus.main_state>=MAIN_STATE_SEATBELT) {
+	if(subs.vstatus.main_state>=MODE_SAS) {
 		if((counter %20==0) && (params.p.ASLC_DEBUG==2)) {
-			printf("dt_sas:%8.6f\n", float(hrt_absolute_time()-t1_old)/1.0e6f);
+			printf("dt_sas:%8.6f\n", double(hrt_absolute_time()-t1_old)/1.0e6);
 		}
 		//t1_old=hrt_absolute_time();
 
 		// Check if the execution frequency of SAS (as the innermost loop) is ok, i.e. corresponds to the one given by the user.
 		if(params.p.ASLC_DEBUG==2 && (ctrldata.dt<0.9f*params.p.SAS_tSample*1.0e6f || ctrldata.dt>1.3f*params.p.SAS_tSample*1.0e6f)) {
-			printf("[aslctrl] WARNING, dt=%u[us] not matching parameter SAS_tSample=%8.5f[s]\n",ctrldata.dt,params.p.SAS_tSample);
+			printf("[aslctrl] WARNING, dt=%u[us] not matching parameter SAS_tSample=%8.5f[s]\n",ctrldata.dt,(double)params.p.SAS_tSample);
 			if(MavlinkSendOK(6)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: dt=%u [us] != SAS_tSample!",ctrldata.dt);}
 		}
 
-		if(subs.vstatus.main_state==MAIN_STATE_SEATBELT) {
+		if(subs.vstatus.main_state==MODE_SAS) {
 			//We are exactly in SAS mode, update references
 			ctrldata.aslctrl_mode = MODE_SAS;
-			ctrldata.uElev=subs.manual_sp.pitch;
-			ctrldata.uAil=subs.manual_sp.roll;
+			ctrldata.uElev=-subs.manual_sp.x;
+			ctrldata.uAil=subs.manual_sp.y;
 
 			bool bReinit=(ctrldata.aslctrl_mode-ctrldata.aslctrl_last_mode>0 ? true : false);
 			if(params.p.ASLC_CtrlType != MPC_STD && params.p.ASLC_CtrlType != MPC_ROLLMPCONLY) { //Only execute for standard PID controller, not for MPC controller (which does rate-stabilization/control internally)
@@ -277,8 +281,8 @@ void ASLAutopilot::update()
 
 		//Set these values, but only for proper logging of the rc-inputs, because they have no actual effect on the actuator outputs
 		ctrldata.aslctrl_mode = MODE_MANUAL;
-		ctrldata.uElev=subs.manual_sp.pitch;
-		ctrldata.uAil=subs.manual_sp.roll;
+		ctrldata.uElev=-subs.manual_sp.x;
+		ctrldata.uAil=subs.manual_sp.y;
 	}
 
 	//ctrldata.aZ=subs.sensors.accelerometer_m_s2[2]-subs.ekf.x_b_a[2];
@@ -295,11 +299,11 @@ void ASLAutopilot::update()
 			(subs.vstatus.rc_signal_lost || ctrldata.aslctrl_mode>=MODE_ALT)) {
 		ctrldata.uThrot=0.0f;
 		ctrldata.uThrot2=0.0f;
-		if(counter%20==0 && params.p.ASLC_DEBUG==30) printf("DEBUG: Disabling throttle. uThrot=%.3f\n",ctrldata.uThrot);
+		if(counter%20==0 && params.p.ASLC_DEBUG==30) printf("DEBUG: Disabling throttle. uThrot=%.3f\n",(double)ctrldata.uThrot);
 		if(MavlinkSendOK(8)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: Disabling throttle!(OnGround&RC-Loss/Auto-Mode)\n");}
 	}
 	else {
-		if(counter%20==0 && params.p.ASLC_DEBUG==30) printf("DEBUG: NOT Disabling throttle. uThrot=%.3f\n",ctrldata.uThrot);
+		if(counter%20==0 && params.p.ASLC_DEBUG==30) printf("DEBUG: NOT Disabling throttle. uThrot=%.3f\n",(double)ctrldata.uThrot);
 	}
 
 	// Step2: Do the actual actuator updates
@@ -315,7 +319,7 @@ void ASLAutopilot::update()
 	}
 	else {
 		//Spoilers on AUX
-		if((counter%20==0) && (params.p.ASLC_DEBUG==31)) printf("flap switch: %.3f\n",subs.manual_sp.flaps);
+		if((counter%20==0) && (params.p.ASLC_DEBUG==31)) printf("flap switch: %.3f\n",(double)subs.manual_sp.flaps);
 		if(subs.manual_sp.flaps<-0.5f || ctrldata.bEngageSpoilers) subs.actuators.control[CH_AUX]=1.0f;
 		else subs.actuators.control[CH_AUX]=0.0f;
 	}
@@ -323,8 +327,9 @@ void ASLAutopilot::update()
 
 	//Debug
 	if ((counter % 20 == 0) && (params.p.ASLC_DEBUG==1)) {
-		printf("UMIXED actuators[1-6]: %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f\n",subs.actuators.control[0],subs.actuators.control[1],subs.actuators.control[2],
-				subs.actuators.control[3],subs.actuators.control[4],subs.actuators.control[5]);
+		printf("UMIXED actuators[1-6]: %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f\n",
+				(double)subs.actuators.control[0],(double)subs.actuators.control[1],(double)subs.actuators.control[2],
+				(double)subs.actuators.control[3],(double)subs.actuators.control[4],(double)subs.actuators.control[5]);
 	}
 
 	/////////////////////////////
@@ -419,25 +424,25 @@ bool MavlinkSendOK(int MsgID)
 //DeMixing of the remote inputs, mostly used for senseSoar aircraft
 int ASLAutopilot::DeMix(void)
 {
-	float ch1=subs.manual_sp.roll;
-	float ch2=-subs.manual_sp.pitch;
-	float ch4=subs.manual_sp.yaw;
+	float ch1=subs.manual_sp.y;
+	float ch2=subs.manual_sp.x;
+	float ch4=subs.manual_sp.r;
 	float ch6=subs.manual_sp.aux2;
 
 	//Aileron demixer
-	subs.manual_sp.roll=params.p.DEMIX_F_CH6t1*(ch1+params.p.DEMIX_CH6t1*ch6);
+	subs.manual_sp.y=params.p.DEMIX_F_CH6t1*(ch1+params.p.DEMIX_CH6t1*ch6);
 
 	//Elevator/Rudder demixer
-	subs.manual_sp.pitch=params.p.DEMIX_F_CH2t4*(ch2-params.p.DEMIX_CH2t4*ch4);
-	subs.manual_sp.yaw=params.p.DEMIX_F_CH2t4*(ch2+params.p.DEMIX_CH2t4*ch4);
+	subs.manual_sp.x=params.p.DEMIX_F_CH2t4*(ch2-params.p.DEMIX_CH2t4*ch4);
+	subs.manual_sp.r=params.p.DEMIX_F_CH2t4*(ch2+params.p.DEMIX_CH2t4*ch4);
 
 	if(params.p.ASLC_DEBUG!=0) {
 			//printf("ch 1/2/4/6, DMX:uAil, uElev,uRud: %7.4f %7.4f %7.4f %7.4f  ||  %7.4f %7.4f %7.4f\n",ch1,ch2,ch4,ch6,ctrldata.uAil,ctrldata.uElev,ctrldata.uRud);
 	}
 
-	subs.manual_sp.roll=limit1(subs.manual_sp.roll,1.0f);
-	subs.manual_sp.pitch=limit1(subs.manual_sp.pitch,1.0f);
-	subs.manual_sp.yaw=limit1(subs.manual_sp.yaw,1.0f);
+	subs.manual_sp.y=limit1(subs.manual_sp.y,1.0f);
+	subs.manual_sp.x=limit1(subs.manual_sp.x,1.0f);
+	subs.manual_sp.r=limit1(subs.manual_sp.r,1.0f);
 
 	return 0;
 }
@@ -482,11 +487,14 @@ int ASLAutopilot::HandleRCLoss(void)
 
 		if(ctrldata.aslctrl_mode == MODE_RCLOSS_RTHFAILSAFE) {
 			// Overwrite switch positions locally here, in order to enter AUTO mode in control loop
-			subs.vstatus.main_state = MAIN_STATE_AUTO;
-			subs.vstatus.assisted_switch = ASSISTED_SWITCH_EASY;
+			subs.vstatus.main_state = MAIN_STATE_AUTO_MISSION;
+			subs.manual_sp.posctl_switch = SWITCH_POS_ON;
 			//Set RTL references
-			subs.global_pos_set_triplet.current.nav_cmd = NAV_CMD_RETURN_TO_LAUNCH;
-			subs.global_pos_set_triplet.current.altitude = (float)subs.home_pos.alt/1.0E3f + 100.0f;
+			//subs.position_setpoint_triplet.nav_state = NAV_CMD_RETURN_TO_LAUNCH; //TODO check whether this works
+			subs.position_setpoint_triplet.current.type == SETPOINT_TYPE_POSITION;
+			subs.position_setpoint_triplet.current.alt = subs.home_pos.alt + 100.0f;
+			subs.position_setpoint_triplet.current.lat = subs.home_pos.lat;
+			subs.position_setpoint_triplet.current.lon = subs.home_pos.lon;
 			//printf("RTL alt:%.2f\n",subs.global_pos_set_triplet.current.altitude);
 		}
 		return 0;
@@ -500,8 +508,8 @@ int ASLAutopilot::HandleRCLoss(void)
 
 		if(ctrldata.aslctrl_mode == MODE_RCLOSS_AUTOFAILSAFE) {
 			// Overwrite switch positions locally here, in order to enter AUTO mode in control loop
-			subs.vstatus.main_state = MAIN_STATE_AUTO;
-			subs.vstatus.assisted_switch = ASSISTED_SWITCH_EASY;
+			subs.vstatus.main_state = MAIN_STATE_AUTO_MISSION;
+			subs.manual_sp.posctl_switch = SWITCH_POS_ON;
 		}
 		return 0;
 	}
@@ -515,13 +523,13 @@ int ASLAutopilot::HandleRCLoss(void)
 
 		if((ctrldata.aslctrl_mode == MODE_RCLOSS_CASFAILSAFE) || (ctrldata.aslctrl_mode == MODE_RCLOSS_ERR)) {
 			//Overwrite switch positions locally here, in order to enter CAS mode in control loop
-			subs.vstatus.main_state = MAIN_STATE_EASY;
-			subs.vstatus.assisted_switch = ASSISTED_SWITCH_EASY;
+			subs.vstatus.main_state = (main_state_t)MODE_CAS;
+			subs.manual_sp.posctl_switch = SWITCH_POS_ON;
 
 			//Set RTL references
 			ctrldata.RollAngleRef = 12.0f*DEG2RAD;		// Loiter in right-turn circle
 			ctrldata.PitchAngleRef = -3.0f*DEG2RAD;		// Descend slowly
-			subs.manual_sp.throttle = 0.0f;				// Deactivate throttle to descend
+			subs.manual_sp.z = 0.0f;					// Deactivate throttle to descend
 			subs.manual_sp.aux2 = 0.0f;					// TODO: This gives problems, does not put throttle to zero. See TF11 TODOs
 			ctrldata.uThrot = 0.0f;
 			ctrldata.uThrot2 = 0.0f;
@@ -536,20 +544,20 @@ int ASLAutopilot::HandleRCLoss(void)
 bool ASLAutopilot::OnGround(void)
 {
 	//Check conditions
-	float vgnd=sqrt(pow(subs.global_pos.vx,2.0f)+pow(subs.global_pos.vy,2.0f)+pow(subs.global_pos.vz,2.0f));
-	float h_home=(float)subs.home_pos.alt/1.0E3f;
-	bool bCond1=subs.sensors.dbaro_velo_ms < 4.5f;
-	bool bCond2=sqrt(pow(subs.global_pos.vx,2.0f)+pow(subs.global_pos.vy,2.0f)+pow(subs.global_pos.vz,2.0f))<4.0;
+	float vgnd=sqrt(pow(subs.global_pos.vel_n,2.0f)+pow(subs.global_pos.vel_e,2.0f)+pow(subs.global_pos.vel_d,2.0f));
+	float h_home=(float)subs.home_pos.alt;
+	bool bCond1=subs.airspeed.true_airspeed_m_s < 4.5f;
+	bool bCond2=sqrt(pow(subs.global_pos.vel_n,2.0f)+pow(subs.global_pos.vel_e,2.0f)+pow(subs.global_pos.vel_d,2.0f))<4.0;
 	bool bCond3=subs.global_pos.alt<h_home+30.0f;
 
 	//Check validity of the data needed to assess the on-ground conditions
-	if(subs.home_pos.alt<0.1) {bCond3=true;bCond2=true;}
+	if(subs.home_pos.alt<0.1f) {bCond3=true;bCond2=true;}
 	// If home_alt==0, then this means that no valid home position was retrieved because the gps-signal has never been received.
 	// This then also means that the global_position estimate is invalid. TODO: This should be handled differently, e.g. through
 	// global_pos.valid or even through vehicle_status.XXX.
 
 	if(params.p.ASLC_DEBUG == 30 && counter%20==0) printf("bCond1/2/3: %d/%d/%d. v_air/v_gnd/h/h_home:%.2f/%.2f/%.2f/%.2f\n",
-			bCond1,bCond2,bCond3,subs.sensors.dbaro_velo_ms,vgnd,subs.global_pos.alt,h_home);
+			bCond1,bCond2,bCond3,(double)subs.airspeed.true_airspeed_m_s,(double)vgnd,(double)subs.global_pos.alt,(double)h_home);
 
 	if(bCond1 && bCond2 && bCond3){
 		return true;

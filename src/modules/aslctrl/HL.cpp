@@ -56,19 +56,21 @@ void HL::CopyUpdatedParams(void)
 	tecs.set_indicated_airspeed_max(params->p.airspeed_max);
 	tecs.set_max_climb_rate(params->p.max_climb_rate);
 	tecs.set_heightrate_p(params->p.heightrate_p);
+	tecs.set_heightrate_ff(params->p.heightrate_ff);
 	tecs.set_speedrate_p(params->p.speedrate_p);
-	tecs.set_throttle_slewrate(params->p.throttle_slewrate);	//Added
+	tecs.set_throttle_slewrate(params->p.throttle_slewrate);
+	tecs.set_detect_underspeed_enabled(true);
 }
 
 int HL::WaypointControl_L1(float &RollAngleRef)
 {
-	math::Vector2f ground_speed(subs->global_pos.vx, subs->global_pos.vy);
-	math::Vector2f cur_pos(float(subs->global_pos.lat)/1.0E7f, float(subs->global_pos.lon)/1.0E7f);
+	math::Vector<2> ground_speed = {subs->global_pos.vel_n, subs->global_pos.vel_e};
+	math::Vector<2> cur_pos = {float(subs->global_pos.lat), float(subs->global_pos.lon)};
 
 	// *********************************************************************
 	// *** L1-PERIOD GAIN SCHEDULING
 	// *********************************************************************
-	float airspeed_lim = limit2(LP_Airspeed.update(subs->sensors.dbaro_velo_ms),params->p.HL_Vel_vMax,params->p.HL_Vel_vMin);
+	float airspeed_lim = limit2(LP_Airspeed.update(subs->airspeed.true_airspeed_m_s),params->p.HL_Vel_vMax,params->p.HL_Vel_vMin);
 	float L1_P_GS = params->p.HL_WPL1_P_vNom;
 
 	if(airspeed_lim > 1.0f) {
@@ -84,54 +86,53 @@ int HL::WaypointControl_L1(float &RollAngleRef)
 	}
 	L1Ctrl.set_l1_period(L1_P_GS);
 
-	if(params->p.ASLC_DEBUG == 22) printf("L1_GS: vAir:%.2f L1_P_GS:%.2f\n",LP_Airspeed.Get(),L1_P_GS);
+	if(params->p.ASLC_DEBUG == 22) printf("L1_GS: vAir:%.2f L1_P_GS:%.2f\n",(double)LP_Airspeed.Get(),(double)L1_P_GS);
 
 	// *********************************************************************
 	// *** STD-WAYPOINT CONTROL
 	// *********************************************************************
-	if (subs->global_pos_set_triplet.current.nav_cmd == NAV_CMD_WAYPOINT) {
+	if (subs->position_setpoint_triplet.current.type == SETPOINT_TYPE_POSITION) {
 		/* waypoint is a plain navigation waypoint */
 		if(params->p.ASLC_DEBUG==10) printf("M5.1: ");
 
-		math::Vector2f next_wp(float(subs->global_pos_set_triplet.current.lat)/1.0E7f,float(subs->global_pos_set_triplet.current.lon)/1.0E7f);
-		math::Vector2f prev_wp(float(subs->global_pos_set_triplet.previous.lat)/1.0E7f,float(subs->global_pos_set_triplet.previous.lon)/1.0E7f);
-		if (!subs->global_pos_set_triplet.previous_valid) {
+		math::Vector<2> next_wp = {float(subs->position_setpoint_triplet.current.lat),float(subs->position_setpoint_triplet.current.lon)};
+		math::Vector<2> prev_wp = {float(subs->position_setpoint_triplet.previous.lat),float(subs->position_setpoint_triplet.previous.lon)};
+		if (!subs->position_setpoint_triplet.previous.valid) {
 			// No valid next waypoint, go for heading hold. This is automatically handled by the L1 library.
-			prev_wp.setX(subs->global_pos_set_triplet.current.lat / 1e7f);
-			prev_wp.setY(subs->global_pos_set_triplet.current.lon / 1e7f);
+			prev_wp(0)=(float)subs->position_setpoint_triplet.current.lat;
+			prev_wp(1)=(float)subs->position_setpoint_triplet.current.lon;
 		}
 		L1Ctrl.navigate_waypoints(prev_wp, next_wp, cur_pos, ground_speed);
 
-		if(params->p.ASLC_DEBUG==10) printf("Previous WP: (%7.5f,%7.5f) Next WP (x/y): (%7.5f,%7.5f) | ", prev_wp.getX(), prev_wp.getY(), next_wp.getX(), next_wp.getY());
+		if(params->p.ASLC_DEBUG==10) printf("Previous WP: (%7.5f,%7.5f) Next WP (x/y): (%7.5f,%7.5f) | ", (double)prev_wp(0), (double)prev_wp(1), (double)next_wp(0), (double)next_wp(1));
 	}
-	else if (subs->global_pos_set_triplet.current.nav_cmd == NAV_CMD_LOITER_TURN_COUNT ||
-			subs->global_pos_set_triplet.current.nav_cmd == NAV_CMD_LOITER_TIME_LIMIT ||
-			subs->global_pos_set_triplet.current.nav_cmd == NAV_CMD_LOITER_UNLIMITED) {
+	else if (subs->position_setpoint_triplet.current.type == SETPOINT_TYPE_LOITER) {
 		/* waypoint is a loiter waypoint */
-		math::Vector2f next_wp(float(subs->global_pos_set_triplet.current.lat)/1.0E7f,float(subs->global_pos_set_triplet.current.lon)/1.0E7f);
-		if(params->p.ASLC_DEBUG==10) printf("M5.2: Next WP (x/y): (%7.5f,%7.5f) | ", next_wp.getX(), next_wp.getY());
+		math::Vector<2> next_wp = {float(subs->position_setpoint_triplet.current.lat),float(subs->position_setpoint_triplet.current.lon)};
+		if(params->p.ASLC_DEBUG==10) printf("M5.2: Next WP (x/y): (%7.5f,%7.5f) | ", (double)next_wp(0), (double)next_wp(1));
 
 		if(params->p.ASLC_DEBUG <27) {
-			L1Ctrl.navigate_loiter(next_wp, cur_pos, subs->global_pos_set_triplet.current.loiter_radius,
-					subs->global_pos_set_triplet.current.loiter_direction, ground_speed);
+			L1Ctrl.navigate_loiter(next_wp, cur_pos, subs->position_setpoint_triplet.current.loiter_radius,
+					subs->position_setpoint_triplet.current.loiter_direction, ground_speed);
 		}
 		else {
-			L1Ctrl.navigate_loiter_adapt(next_wp, cur_pos, subs->global_pos_set_triplet.current.loiter_radius,
-								subs->global_pos_set_triplet.current.loiter_direction, ground_speed,subs->att.yaw,subs->global_pos_set_triplet.current.altitude, subs->global_pos.alt);
+			//This is a call to ASL/Kostas' modified L1 loitering logic
+			//L1Ctrl.navigate_loiter_adapt(next_wp, cur_pos, subs->position_setpoint_triplet.current.loiter_radius,
+			//					subs->position_setpoint_triplet.current.loiter_direction, ground_speed,subs->att.yaw,subs->position_setpoint_triplet.current.altitude, subs->global_pos.alt);
 		}
 
 	}
 	else {
 		/* RETURN TO LAUNCH (RTL) */
-		if(params->p.ASLC_DEBUG==10) printf("M5.3: Home=(%7.5f,%7.5f,%.3f)\n",float(subs->home_pos.lat)/1.0E7f,float(subs->home_pos.lon)/1.0E7f,float(subs->home_pos.alt));
-		math::Vector2f rtl_pos(float(subs->home_pos.lat)/1.0E7f, float(subs->home_pos.lon)/1.0E7f);
+		if(params->p.ASLC_DEBUG==10) printf("M5.3: Home=(%7.5f,%7.5f,%.3f)\n",subs->home_pos.lat,subs->home_pos.lon,double(subs->home_pos.alt));
+		math::Vector<2> rtl_pos = {float(subs->home_pos.lat), float(subs->home_pos.lon)};
 
 		L1Ctrl.navigate_waypoints(rtl_pos, rtl_pos, cur_pos, ground_speed);
 	}
 
 	RollAngleRef = limit1(L1Ctrl.nav_roll(), params->p.CAS_RollAngleLim);
 
-	if(params->p.ASLC_DEBUG==10) printf("Roll Angle Ref(unlim):%7.4f \n",L1Ctrl.nav_roll());
+	if(params->p.ASLC_DEBUG==10) printf("Roll Angle Ref(unlim):%7.4f \n",(double)L1Ctrl.nav_roll());
 
 	return 0;
 }
@@ -141,7 +142,7 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 	//Absolute altitude controller
 	//printf("hRef: %7.4f h:%7.4f h_home: %7.4f velw: %7.4f\n", hRef, h, h_home,velw);
 
-	if(params->p.ASLC_DEBUG==11) printf("AltCtrl: bModeChanged:%u, bUseRamp:%u, h:%.2f, hRef:%.2f, hRef_t:%.2f\n",bModeChanged,bUseRamp,h,hRef,hRef_t);
+	if(params->p.ASLC_DEBUG==11) printf("AltCtrl: bModeChanged:%u, bUseRamp:%u, h:%.2f, hRef:%.2f, hRef_t:%.2f\n",bModeChanged,bUseRamp,(double)h,(double)hRef,(double)hRef_t);
 
 	int RET = 0;
 	//Safety checks. Either
@@ -149,7 +150,7 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 	if(h_home<0.0f || h_home>5000.0f) 				{return -1;}						// First, check whether home altitude is OK
 	if(params->p.HL_AlthMax < h_home+50.0f)			{return -2;}						// To catch a wrong user input
 	//b) Warnings (return RET after execution)
-	if(hRef<h_home+50.0f || hRef>h_home+5000.0f) 	{RET=-3; hRef=h_home+150.0;} 		// Relative altitude setpoint can be between these values
+	if(hRef<h_home+50.0f || hRef>h_home+5000.0f) 	{RET=-3; hRef=h_home+150.0f;} 		// Relative altitude setpoint can be between these values
 	if(h<h_home-100.0f || h>h_home+1000.0f) 		{RET=-4;} 							// Relative altitude can be between these values
 	//if(fabs(hRef-h)>300.0f)						{return -5;}  						// Maximum altitude change
 	if(hRef>params->p.HL_AlthMax)					{RET=-6; hRef=params->p.HL_AlthMax;} // Altitude-ref may not exceed max alt limit
@@ -176,12 +177,21 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 
 	//TECS altitude & airspeed controller
 	tecs.update_pitch_throttle(R_nb, subs->att.pitch, subs->global_pos.alt, hRef_t,
-						AirspeedRef,subs->sensors.dbaro_velo_ms, 1.0f, false, math::radians(params->p.pitch_limit_min),
+						AirspeedRef,subs->airspeed.true_airspeed_m_s, 1.0f, false, math::radians(params->p.pitch_limit_min),
 						params->p.throttle_min, maxThrot, params->p.throttle_cruise, math::radians(params->p.pitch_limit_min),
 						math::radians(params->p.pitch_limit_max));
 
 	PitchAngleRef = tecs.get_pitch_demand();
 	uThrot = tecs.get_throttle_demand();
+
+	struct TECS::tecs_state TECS_State;
+	tecs.get_tecs_state(TECS_State);
+	if(TECS_State.mode != TECS::ECL_TECS_MODE_NORMAL)
+	{
+		if(TECS_State.mode == TECS::ECL_TECS_MODE_UNDERSPEED) RET=-10;
+		if(TECS_State.mode == TECS::ECL_TECS_MODE_BAD_DESCENT) RET=-11;
+		if(TECS_State.mode == TECS::ECL_TECS_MODE_CLIMBOUT) RET=-12;
+	}
 
 	//Limiters. TODO: Add additional checks here.
 	PitchAngleRef=limit1(PitchAngleRef,params->p.CAS_PitchAngleLim);
@@ -193,10 +203,11 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 	if(h < hRef_t - 20.0f && PitchAngleRef>params->p.CAS_PitchAngleLim) {
 		// Check for any large altitude undershoot. We need too increase throttle if we are descending too much!
 		AltitudeStatus = ALTITUDE_WARNING_ALTLOW;
-		RET=-10;
+		RET=-13;
 	}
 
 	return RET;
+	//TODO: Return reasonable warnings&errors to the User/QGC, not just error codes that nobody knows.
 }
 
 int HL::TECS_Update50Hz(void)
@@ -204,10 +215,10 @@ int HL::TECS_Update50Hz(void)
 	//This function updates the TECS data fields. It should be run at >50Hz.
 	for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++)
 		R_nb(i, j) = subs->att.R[i][j];
-	math::Vector3 accel_body(subs->sensors.accelerometer_m_s2[0], subs->sensors.accelerometer_m_s2[1], subs->sensors.accelerometer_m_s2[2]);
-	math::Vector3 accel_earth = R_nb.transpose() * accel_body;
+	math::Vector<3> accel_body(subs->sensors.accelerometer_m_s2);
+	math::Vector<3> accel_earth = R_nb * accel_body;
 
-	tecs.update_50hz(subs->global_pos.alt, subs->sensors.dbaro_velo_ms, R_nb, accel_body, accel_earth);
+	tecs.update_50hz(subs->global_pos.alt, subs->airspeed.true_airspeed_m_s, R_nb, accel_body, accel_earth);
 
 	return 0;
 }
@@ -218,7 +229,7 @@ int HL::CalcAltitudeRamp(float& hRef_t, const float& hRef, const float& h, const
 
 	float dt = (hrt_absolute_time()-t_old)/1.0E6;
 
-	if(dt > 1.0 /*|| bModeChanged*/) {
+	if(dt > 1.0f /*|| bModeChanged*/) {
 		//Reinit (because of ModeChange or first init), but don't run for now!
 		hRef_t = h;
 		t_old = hrt_absolute_time();
@@ -239,7 +250,7 @@ int HL::CalcAltitudeRamp(float& hRef_t, const float& hRef, const float& h, const
 	t_old = hrt_absolute_time();
 
 	//DEBUG
-	if(params->p.ASLC_DEBUG==11) printf("AltRAMP: bModeChanged:%u, h:%.2f, hRef:%.2f, hRef_t:%.2f\n",bModeChanged,h,hRef,hRef_t);
+	if(params->p.ASLC_DEBUG==11) printf("AltRAMP: bModeChanged:%u, h:%.2f, hRef:%.2f, hRef_t:%.2f\n",bModeChanged,(double)h,(double)hRef,(double)hRef_t);
 
 	return 0;
 }
@@ -284,7 +295,7 @@ int HL::CalcThermalModeModifications(const float& h, const float& hRef_t, bool& 
 		bEngageSpoilers=bSpoilerAltExceeded;
 	}
 
-	if(params->p.ASLC_DEBUG == 29) printf("h:%.1f hMax:%.1f sw:%.2f r2t:%.2f hrp:%.2f bSpoil:%d\n",h,params->p.HL_AlthMax,tecs.get_speed_weight(),tecs.get_roll_throttle_compensation(), tecs.get_heightrate_p(),bEngageSpoilers);
+	if(params->p.ASLC_DEBUG == 29) printf("h:%.1f hMax:%.1f sw:%.2f bSpoil:%d\n",(double)h,(double)params->p.HL_AlthMax,(double)tecs.get_speed_weight(),/*(double)tecs.get_roll_throttle_compensation(), (double)tecs.get_heightrate_p(),*/bEngageSpoilers);
 
 	return 0;
 }

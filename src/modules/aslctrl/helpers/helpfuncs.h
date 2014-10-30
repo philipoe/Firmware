@@ -54,7 +54,7 @@ const float Rair=287.1f; // [J/(kg*K)]
 const float KelvinConstant=273.15f;
 inline float CalcRhoAir(float pressure, float temperature)
 {
-	 return pressure*1E2/Rair/(temperature+KelvinConstant);
+	 return pressure*100.0f/Rair/(temperature+KelvinConstant);
 }
 
 inline float GainScheduler_linear(float error_cur, float error_max, float Kp_nom, float Kp_min)
@@ -91,7 +91,7 @@ inline float interp1_lin(const float &dx_rel,  const float &y1, const float &y2)
 
 //Protection against division by zero
 inline float SAFE_ZERO_DIV(const float &value) {
-	return (fabs(value)>1E-5f?value:sgn(value)*1E-5);
+	return (fabs(value)>1E-5f?value:sgn(value)*1E-5f);
 }
 
 //inline float interp1_quadr(const float &x1, const float &x2, const float &x3, const float &x, const float &y1, const float &y2, const float &y3) {

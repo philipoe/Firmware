@@ -14,12 +14,12 @@
 #include <systemlib/param/param.h>
 
 SAS::SAS() :
-	LP_Roll(0,0), LP_Pitch(0,0), LP_Yaw(0,0), HP_Pitch(0,0), HP_Yaw(0,0), LP_Airspeed(0,0), MA_Airspeed(4,0.0f)
+	LP_Pitch(0,0), LP_Roll(0,0), LP_Yaw(0,0), HP_Pitch(0,0), HP_Yaw(0,0), LP_Airspeed(0,0), MA_Airspeed(4,0.0f)
 {
 };
 
 SAS::SAS(parameters *params_arg, subscriptions *subs_arg) :
-		LP_Roll(0,0), LP_Pitch(0,0), LP_Yaw(0,0), HP_Pitch(0,0), HP_Yaw(0,0), LP_Airspeed(0,0), MA_Airspeed(4,0.0f)
+		LP_Pitch(0,0), LP_Roll(0,0), LP_Yaw(0,0), HP_Pitch(0,0), HP_Yaw(0,0), LP_Airspeed(0,0), MA_Airspeed(4,0.0f)
 {
 	params=params_arg;
 	subs=subs_arg;
@@ -58,7 +58,7 @@ void SAS::RollDamper(float &uAilCmd, float const &p, float AirspeedScaler1, floa
 	uAilCmd = AirspeedScaler1*uAilCmd + AirspeedScaler2*uAilCtrlCmd + uAilTrim;
 
 	//debug
-	if(params->p.ASLC_DEBUG == 17)  printf("p: %7.5f, pFilt: %7.5f, uAilCtrlCmd: %7.4f, uAilCmd: %.4f\n", p, pFilt, uAilCtrlCmd, uAilCmd);
+	if(params->p.ASLC_DEBUG == 17)  printf("p: %7.5f, pFilt: %7.5f, uAilCtrlCmd: %7.4f, uAilCmd: %.4f\n", (double)p, (double)pFilt, (double)uAilCtrlCmd, (double)uAilCmd);
 
 	return;
 }
@@ -77,7 +77,7 @@ void SAS::PitchDamper(float &uEleCmd, float const &q, float AirspeedScaler1, flo
 	uEleCmd = AirspeedScaler1*uEleCmd + AirspeedScaler2*uEleCtrlCmd + uEleTrim;
 
 	//debug
-	if(params->p.ASLC_DEBUG == 18) printf("q: %7.5f, qFilt: %7.5f, uElevCtrlCmd: %7.4f, uEleCmd:%.4f\n", q, qFilt,uEleCtrlCmd,uEleCmd);
+	if(params->p.ASLC_DEBUG == 18) printf("q: %7.5f, qFilt: %7.5f, uElevCtrlCmd: %7.4f, uEleCmd:%.4f\n", (double)q, (double)qFilt,(double)uEleCtrlCmd,(double)uEleCmd);
 
 	return;
 }
@@ -96,7 +96,7 @@ void SAS::YawDamper(float &uRudCmd, float const &r, float AirspeedScaler1, float
 	uRudCmd = AirspeedScaler1*uRudCmd + AirspeedScaler2*uRudCtrlCmd + uRudTrim;
 
 	//debug
-	if(params->p.ASLC_DEBUG == 19) printf("r: %7.5f, rFilt: %7.5f, HPmgain: %7.4f, uRudCtrlCmd: %7.4f uRudCmd: %.4f\n", r, rFilt,HP_Yaw.m_gain, uRudCtrlCmd, uRudCmd);
+	if(params->p.ASLC_DEBUG == 19) printf("r: %7.5f, rFilt: %7.5f, HPmgain: %7.4f, uRudCtrlCmd: %7.4f uRudCmd: %.4f\n", (double)r, (double)rFilt,(double)HP_Yaw.m_gain, (double)uRudCtrlCmd, (double)uRudCmd);
 
 	return;
 }
@@ -108,7 +108,7 @@ void SAS::CoordinatedTurn_YawDamper(float &uRudCmd, float const &r, float& rRef,
 
 	if(LP_Airspeed.Get()>1.0f /*bAirspeedValid*/) {
 		// Recalculate reference body-yawrate (i.e. r-rate) necessary for a coordinated turn
-		rRef = g * sin(roll) / LP_Airspeed.Get();
+		rRef = g * sinf(roll) / LP_Airspeed.Get();
 
 		// Yawrate reference. Calculated from coordinated turn constraint, assuming constant pitch (theta_dot=0)
 		//ctrldata.Yawdot_ref = g * tan(roll) / LP_Airspeed.Get();
@@ -117,16 +117,16 @@ void SAS::CoordinatedTurn_YawDamper(float &uRudCmd, float const &r, float& rRef,
 	}
 
 	//SAS action
-	uRudCtrlCmd = subs->manual_sp.yaw;
+	uRudCtrlCmd = subs->manual_sp.r;
 	uRudCtrlCmd += params->p.SAS_YawPDir * params->p.SAS_YawCTkP*(rFilt-rRef);
-	uRudCtrlCmd -= params->p.SAS_YawPDir * params->p.SAS_YawCTFF*sin(RollRef); 			//real feed forward
+	uRudCtrlCmd -= params->p.SAS_YawPDir * params->p.SAS_YawCTFF*sinf(RollRef); 			//real feed forward
 	uRudCtrlCmd=limit1(uRudCtrlCmd, params->p.SAS_YCtrlLim);
 
 	//Combination of CAS&SAS to output (with scaling)
 	uRudCmd = AirspeedScaler1*uRudCmd + AirspeedScaler2*uRudCtrlCmd + uRudTrim;
 
 	//debug
-	if(params->p.ASLC_DEBUG == 19) printf("r: %.3f, rFilt: %.3f, rRef: %.3f roll:%.3f rollref: %.3f uRudCtrlCmd: %7.4f uRudCmd: %.4f\n", r, rFilt,rRef,roll, RollRef,uRudCtrlCmd, uRudCmd);
+	if(params->p.ASLC_DEBUG == 19) printf("r: %.3f, rFilt: %.3f, rRef: %.3f roll:%.3f rollref: %.3f uRudCtrlCmd: %7.4f uRudCmd: %.4f\n", (double)r, (double)rFilt,(double)rRef,(double)roll, (double)RollRef,(double)uRudCtrlCmd, (double)uRudCmd);
 
 	return;
 }
@@ -140,7 +140,7 @@ void SAS::CoordinatedTurn_RollYawDecoupling(float const &uAilCmd,float &uRudCmd,
 	float temp=limit1(params->p.SAS_RollYawDecoupleKari*uAilCmd,params->p.SAS_YCtrlLim);
 	uRudCmd += temp;
 
-	if(params->p.ASLC_DEBUG == 20)  printf("uRudCmd_New: %7.5f, temp: %7.5f\n", uRudCmd, temp);
+	if(params->p.ASLC_DEBUG == 20)  printf("uRudCmd_New: %7.5f, temp: %7.5f\n", (double)uRudCmd, (double)temp);
 }
 
 int SAS::StabilityAugmentation(float &uAilCmd, float &uElevCmd, float &uRudCmd,float &fGainSchedQ,float const &p, float const &q, float const &r, bool bModeChanged)
@@ -151,10 +151,10 @@ int SAS::StabilityAugmentation(float &uAilCmd, float &uElevCmd, float &uRudCmd,f
 
 	//Filtering (LowPass & Moving Average)
 	if(bModeChanged) {
-		LP_Airspeed.Set(subs->sensors.dbaro_velo_ms);
-		MA_Airspeed.Set(subs->sensors.dbaro_velo_ms);
+		LP_Airspeed.Set(subs->airspeed.true_airspeed_m_s);
+		MA_Airspeed.Set(subs->airspeed.true_airspeed_m_s);
 	}
-	MA_Airspeed.update(LP_Airspeed.update(subs->sensors.dbaro_velo_ms));
+	MA_Airspeed.update(LP_Airspeed.update(subs->airspeed.true_airspeed_m_s));
 
 	//Airspeed scaling
 	fGainSchedQ=GetDynamicPressureScaling(bModeChanged);
@@ -168,7 +168,7 @@ int SAS::StabilityAugmentation(float &uAilCmd, float &uElevCmd, float &uRudCmd,f
 	CoordinatedTurn_RollYawDecoupling(uAilCmd, uRudCmd, fGainSchedQ);
 	//YawRollDecoupling(uAilCmd,r);
 
-	if(params->p.ASLC_DEBUG==5) printf("uAil=(%7.4f/%7.4f) uElev=(%7.4f/%7.4f) uRud=(%7.4f/%7.4f)\n", temp1,uAilCmd,temp2,uElevCmd,temp3,uRudCmd);
+	if(params->p.ASLC_DEBUG==5) printf("uAil=(%7.4f/%7.4f) uElev=(%7.4f/%7.4f) uRud=(%7.4f/%7.4f)\n", (double)temp1,(double)uAilCmd,(double)temp2,(double)uElevCmd,(double)temp3,(double)uRudCmd);
 
 	return 0;
 }
@@ -183,10 +183,10 @@ int SAS::RateControl(const float pRef, const float qRef, float& rRef, float &uAi
 
 	//Filtering (LowPass & Moving Average)
 	if(bModeChanged) {
-		LP_Airspeed.Set(subs->sensors.dbaro_velo_ms);
-		MA_Airspeed.Set(subs->sensors.dbaro_velo_ms);
+		LP_Airspeed.Set(subs->airspeed.true_airspeed_m_s);
+		MA_Airspeed.Set(subs->airspeed.true_airspeed_m_s);
 	}
-	MA_Airspeed.update(LP_Airspeed.update(subs->sensors.dbaro_velo_ms));
+	MA_Airspeed.update(LP_Airspeed.update(subs->airspeed.true_airspeed_m_s));
 
 	//Airspeed scaling
 	fGainSchedQ=GetDynamicPressureScaling(bModeChanged);
@@ -218,10 +218,10 @@ int SAS::RateControl(const float pRef, const float qRef, float& rRef, float &uAi
 	CoordinatedTurn_RollYawDecoupling(uAilCmd, uRudCmd, fGainSchedQ);
 
 	if(params->p.ASLC_DEBUG==5) printf(" uAil=(%7.4f/%7.4f) uElev=(%7.4f/%7.4f) uRud=(%7.4f/%7.4f)\n",
-					temp1,uAilCmd,temp2,uElevCmd,temp3,uRudCmd);
+			(double)temp1,(double)uAilCmd,(double)temp2,(double)uElevCmd,(double)temp3,(double)uRudCmd);
 
 	// Return codes
-	if(fabs(params->p.SAS_RollPGain) <1.0E-5 || fabs(params->p.SAS_PitchPGain) <1.0E-5) {
+	if(fabs(params->p.SAS_RollPGain) <1.0E-5f || fabs(params->p.SAS_PitchPGain) <1.0E-5f) {
 		return -1; //Let the user know that the gains were accidentally set to zero, so there is no control authority!
 	}
 	else if(bOvSpdProt_Protecting) return -2;
@@ -263,15 +263,15 @@ int SAS::CalculateTrimOutputs(void)
 		if(bOvSpdProt_Protecting) {
 		float dAirspeed_rel = ((MA_Airspeed.Get()-f_tresh1*params->p.HL_Vel_vMax)/((f_tresh2-f_tresh1)*params->p.HL_Vel_vMax));
 		float kP_theta = limit2(-2.0f * subs->att.pitch/params->p.CAS_PitchAngleLim,1.0f,0.0f) ;
-		uEleTrim += kP_theta * interp1_lin(dAirspeed_rel, 0.0f,2.0*(params->p.SAS_TrimElevMin-params->p.SAS_TrimElevMax));
+		uEleTrim += kP_theta * interp1_lin(dAirspeed_rel, 0.0f,2.0f*(params->p.SAS_TrimElevMin-params->p.SAS_TrimElevMax));
 
-		if(params->p.ASLC_DEBUG == 13) printf("OVSPD_Prot: v=%.2f, dAirsped_rel=%.2f, kP_theta=%.3f, uEleTrim=%.2f\n",MA_Airspeed.Get(),dAirspeed_rel,kP_theta,uEleTrim);
+		if(params->p.ASLC_DEBUG == 13) printf("OVSPD_Prot: v=%.2f, dAirsped_rel=%.2f, kP_theta=%.3f, uEleTrim=%.2f\n",(double)MA_Airspeed.Get(),(double)dAirspeed_rel,(double)kP_theta,(double)uEleTrim);
 	}
 
 	// Take into account air density changes
 	// This is still TODO .
 
-	if(params->p.ASLC_DEBUG == 7) printf("Trim Ail=%7.4f Elev=%7.4f Rud=%7.4f\n",uAilTrim,uEleTrim,uRudTrim);
+	if(params->p.ASLC_DEBUG == 7) printf("Trim Ail=%7.4f Elev=%7.4f Rud=%7.4f\n",(double)uAilTrim,(double)uEleTrim,(double)uRudTrim);
 
 	return 0;
 }
@@ -288,7 +288,7 @@ float SAS::GetDynamicPressureScaling(bool bModeChanged)
 	//Assume constant for now.
 	float fRho=1.0f;
 
-	if(params->p.ASLC_DEBUG==5) printf("v-Scale: v=%.4f v_f=%.4f f_Sc:%.4f vScaleExp:%.2f",subs->sensors.dbaro_velo_ms, MA_Airspeed_lim, fAirspeed*fRho,params->p.SAS_vScaleExp);
+	if(params->p.ASLC_DEBUG==5) printf("v-Scale: v=%.4f v_f=%.4f f_Sc:%.4f vScaleExp:%.2f",(double)subs->airspeed.true_airspeed_m_s, (double)MA_Airspeed_lim, double(fAirspeed*fRho),(double)params->p.SAS_vScaleExp);
 
 	return fAirspeed*fRho;
 }

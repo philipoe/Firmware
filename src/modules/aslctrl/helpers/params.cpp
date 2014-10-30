@@ -159,6 +159,7 @@ int parameters::init()
 	h.speed_weight = param_find("FW_T_SPDWEIGHT");
 	h.pitch_damping = param_find("FW_T_PTCH_DAMP");
 	h.heightrate_p = param_find("FW_T_HRATE_P");
+	h.heightrate_ff = param_find("FW_T_HRATE_FF");
 	h.speedrate_p =	param_find("FW_T_SRATE_P");
 	h.throttle_slewrate = param_find("FW_T_THRSLEW");
 	h.throttle_ILim = param_find("FW_T_ThrILim");
@@ -311,6 +312,7 @@ int parameters::update()
 	param_get(h.pitch_damping, &(p.pitch_damping));
 	param_get(h.max_climb_rate, &(p.max_climb_rate));
 	param_get(h.heightrate_p, &(p.heightrate_p));
+	param_get(h.heightrate_ff, &(p.heightrate_ff));
 	param_get(h.speedrate_p, &(p.speedrate_p));
 	param_get(h.throttle_slewrate, &(p.throttle_slewrate));
 	param_get(h.throttle_ILim, &(p.throttle_ILim));

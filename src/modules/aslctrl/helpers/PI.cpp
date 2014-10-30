@@ -7,7 +7,7 @@ PI_Ctrl::PI_Ctrl(void): m_int(0.0f), m_tSample(0.0f)
 }
 
 PI_Ctrl::PI_Ctrl(float const & PGain, float const & IGain, float const & SatMax, float const & SatMin, float const & IntMax, float const & IntMin, float const & tSample)
-	: m_PGain(PGain), m_IGain(IGain), m_SatMax(SatMax), m_SatMin(SatMin), m_tSample(tSample), m_IntMax(IntMax), m_IntMin(IntMin), m_int(0.0f)
+	: m_int(0.0f), m_PGain(PGain), m_IGain(IGain), m_SatMax(SatMax), m_SatMin(SatMin), m_tSample(tSample), m_IntMax(IntMax), m_IntMin(IntMin)
 {
 }
 void PI_Ctrl::SetParams(float PGain, float IGain, float SatMax, float SatMin, float IntMax, float IntMin, float tSample)

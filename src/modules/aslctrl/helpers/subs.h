@@ -3,7 +3,7 @@
 
 #include <uORB/uORB.h>
 #include <uORB/topics/vehicle_global_position.h>
-#include <uORB/topics/vehicle_global_position_set_triplet.h>
+#include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_control_mode.h>
@@ -47,7 +47,7 @@ public:
 	struct vehicle_attitude_setpoint_s att_sp;
 	struct vehicle_rates_setpoint_s rates_sp;
 	struct vehicle_global_position_s global_pos;
-	struct vehicle_global_position_set_triplet_s global_pos_set_triplet;
+	struct position_setpoint_triplet_s position_setpoint_triplet;
 	struct manual_control_setpoint_s manual_sp;
 	struct vehicle_status_s vstatus;
 	struct vehicle_control_mode_s vcontrol;
@@ -68,7 +68,7 @@ private:
 	int att_sp_sub;
 	int rates_sp_sub;
 	int global_pos_sub;
-	int global_pos_set_triplet_sub;
+	int position_setpoint_triplet_sub;
 	int manual_sp_sub;
 	int vstatus_sub;
 	int vcontrol_sub;

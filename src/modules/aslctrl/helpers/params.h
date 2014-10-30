@@ -140,6 +140,7 @@ struct control_param_handles {
 	param_t throttle_max;
 	param_t throttle_cruise;
 	param_t heightrate_p;
+	param_t heightrate_ff;
 	param_t speedrate_p;
 	param_t throttle_slewrate;
 	param_t throttle_ILim;

@@ -47,7 +47,7 @@ private:
 	LowPass LP_h;				// Altitude Low Pass Filter
 
 	hrt_abstime t_old;
-	math::Dcm R_nb;				//TECS attitude rotation matrix
+	math::Matrix<3,3> R_nb;				//TECS attitude rotation matrix
 
 	parameters *params;			//parameters from PX4
 	subscriptions *subs; 		//UORB subscriptions from PX4

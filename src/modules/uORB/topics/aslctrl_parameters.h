@@ -175,6 +175,7 @@ struct aslctrl_parameters_s {
 	float throttle_max;
 	float throttle_cruise;
 	float heightrate_p;
+	float heightrate_ff;
 	float speedrate_p;
 	float throttle_slewrate;
 	float throttle_ILim;

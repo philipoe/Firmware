@@ -52,7 +52,7 @@ int LowPass::SetGains(float const tSample, float const omega)
 // MOVING AVERAGE FILTER
 //***********************************************************
 MovingAverage::MovingAverage(int initialvalue, int _order)
-	: m_oldValue(initialvalue), order(_order)
+	: order(_order), m_oldValue(initialvalue)
 {
 		divider=1.0f/(1.0f+order);
 }

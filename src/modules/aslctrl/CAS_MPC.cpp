@@ -123,11 +123,11 @@ int CAS_MPC::CASRollPitchControl_MPC(float& uAil, float& uEle, float const& Roll
 	//If mode was changed, reinitialise applicable filters and variables
 	if(bModeChanged) {
 		//LP_AccZ.Set(accZ);
-		LP_Airspeed.Set(subs->sensors.dbaro_velo_ms);
-		MA_Airspeed.Set(subs->sensors.dbaro_velo_ms);
+		LP_Airspeed.Set(subs->airspeed.true_airspeed_m_s);
+		MA_Airspeed.Set(subs->airspeed.true_airspeed_m_s);
 	}
 	//LP_AccZ.update(accZ);
-	MA_Airspeed.update(LP_Airspeed.update(subs->sensors.dbaro_velo_ms));
+	MA_Airspeed.update(LP_Airspeed.update(subs->airspeed.true_airspeed_m_s));
 	LP_RollRate.update(p);
 	LP_PitchRate.update(q);
 
@@ -152,8 +152,8 @@ int CAS_MPC::CASRollPitchControl_MPC(float& uAil, float& uEle, float const& Roll
 	uEle += uEleTrim;
 
 	if(params->p.ASLC_DEBUG==8) {
-		printf("MPC: Pitch_ref: %7.4f: Pitch %7.4f q: %7.5f u_elev:%7.4f\n",PitchAngleRef,PitchAngle,q,uEle);
-		printf("MPC: Bank_ref:  %7.4f: Bank %7.4f  p: %7.5f u_Ail:%7.4f\n",RollAngleRef,RollAngle,p,uAil);
+		printf("MPC: Pitch_ref: %7.4f: Pitch %7.4f q: %7.5f u_elev:%7.4f\n",(double)PitchAngleRef,(double)PitchAngle,(double)q,(double)uEle);
+		printf("MPC: Bank_ref:  %7.4f: Bank %7.4f  p: %7.5f u_Ail:%7.4f\n",(double)RollAngleRef,(double)RollAngle,(double)p,(double)uAil);
 	}
 
 	return 0;
@@ -181,7 +181,7 @@ int CAS_MPC::CalculateTrimOutputs(void)
 	// Take into account air density changes
 	// This is still TODO .
 
-	if(params->p.ASLC_DEBUG == 7) printf("Trim Ail=%7.4f Elev=%7.4f Rud=%7.4f\n",uAilTrim,uEleTrim,uRudTrim);
+	if(params->p.ASLC_DEBUG == 7) printf("Trim Ail=%7.4f Elev=%7.4f Rud=%7.4f\n",(double)uAilTrim,(double)uEleTrim,(double)uRudTrim);
 
 	return 0;
 }

@@ -4,7 +4,7 @@
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_global_position.h>
-#include <uORB/topics/vehicle_global_position_set_triplet.h>
+#include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/actuator_controls.h>
@@ -39,6 +39,7 @@ public:
 	virtual ~ASLAutopilot();
 
 	int SetCtrlData(void);
+
 	int ReloadParameters(void);
 	//int UpdateFilters(const int & counter);
 
