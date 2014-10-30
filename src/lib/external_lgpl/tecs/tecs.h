@@ -43,6 +43,7 @@ public:
 		_ptchDamp(0.0f),
 		_thrDamp(0.0f),
 		_integGain(0.0f),
+		_throtILim(0.0f),
 		_vertAccLim(0.0f),
 		_rollComp(0.0f),
 		_spdWeight(0.5f),
@@ -233,6 +234,10 @@ public:
 		_detect_underspeed_enabled = enabled;
 	}
 
+	void set_throtILim(float limit) {
+		_throtILim=limit;
+	}
+
 private:
 
 	struct tecs_state _tecs_state;
@@ -257,6 +262,7 @@ private:
 	float _ptchDamp;
 	float _thrDamp;
 	float _integGain;
+	float _throtILim;
 	float _vertAccLim;
 	float _rollComp;
 	float _spdWeight;
