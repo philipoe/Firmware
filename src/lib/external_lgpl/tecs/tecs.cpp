@@ -344,14 +344,14 @@ void TECS::_update_throttle(float throttle_cruise, const math::Matrix<3,3> &rotM
 			_throttle_dem = ff_throttle;
 		}
 
+		// Constrain throttle demand
+		_throttle_dem = constrain(_throttle_dem, _THRminf, _THRmaxf);
+
 		// Rate limit PD + FF throttle from the specified slew time.
 		if (fabsf(_throttle_slewrate) > 0.001f && (_THRmaxf-_THRminf)>0.001f) {
 			float thrRateIncr = _DT * (_THRmaxf - _THRminf) * _throttle_slewrate;
 			_throttle_dem = constrain(_throttle_dem, _last_throttle_dem-thrRateIncr, _last_throttle_dem+thrRateIncr);
 		}
-
-		// Constrain throttle demand
-		_throttle_dem = constrain(_throttle_dem, _THRminf, _THRmaxf);
 	}
 	_last_throttle_dem = _throttle_dem;
 }
