@@ -73,6 +73,9 @@ ORB_DEFINE(output_pwm, struct pwm_output_values);
 #include <drivers/drv_rc_input.h>
 ORB_DEFINE(input_rc, struct rc_input_values);
 
+#include "topics/state_estimator_EKF_parameters.h"											// added for testing the EKF state estimator (ASL/Amir)
+ORB_DEFINE(state_estimator_EKF_parameters, struct state_estimator_EKF_parameters_s);		// added for testing the EKF state estimator (ASL/Amir)
+
 #include "topics/aslctrl_parameters.h"								// added for testing ASLCTRL (PhOe)
 ORB_DEFINE(aslctrl_parameters, struct aslctrl_parameters_s);		// added for testing ASLCTRL (PhOe)
 

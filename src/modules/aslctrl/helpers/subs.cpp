@@ -49,7 +49,7 @@ int subscriptions::init(void)
 	vcontrol_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	param_update_sub = orb_subscribe(ORB_ID(parameter_update));
 	sensors_sub = orb_subscribe(ORB_ID(sensor_combined));
-	ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parmeters));
+	ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
 	home_pos_sub = orb_subscribe(ORB_ID(home_position));
 	airspeed_sub = orb_subscribe(ORB_ID(airspeed));
 
@@ -85,7 +85,7 @@ int subscriptions::get_inputs(void)
 	orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
 	orb_copy(ORB_ID(vehicle_control_mode), vcontrol_sub, &vcontrol);
 	orb_copy(ORB_ID(sensor_combined), sensors_sub, &sensors);
-	orb_copy(ORB_ID(state_estimator_EKF_parmeters), ekf_sub, &ekf);
+	orb_copy(ORB_ID(state_estimator_EKF_parameters), ekf_sub, &ekf);
 	orb_copy(ORB_ID(home_position), home_pos_sub, &home_pos);
 	orb_copy(ORB_ID(airspeed), airspeed_sub, &airspeed);
 

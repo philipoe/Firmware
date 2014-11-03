@@ -16,7 +16,7 @@
 #include <uORB/topics/aslctrl_data.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/sensor_combined.h>
-#include <uORB/topics/state_estimator_EKF_parmeters.h>
+#include <uORB/topics/state_estimator_EKF_parameters.h>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/airspeed.h>
 
@@ -53,7 +53,7 @@ public:
 	struct vehicle_control_mode_s vcontrol;
 	struct parameter_update_s param_update;
 	struct sensor_combined_s sensors;
-	struct state_estimator_EKF_parmeters_s ekf;
+	struct state_estimator_EKF_parameters_s ekf;
 	struct home_position_s home_pos;
 	struct airspeed_s airspeed;
 
