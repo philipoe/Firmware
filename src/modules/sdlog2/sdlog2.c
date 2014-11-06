@@ -102,6 +102,9 @@
 #include "sdlog2_format.h"
 #include "sdlog2_messages.h"
 
+//Added (ASL/PhilippOe)
+#include "logenabler.h"
+
 /**
  * Logging rate.
  *
@@ -915,6 +918,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 	if (OK != logbuffer_init(&lb, log_buffer_size)) {
 		errx(1, "can't allocate log buffer, exiting");
 	}
+
+	//Added (ASL/PhilippOe)
+	GetLogEnablerParams();
 
 	struct vehicle_status_s buf_status;
 
