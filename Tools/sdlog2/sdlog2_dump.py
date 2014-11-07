@@ -37,8 +37,8 @@ class SDLog2Parser:
     MSG_HEADER_LEN = 3
     MSG_HEAD1 = 0xA3
     MSG_HEAD2 = 0x95
-    MSG_FORMAT_PACKET_LEN = 89
-    MSG_FORMAT_STRUCT = "BB4s16s64s"
+    MSG_FORMAT_PACKET_LEN = 329         #Modified by ASL/PhilippOe
+    MSG_FORMAT_STRUCT = "BB4s64s256s"   #Modified by ASL/PhilippOe
     MSG_TYPE_FORMAT = 0x80
     FORMAT_TO_STRUCT = {
         "b": ("b", None),
