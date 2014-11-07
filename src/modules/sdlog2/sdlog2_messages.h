@@ -417,6 +417,197 @@ struct log_ENCD_s {
 };
 
 
+/********** ASL-MESSAGES, ID > 100 **************/
+
+/* --- ASLCTRL - ASLC parameter state --- (ASL/PhilippOe) */
+// Abbreviations:
+// A/ASLC=ASLC, S=SAS, C=CAS, HL=HL
+// R=RollAngle/RRate=RollRate, P=Pitch, Y=Yaw
+// kP = P-Gain, kI=I-Gain, L=Lim, IL=Integral-Limit, LP=Low Pass, HP=HighPass, T=Trim,
+// GS=GainScheduling, SP=StallProtection, tS=tSample
+
+#define LOG_ASLC_MSG 101
+struct log_ASLC_s {
+
+	uint64_t timestamp;      /**< in microseconds since system start          */
+
+	//--- ASLCTRL GENERAL --------------------
+	uint8_t ASLC_CtrlType;
+	uint8_t ASLC_GainSch_E;
+	uint8_t ASLC_GainSch_Q;
+	uint8_t ASLC_StallProt;
+	uint8_t ASLC_VelCtrl;
+	uint8_t ASLC_OnRCLoss;
+	uint8_t ASLC_OvSpdProt;
+	uint8_t ASLC_CoordTurn;
+};
+
+#define LOG_ASAS_MSG 102
+struct log_ASAS_s {
+	//--- SAS --------------------
+	//Sampling time
+	float SAS_tSample;
+	//Gains
+	float SAS_RollPGain;
+	float SAS_PitchPGain;
+	float SAS_YawPGain;
+	float SAS_RollPDir;
+	float SAS_PitchPDir;
+	float SAS_YawPDir;
+	float SAS_RollYawDecoupleKari;
+	float SAS_YawCTFF;
+	float SAS_YawCTkP;
+
+	//Limiters
+	float SAS_RCtrlLim;
+	float SAS_PCtrlLim;
+	float SAS_YCtrlLim;
+	//Filters
+	float SAS_YawHighPassOmega;
+	float SAS_PitchLowPassOmega;
+	float SAS_RollLowPassOmega;
+	//Dynamic Pressure Scaling
+	float SAS_vScaleLimF;
+	float SAS_vScaleExp;
+	//Trim Values
+	float SAS_TrimAilvNom;
+	float SAS_TrimAilvMin;
+	float SAS_TrimAilvMax;
+	float SAS_TrimElevNom;
+	float SAS_TrimElevMin;
+	float SAS_TrimElevMax;
+	float SAS_TrimRudvNom;
+	float SAS_TrimRudvMin;
+	float SAS_TrimRudvMax;
+};
+
+#define LOG_ACAS_MSG 103
+struct log_ACAS_s {
+	//---CAS/AP ----------------------
+	//Sampling time
+	uint8_t CAS_fMult;
+	//Gains
+	float CAS_PitchPGain;
+	float CAS_PitchPGainM;
+	float CAS_PitchIGain;
+	float CAS_RollPGain;
+	float CAS_RollPGainM;
+	float CAS_HeadPGain;
+	float CAS_q2uPGain;
+	float CAS_p2uPGain;
+
+	//Limiters
+	float CAS_PitchRateLim;
+	float CAS_PitchRateILim;
+	float CAS_PitchTCkI;
+	float CAS_PitchTCILim;
+	float CAS_RollRateLim;
+	float CAS_YawRateLim;
+	float CAS_PitchAngleLim;
+	float CAS_RollAngleLim;
+
+	//Coordinated turn feed-forward gains
+	float CAS_uElevTurnFF;
+
+	//Filters
+	float CAS_YawLowPassOmega;
+};
+
+#define LOG_AHL_MSG 104
+struct log_AHL_s {
+	//---WP following ------------------
+	uint8_t HL_fMult;
+	float HL_WPL1_Damping;
+	float HL_WPL1_P_vMin;
+	float HL_WPL1_P_vNom;
+	float HL_WPL1_P_vMax;
+	float HL_Vel_vNom;
+	float HL_Vel_vMin;
+	float HL_Vel_vMax;
+	//Old altitude controller
+	float HL_AlthMax;
+	float HL_AlthMin;
+	float HL_vZClimb;
+	float HL_vZSink;
+	float HL_AltLowPassOmega;
+	//---TECS--------------------
+	float time_const;
+	float time_const_throt;
+	float min_sink_rate;
+	float max_sink_rate;
+	float max_climb_rate;
+	float throttle_damp;
+	float integrator_gain;
+	float throttle_ILim;
+	float vertical_accel_limit;
+	float height_comp_filter_omega;
+	float speed_comp_filter_omega;
+	float roll_throttle_compensation;
+	float speed_weight;
+	float pitch_damping;
+	float airspeed_min;
+	float airspeed_trim;
+	float airspeed_max;
+	float pitch_limit_min;
+	float pitch_limit_max;
+	float throttle_min;
+	float throttle_max;
+	float throttle_cruise;
+	float heightrate_p;
+	float speedrate_p;
+	float throttle_slewrate;
+};
+
+#define LOG_ASLD_MSG 105
+struct log_ASLD_s {
+	/* --- ASLD - ASLD data state --- */
+	uint64_t timestamp;      /**< in microseconds since system start          */
+	uint32_t dt;
+	uint8_t aslctrl_mode; //The control mode (manual, assisted, auto...)
+
+	//Longitudinal loop
+	float h;
+	float hRef;
+	float hRef_t;
+	float PitchAngle;
+	float PitchAngleRef;
+	float PitchAngleRefCT;
+	float q;
+	float qRef;
+	float uElev;
+	float uThrot;
+	float uThrot2;
+	float aZ;
+	float AirspeedRef;
+	uint8_t bEngageSpoilers;
+
+	//Lateral loops
+	float YawAngle;
+	float YawAngleRef;
+	float RollAngle;
+	float RollAngleRef;
+	float p;
+	float pRef;
+	float r;
+	float rRef;
+	float uAil;
+	float uRud;
+	float Yawdot_ref;
+	float Yawdot;
+
+	//General
+	float f_GainSch_Q;
+	float P_kP_GainSch_E;
+	float R_kP_GainSch_E;
+	float qmax;
+	uint8_t StallStatus;
+	uint8_t AltitudeStatus;
+	uint8_t AirspeedCtrlStatus;
+};
+///////////////////////////////
+
+///////////////////////////////
+
 /********** SYSTEM MESSAGES, ID > 0x80 **********/
 
 /* --- TIME - TIME STAMP --- */
@@ -482,6 +673,13 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(TECS, "fffffffffffffB",	"ASP,AF,FSP,F,FF,AsSP,AsF,AsDSP,AsD,TERSP,TER,EDRSP,EDR,M"),
 	LOG_FORMAT(WIND, "ffff",	"X,Y,CovX,CovY"),
 	LOG_FORMAT(ENCD, "qfqf",	"cnt0,vel0,cnt1,vel1"),
+
+	/* ASL messages, ID >= 100(0x64) */
+	LOG_FORMAT(ASLC, "QBBBBBBBB","timestamp,CtrlType,GainSch_E,GainSch_Q,StallProt,VelCtrl,OnRCLoss,OvSpdProt,CoordTurn"),
+	LOG_FORMAT(ASAS, "fffffffffffffffffffffffffff","tSample,R_kP,P_kP,Y_kP,R_PDir,P_PDir,Y_PDir,RYDec_kari,Y_TurnFF,Y_TurnkP,R_Lim,P_Lim,Y_Lim,Y_LPw,P_LPw,R_LPw,vScaleLimF,vScaleExp,R_T_vNom,R_T_vMin,R_T_vMax,P_T_vNom,P_T_vMin,P_T_vMax,Y_T_vNom,Y_T_vMin,Y_T_vMax"),
+	LOG_FORMAT(ACAS, "Bffffffffffffffffff","fMult,P_kP,P_kP_M,P_kI,R_kP,R_kP_M,Head_kP,q2u_kP,p2u_kP,PRate_Lim,PRate_ILim,PTCkI,PTCILim,RRate_Lim,YRate_Lim,P_Lim,R_Lim,uElevTurnFF,Y_LPw"),
+	LOG_FORMAT(AHL,  "Bfffffffffffffffffffffffffffffffffffff","fMult,L1_Damp,L1_P_vMin,L1_P_vNom,L1_P_vMax,v_vNom,v_vMi,v_vMa,hMax,hMin,h_vZcl,h_vZsi,h_LPw,tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,ami,at,ama,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
+	LOG_FORMAT(ASLD, "QIBfffffffffffffBffffffffffffffffBBB", "timestamp,dt,mode,h,hRef,hRef_t,Pitch,PitchRef,PitchRefCT,q,qRef,uElev,uThrot,uThrot2,aZ,AirspeedRef,bSpoilers,Yaw,YawRef,Roll,RollRef,p,pRef,r,rRef,uAil,uRud,Yawdot_ref,Yawdot,f_GS_Q,P_kP_GS_E,R_kP_GS_E,qmax,StallStat,AltStat,vStat"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */
