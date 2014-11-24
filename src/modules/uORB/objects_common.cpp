@@ -82,6 +82,9 @@ ORB_DEFINE(aslctrl_parameters, struct aslctrl_parameters_s);		// added for testi
 #include "topics/aslctrl_data.h"									// added for testing ASLCTRL (PhOe)
 ORB_DEFINE(aslctrl_data, struct aslctrl_data_s);					// added for testing ASLCTRL (PhOe)
 
+#include "topics/sensor_mppt.h"										// added for testing ASLCTRL (PhOe)
+ORB_DEFINE(sensor_mppt, struct sensor_mppt_s);						// added for testing ASLCTRL (PhOe)
+
 #include "topics/vehicle_attitude.h"
 ORB_DEFINE(vehicle_attitude, struct vehicle_attitude_s);
 
