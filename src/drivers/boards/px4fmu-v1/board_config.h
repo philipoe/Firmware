@@ -87,6 +87,10 @@ __BEGIN_DECLS
 
 #define PX4_SPI_BUS_SENSORS	1
 
+#ifdef PX4_IMU_CONF_ADIS16448
+	#define GPIO_SPI_CS_ADIS	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN12)
+#endif
+
 /*
  * Use these in place of the spi_dev_e enumeration to
  * select a specific SPI device on SPI1
@@ -95,6 +99,9 @@ __BEGIN_DECLS
 #define PX4_SPIDEV_ACCEL	2
 #define PX4_SPIDEV_MPU		3
 
+#ifdef PX4_IMU_CONF_ADIS16448
+	#define PX4_SPIDEV_ADIS		4
+#endif
 /*
  * Optional devices on IO's external port
  */

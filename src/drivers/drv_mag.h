@@ -132,4 +132,7 @@ ORB_DECLARE(sensor_mag2);
 /** determine if mag is external or onboard */
 #define MAGIOCGEXTERNAL		_MAGIOC(11)
 
+/** get the current mag type */
+#define MAGIOCTYPE			_MAGIOC(12)
+
 #endif /* _DRV_MAG_H */

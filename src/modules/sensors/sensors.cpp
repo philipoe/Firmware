@@ -35,9 +35,10 @@
  * @file sensors.cpp
  * Sensor readout process.
  *
- * @author Lorenz Meier <lm@inf.ethz.ch>
- * @author Julian Oes <joes@student.ethz.ch>
+ * @author Lorenz Meier  <lm@inf.ethz.ch>
+ * @author Julian Oes 	 <joes@student.ethz.ch>
  * @author Thomas Gubler <thomasgubler@student.ethz.ch>
+ * @author Amir   Melzer <amir.melzer@mavt.ethz.ch>
  */
 
 #include <nuttx/config.h>
@@ -61,6 +62,11 @@
 #include <drivers/drv_mag.h>
 #include <drivers/drv_baro.h>
 #include <drivers/drv_rc_input.h>
+////#include <drivers/drv_dbaro.h>					// added
+////#include <drivers/drv_amb_temp.h>				// added
+////#include <drivers/drv_voltage_current.h>		// added
+////#include <drivers/drv_mppt.h>					// added
+////#include <drivers/drv_rc_input.h>
 #include <drivers/drv_adc.h>
 #include <drivers/drv_airspeed.h>
 
@@ -87,14 +93,17 @@
 #define ACC_HEALTH_COUNTER_LIMIT_ERROR  20   /* 40 ms downtime at 500 Hz update rate   */
 #define MAGN_HEALTH_COUNTER_LIMIT_ERROR 100  /* 1000 ms downtime at 100 Hz update rate  */
 #define BARO_HEALTH_COUNTER_LIMIT_ERROR 50   /* 500 ms downtime at 100 Hz update rate  */
+#define DBARO_HEALTH_COUNTER_LIMIT_ERROR 50  /* 500 ms downtime at 100 Hz update rate  */    // added check value
 #define ADC_HEALTH_COUNTER_LIMIT_ERROR  10   /* 100 ms downtime at 100 Hz update rate  */
 
 #define GYRO_HEALTH_COUNTER_LIMIT_OK 5
 #define ACC_HEALTH_COUNTER_LIMIT_OK  5
 #define MAGN_HEALTH_COUNTER_LIMIT_OK 5
 #define BARO_HEALTH_COUNTER_LIMIT_OK 5
+#define DBARO_HEALTH_COUNTER_LIMIT_OK 5							/// added check value
 #define ADC_HEALTH_COUNTER_LIMIT_OK  5
 
+#define ADIS16448_Product		0x4040						   /* Product ID of the ADIS16448 IMU */
 /**
  * Analog layout:
  * FMU:
@@ -148,6 +157,16 @@
 # undef ERROR
 #endif
 static const int ERROR = -1;
+
+// added - Additional Parameters (Tube Diameter&Length) are defined in sensor_params.c
+#define CALIBRATED_PRESSURE_Pa 96600.0f
+#define DRY_GAS_CONSTANT 287.058f
+#define KELVIN_CONV 273.15f
+#define PI_f 3.141592653f
+
+//uint32_t last_baro_counter = 0;
+//uint32_t last_dbaro_counter = 0;
+///
 
 /**
  * Sensor app start / stop handling function
@@ -370,6 +389,15 @@ private:
 	}		_parameter_handles;		/**< handles for interesting parameters */
 
 
+	//Added
+	param_t h_dbaro_Dtube;
+	param_t h_dbaro_Ltube;
+	param_t h_dbaro_offset;
+	param_t h_dbaro_dy;
+	float dbaro_DtubePow4;			//Diameter of tube in [m] to the power of 4
+	float dbaro_Ltube;				//Length of tube in [m]
+	float dbaro_offset;				//dbaro zero offset correction (as sometimes necessary for the HDIM10)
+	float dbaro_dy;					//dbaro/pitot tube lateral position offset [m]
 	/**
 	 * Update our local parameter cache.
 	 */
@@ -394,6 +422,41 @@ private:
 	 * Do baro-related initialisation.
 	 */
 	void		baro_init();
+
+	/**
+	 * Do dbaro-related initialization.									// added
+	 */
+	void		dbaro_init();
+
+	/**
+	 * Do ambient temperate sensor-related initialization.				// added
+	 */
+	void		amb_temp_init();
+
+	/**
+	 * Do power board voltage sensor-related initialization.			// added
+	 */
+	void		adc121_vspb_init();
+
+	/**
+	 * Do power board current sensor-related initialization.			// added
+	 */
+	void		adc121_cspb_init();
+
+	/**
+	 * Do board current sensor 1 -related initialization.				// added
+	 */
+	void		adc121_cs1_init();
+
+	/**
+	 * Do board current sensor 2 -related initialization.				// added
+	 */
+	void		adc121_cs2_init();
+
+	/**
+	 * Do MPPT -related initialization.									// added
+	 */
+	void		mppt_init();
 
 	/**
 	 * Do adc-related initialisation.
@@ -431,6 +494,76 @@ private:
 	 *				data should be returned.
 	 */
 	void		baro_poll(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Poll the differential barometer for updated data.
+	 *
+	 * @param raw			Combined sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		dbaro_poll(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Calculate the velocity from the differential and the static barometer data.
+	 *
+	 */
+
+	float		dbaro_pressure_corr(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Calculate the corrected dbaro pressure due to viscose fraction of the tubes
+	 *
+	 */
+
+	void		dbaro_velocity_calc(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Poll the ambient temperature for updated data.
+	 *
+	 * @param raw			Combined sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		amb_temp_poll(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Poll the voltage sensor power board for updated data.
+	 *
+	 * @param raw			Combined sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		adc121_vspb_poll(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Poll the current sensor power board for updated data.
+	 *
+	 * @param raw			Combined sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		adc121_cspb_poll(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Poll the current sensor 1 board for updated data.
+	 *
+	 * @param raw			Combined sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		adc121_cs1_poll(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Poll the current sensor 2 board for updated data.
+	 *
+	 * @param raw			Combined sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		adc121_cs2_poll(struct sensor_combined_s &raw);
+
+	/**																		// added
+	 * Poll the MPPTs data for updated data.
+	 *
+	 * @param raw			Combined sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		mppt_poll(struct sensor_combined_s &raw);
 
 	/**
 	 * Poll the differential pressure sensor for updated data.
@@ -497,6 +630,13 @@ Sensors::Sensors() :
 	_rc_sub(-1),
 	_baro_sub(-1),
 	_vcontrol_mode_sub(-1),
+	////_dbaro_sub(-1),												// added
+	////_amb_temp_sub(-1),											// added
+	////_adc121_vspb_sub(-1),										// added
+	////_adc121_cspb_sub(-1),										// added
+	////_adc121_cs1_sub(-1),										// added
+	////_adc121_cs2_sub(-1),										// added
+	////_mppt_sub(-1),												// added
 	_params_sub(-1),
 	_manual_control_sub(-1),
 
@@ -620,6 +760,12 @@ Sensors::Sensors() :
 	_parameter_handles.board_offset[0] = param_find("SENS_BOARD_X_OFF");
 	_parameter_handles.board_offset[1] = param_find("SENS_BOARD_Y_OFF");
 	_parameter_handles.board_offset[2] = param_find("SENS_BOARD_Z_OFF");
+
+	/* ASLUAV parameters - added */
+	h_dbaro_Dtube=param_find("SENSA_DBaro_D");
+	h_dbaro_Ltube=param_find("SENSA_DBaro_L");
+	h_dbaro_offset=param_find("SENSA_DBaro_OFF");
+	h_dbaro_dy=param_find("SENSA_DBaro_dy");
 
 	/* Barometer QNH */
 	_parameter_handles.baro_qnh = param_find("SENS_BARO_QNH");
@@ -840,6 +986,15 @@ Sensors::parameters_update()
 	param_get(_parameter_handles.board_offset[1], &(_parameters.board_offset[1]));
 	param_get(_parameter_handles.board_offset[2], &(_parameters.board_offset[2]));
 
+	// ASLUAV custom parameters - Added by PhOe
+	float temp=0.0f;
+	param_get(h_dbaro_Dtube,&temp);
+	dbaro_DtubePow4=pow(temp,4.0f);
+	param_get(h_dbaro_Ltube,&dbaro_Ltube);
+	param_get(h_dbaro_offset, &dbaro_offset);
+	param_get(h_dbaro_dy, &dbaro_dy);
+	//printf("new params: DtubePow4[m]:%7.9f Ltube[m]: %7.4f dbaro_offset[Pa]: %7.4f\n",(double)dbaro_DtubePow4, (double)dbaro_Ltube, (double)dbaro_offset);
+
 	/** fine tune board offset on parameter update **/
 	math::Matrix<3, 3> board_rotation_offset;
 	board_rotation_offset.from_euler( M_DEG_TO_RAD_F * _parameters.board_offset[0],
@@ -886,13 +1041,31 @@ Sensors::accel_init()
 
 #ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 
-		/* set the accel internal sampling rate up to at leat 1000Hz */
-		ioctl(fd, ACCELIOCSSAMPLERATE, 1000);
+		if (ioctl(fd, ACCELIOCTYPE, 0) == ADIS16448_Product){
 
-		/* set the driver to poll at 1000Hz */
-		ioctl(fd, SENSORIOCSPOLLRATE, 1000);
+			/* Set the ADIS16448 IMU's */
 
-#elif CONFIG_ARCH_BOARD_PX4FMU_V2 || CONFIG_ARCH_BOARD_AEROCORE
+			/* set the accel internal sampling rate up to at leat 100Hz */
+			ioctl(fd, ACCELIOCSSAMPLERATE, 100);
+
+			/* set the driver to poll at 100Hz */
+			ioctl(fd, SENSORIOCSPOLLRATE, 100);
+
+			warnx("using external accelerometer (ADIS16448)");
+		}
+		else{
+			/* Set the normal PX4 IMU's */
+
+			/* set the accel internal sampling rate up to at leat 1000Hz */
+			ioctl(fd, ACCELIOCSSAMPLERATE, 1000);
+
+			/* set the driver to poll at 1000Hz */
+			ioctl(fd, SENSORIOCSPOLLRATE, 1000);
+
+			warnx("using system accel");
+		}
+
+		#elif CONFIG_ARCH_BOARD_PX4FMU_V2
 
 		/* set the accel internal sampling rate up to at leat 800Hz */
 		ioctl(fd, ACCELIOCSSAMPLERATE, 800);
@@ -926,14 +1099,24 @@ Sensors::gyro_init()
 
 #ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 
-		/* set the gyro internal sampling rate up to at least 1000Hz */
-		if (ioctl(fd, GYROIOCSSAMPLERATE, 1000) != OK) {
-			ioctl(fd, GYROIOCSSAMPLERATE, 800);
-		}
+		if (ioctl(fd, GYROIOCTYPE, 0) == ADIS16448_Product){
+				/* Set the ADIS16448 IMU's */
+				if (ioctl(fd, SENSORIOCSPOLLRATE, 100) != OK)
+					warn("error in setting gyro poll rate");
 
-		/* set the driver to poll at 1000Hz */
-		if (ioctl(fd, SENSORIOCSPOLLRATE, 1000) != OK) {
-			ioctl(fd, SENSORIOCSPOLLRATE, 800);
+				warnx("using external gyroscope (ADIS16448)");
+		}
+		else{
+
+			/* Set the normal PX4 IMU's */
+			/* set the gyro internal sampling rate up to at least 1000Hz */
+			if (ioctl(fd, GYROIOCSSAMPLERATE, 1000) != OK)
+				ioctl(fd, GYROIOCSSAMPLERATE, 800);
+
+			/* set the driver to poll at 1000Hz */
+			if (ioctl(fd, SENSORIOCSPOLLRATE, 1000) != OK)
+				ioctl(fd, SENSORIOCSPOLLRATE, 800);
+			warnx("using system gyro");
 		}
 
 #else
@@ -963,40 +1146,41 @@ Sensors::mag_init()
 		errx(1, "FATAL: no magnetometer found");
 	}
 
-	/* try different mag sampling rates */
+	if (ioctl(fd, MAGIOCTYPE, 0) == ADIS16448_Product){
+		/* Set the ADIS16448 IMU's */
+		if (ioctl(fd, SENSORIOCSPOLLRATE, 100) != OK)
+			warn("error in setting mag poll rate");
 
-
-	ret = ioctl(fd, MAGIOCSSAMPLERATE, 150);
-
-	if (ret == OK) {
-		/* set the pollrate accordingly */
-		ioctl(fd, SENSORIOCSPOLLRATE, 150);
-
-	} else {
-		ret = ioctl(fd, MAGIOCSSAMPLERATE, 100);
-
-		/* if the slower sampling rate still fails, something is wrong */
-		if (ret == OK) {
-			/* set the driver to poll also at the slower rate */
-			ioctl(fd, SENSORIOCSPOLLRATE, 100);
-
-		} else {
-			errx(1, "FATAL: mag sampling rate could not be set");
-		}
+		warnx("using external magnetometer (ADIS16448)");
 	}
+	else{
+		/* Set the normal PX4 Magnetometer */
 
+		/* try different mag sampling rates */
+		ret = ioctl(fd, MAGIOCSSAMPLERATE, 150);
+		if (ret == OK) {
+			/* set the pollrate accordingly */
+		ioctl(fd, SENSORIOCSPOLLRATE, 150);			 // Reduced in the driver to 100Hz
+		} else {
+			ret = ioctl(fd, MAGIOCSSAMPLERATE, 100);
+			/* if the slower sampling rate still fails, something is wrong */
+			if (ret == OK) {
+				/* set the driver to poll also at the slower rate */
+				ioctl(fd, SENSORIOCSPOLLRATE, 100);
+			} else {
+				errx(1, "FATAL: mag sampling rate could not be set");
+			}
+		}
 
+		ret = ioctl(fd, MAGIOCGEXTERNAL, 0);
+		if (ret < 0)
+			errx(1, "FATAL: unknown if magnetometer is external or onboard");
+		else if (ret == 1)
+			_mag_is_external = true;
+		else
+			_mag_is_external = false;
 
-	ret = ioctl(fd, MAGIOCGEXTERNAL, 0);
-
-	if (ret < 0) {
-		errx(1, "FATAL: unknown if magnetometer is external or onboard");
-
-	} else if (ret == 1) {
-		_mag_is_external = true;
-
-	} else {
-		_mag_is_external = false;
+		warnx("using system mag");
 	}
 
 	close(fd);
@@ -1015,11 +1199,139 @@ Sensors::baro_init()
 	}
 
 	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 150);
+	//ioctl(fd, SENSORIOCSPOLLRATE, 150);
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);			 // Reduced to 20Hz
 
 	close(fd);
 }
+///// added
+#if 0
+void
+Sensors::dbaro_init()
+{
+	int	fd;
 
+	fd = open(DBARO_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", DBARO_DEVICE_PATH);
+		warnx("No differential barometer found, ignoring");
+	}
+
+	/* set the driver to poll at 150 Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz
+
+	close(fd);
+}
+/////
+///// added
+void
+Sensors::amb_temp_init()
+{
+	int	fd;
+
+	fd = open(LM73_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", LM73_DEVICE_PATH);
+		warnx("No ambient temperature sensor found, ignoring");
+	}
+
+	/* set the driver to poll at 150Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 10);			// Reduced to 10Hz
+
+	close(fd);
+}
+/////
+///// added
+void
+Sensors::adc121_vspb_init()
+{
+	int	fd;
+
+	fd = open(ADC121_VSPB_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", ADC121_VSPB_DEVICE_PATH);
+		warnx("No power board voltage sensor found, ignoring");
+	}
+
+	/* set the driver to poll at 150Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 10);			// Reduced to 10Hz
+
+	close(fd);
+}
+/////
+///// added
+void
+Sensors::adc121_cspb_init()
+{
+	int	fd;
+
+	fd = open(ADC121_CSPB_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", ADC121_CSPB_DEVICE_PATH);
+		warnx("No power board current sensor found, ignoring");
+	}
+
+	/* set the driver to poll at 150Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz  (set poll rate to 20 Hz (and then average 10 samples))
+
+	close(fd);
+}
+/////
+///// added
+void
+Sensors::adc121_cs1_init()
+{
+	int	fd;
+
+	fd = open(ADC121_CS1_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", ADC121_CS1_DEVICE_PATH);
+		warnx("No board current sensor 1 found, ignoring");
+	}
+
+	/* set the driver to poll at 150Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz  (set poll rate to 10 Hz (and then average 10 samples))
+
+	close(fd);
+}
+/////
+///// added
+void
+Sensors::adc121_cs2_init()
+{
+	int	fd;
+
+	fd = open(ADC121_CS2_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", ADC121_CS2_DEVICE_PATH);
+		warnx("No board current sensor 2 found, ignoring");
+	}
+
+	/* set the driver to poll at 150Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);		// Reduced to 20Hz  (set poll rate to 10 Hz (and then average 10 samples))
+
+	close(fd);
+}
+/////
+///// added
+void
+Sensors::mppt_init()
+{
+	int	fd;
+
+	fd = open(SPV1020_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", SPV1020_DEVICE_PATH);
+		warnx("No board MPPT found, ignoring");
+	}
+
+	/* set the driver to poll at 150Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 10);		// Reduced to 10Hz
+
+	close(fd);
+}
+/////
+#endif
 void
 Sensors::adc_init()
 {
@@ -1219,7 +1531,47 @@ Sensors::baro_poll(struct sensor_combined_s &raw)
 		raw.baro_timestamp = _barometer.timestamp;
 	}
 }
+////// added
+#if 0
+void
+Sensors::dbaro_poll(struct sensor_combined_s &raw)
+{
+	bool dbaro_updated;
+	float Epsilon = 0;
+	orb_check(_dbaro_sub, &dbaro_updated);
 
+	if (dbaro_updated) {
+		struct dbaro_report	dbaro_report;
+
+		orb_copy(ORB_ID(sensor_dbaro), _dbaro_sub, &dbaro_report);
+
+		raw.dbaro_timestamp    = dbaro_report.timestamp;
+		raw.dbaro_pres_pa_raw  = dbaro_report.dpressure;					/* Pressure in pa raw measurement			  */
+
+		if(dbaro_Ltube > 1E-3f) //dbaro_Ltube is in [m]
+		{
+			/* This correction should be applied when when tube length exceeds a certain threshold
+			 * AND only when the SDP600 is used (otherwise set tube length to zero!)*/
+			Epsilon = dbaro_pressure_corr(raw);								/* pressure drop compensation				  */
+			raw.dbaro_pres_pa	= dbaro_report.dpressure / (1 + Epsilon); /* Pressure in pa with tube loss compensation */
+
+			//warnx("Pressure drop correction: eps, raw, corr %3.3f,%3.3f,%3.3f \n", (double) Epsilon, (double) raw.dbaro_pres_pa_raw, (double) raw.dbaro_pres_pa);
+			//warnx("raw and corrected differential pressure %3.6f, %3.6f [pa]", (double) raw.dbaro_pres_pa_raw , (double) raw.dbaro_pres_pa);  // delete
+		}
+		else{
+			raw.dbaro_pres_pa	= dbaro_report.dpressure ;
+		}
+
+		raw.dbaro_pres_pa	= raw.dbaro_pres_pa + dbaro_offset;			/* Pressure in pa with added pressure offset  */
+
+		raw.dbaro_counter++;
+
+		//Calculate airspeed from differential pressure
+		dbaro_velocity_calc(raw);
+	}
+}
+
+/*		 Velocity calculation (exported code to the dbaro_velocity_eval app )  		 */
 void
 Sensors::diff_pres_poll(struct sensor_combined_s &raw)
 {
@@ -1252,7 +1604,187 @@ Sensors::diff_pres_poll(struct sensor_combined_s &raw)
 		}
 	}
 }
+//
+float
+Sensors::dbaro_pressure_corr(struct sensor_combined_s &raw)
+{
+	/* corrected dbaro pressure due to viscous friction of the tubes */						// move to an app!!
+		float Nair;
+		float Rair;
+		float Eps;
 
+		if (raw.dbaro_pres_pa_raw < 0.0f)
+			raw.dbaro_pres_pa_raw = -1*raw.dbaro_pres_pa_raw;
+					//TODO: This causes errors at low velocities for the HDIM10, which often has a negative offset! (PhOe)
+					// -> we need to correct for this via calibration
+
+		if (raw.dbaro_pres_pa_raw > 0.0f)
+		{
+			Nair = (float) (18.205f + 0.0484f * (raw.baro_temp_celcius - 20.0f)) * 1e-6f;
+			Rair = (float) (1.1885f * raw.baro_pres_mbar *1e-3f *(KELVIN_CONV + 20.0f))/(KELVIN_CONV + raw.baro_temp_celcius);
+			float denominator=PI_f/dbaro_DtubePow4/Rair/raw.dbaro_pres_pa_raw;
+			if(fabsf(denominator)>1E-6f)
+				Eps  = (float) -64.0f*dbaro_Ltube*Nair*6.17e-7f*(((float)sqrt((float)(1.0f+8.0f*raw.dbaro_pres_pa_raw/62.0f))-1.0f))/denominator;
+			else
+				Eps  = 0.0f;
+
+			if ((fabsf(Eps) < 1.0f) && (fabsf(Eps) >= 0.0f))
+				return (Eps);
+			else
+				return (0.0f);
+		}
+		else
+			return (0.0f);
+}
+void
+Sensors::dbaro_velocity_calc(struct sensor_combined_s &raw)
+{
+	// Calculate true airspeed from differential pressure
+	if (raw.dbaro_pres_pa < 0.0f)
+		raw.dbaro_pres_pa = -1*raw.dbaro_pres_pa;
+
+	if ((raw.baro_pres_mbar > 0.0f) && (raw.baro_temp_celcius > -1*KELVIN_CONV)){
+		raw.dbaro_velo_ms = (float)(sqrt((float)(2*raw.dbaro_pres_pa*CALIBRATED_PRESSURE_Pa*DRY_GAS_CONSTANT*(raw.baro_temp_celcius + KELVIN_CONV)))) / raw.baro_pres_mbar / 100;
+	}
+	else
+		raw.dbaro_velo_ms = 0.01f;
+
+	//Correct for a possible lateral offset of the pitot tube (this will tamper with the airspeed measurement in turns when the yawrate != zero)
+	if(fabsf(raw.gyro_rad_s[2]) < 4.0f*PI_f) { //limit to reasonable gyro values
+		float dbaro_velo_ms_err = dbaro_dy * raw.gyro_rad_s[2];
+		//printf("dbaro: r/v/err/v_corr %6.3f/%6.3f/%6.3f/%6.3f\n",raw.gyro_rad_s[2],raw.dbaro_velo_ms,dbaro_velo_ms_err,raw.dbaro_velo_ms+dbaro_velo_ms_err);
+		raw.dbaro_velo_ms += dbaro_velo_ms_err;
+	}
+
+	// Publish this to PX4-standard variables, too
+	_airspeed.indicated_airspeed_m_s = raw.dbaro_velo_ms; 	// Not really correct, as this is already TAS
+	_airspeed.true_airspeed_m_s = raw.dbaro_velo_ms;
+	_airspeed.timestamp = hrt_absolute_time();
+
+	// announce the airspeed if needed, just publish else
+	if (_airspeed_pub > 0) orb_publish(ORB_ID(airspeed), _airspeed_pub, &_airspeed);
+	else _airspeed_pub = orb_advertise(ORB_ID(airspeed), &_airspeed);
+
+	//DEBUG
+	//printf("dbaro_vel_calc: (Pres_Pa/dbaro_velo_ms/ias/tas/timestamp) %0.2f %0.2f %0.2f %0.2f %llu\n",raw.dbaro_pres_pa,raw.dbaro_velo_ms,
+	//		_airspeed.indicated_airspeed_m_s,_airspeed.true_airspeed_m_s,_airspeed.timestamp);
+}
+
+void
+Sensors::amb_temp_poll(struct sensor_combined_s &raw)
+{
+	bool amb_temp_updated;
+	orb_check(_amb_temp_sub, &amb_temp_updated);
+
+	if (amb_temp_updated) {
+		struct lm73_report	amb_temp_report;
+
+		orb_copy(ORB_ID(sensor_lm73), _amb_temp_sub, &amb_temp_report);
+
+		raw.amb_temp_timestamp = amb_temp_report.timestamp;
+
+		raw.amb_temp_celcius = amb_temp_report.ambient_temperature; 			// Ambient temperature in degrees celcius
+
+		raw.amb_temp_counter++;
+	}
+}
+void
+Sensors::adc121_vspb_poll(struct sensor_combined_s &raw)
+{
+	bool adc121_vspb_updated;
+	orb_check(_adc121_vspb_sub, &adc121_vspb_updated);
+
+	if (adc121_vspb_updated) {
+		struct adc121_vspb_report	adc121_vspb_report;
+
+		orb_copy(ORB_ID(sensor_adc121_vspb), _adc121_vspb_sub, &adc121_vspb_report);
+
+		raw.adc121_vspb_volt = adc121_vspb_report.voltage; 			// power board voltage sensor readings in volts
+
+		raw.adc121_vspb_counter++;
+	}
+}
+void
+Sensors::adc121_cspb_poll(struct sensor_combined_s &raw)
+{
+	bool adc121_cspb_updated;
+	orb_check(_adc121_cspb_sub, &adc121_cspb_updated);
+
+	if (adc121_cspb_updated) {
+		struct adc121_cspb_report	adc121_cspb_report;
+
+		orb_copy(ORB_ID(sensor_adc121_cspb), _adc121_cspb_sub, &adc121_cspb_report);
+
+		raw.adc121_cspb_amp = adc121_cspb_report.current; 			// power board current sensor readings in amperes
+
+		raw.adc121_cspb_counter++;
+	}
+}
+void
+Sensors::adc121_cs1_poll(struct sensor_combined_s &raw)
+{
+	bool adc121_cs1_updated;
+	orb_check(_adc121_cs1_sub, &adc121_cs1_updated);
+
+	if (adc121_cs1_updated) {
+		struct adc121_cs1_report	adc121_cs1_report;
+
+		orb_copy(ORB_ID(sensor_adc121_cs1), _adc121_cs1_sub, &adc121_cs1_report);
+
+		raw.adc121_cs1_amp = adc121_cs1_report.current; 			//  board current sensor 1 readings in amperes
+
+		raw.adc121_cs1_counter++;
+	}
+}
+void
+Sensors::adc121_cs2_poll(struct sensor_combined_s &raw)
+{
+	bool adc121_cs2_updated;
+	orb_check(_adc121_cs2_sub, &adc121_cs2_updated);
+
+	if (adc121_cs2_updated) {
+		struct adc121_cs2_report	adc121_cs2_report;
+
+		orb_copy(ORB_ID(sensor_adc121_cs2), _adc121_cs2_sub, &adc121_cs2_report);
+
+		raw.adc121_cs2_amp = adc121_cs2_report.current; 			//  board current sensor 2 readings in amperes
+
+		raw.adc121_cs2_counter++;
+	}
+}
+void
+Sensors::mppt_poll(struct sensor_combined_s &raw)
+{
+	bool mppt_updated;
+	orb_check(_mppt_sub, &mppt_updated);
+
+	if (mppt_updated) {
+		struct spv1020_report	spv1020_report;
+
+		orb_copy(ORB_ID(sensor_spv1020), _mppt_sub, &spv1020_report);
+
+		raw.mppt_timestamp = spv1020_report.timestamp;
+
+		raw.mppt_amp[0]    = spv1020_report.current[0]; 				/* MPPT device 0 current in amp */
+		raw.mppt_volt[0]   = spv1020_report.voltage[0]; 				/* MPPT device 0 voltage in volt*/
+		raw.mppt_pwm[0]    = spv1020_report.pwm[0]; 					/* MPPT device 0 pwm 		    */
+		raw.mppt_status[0] = spv1020_report.status[0]; 					/* MPPT device 0 status		    */
+
+		raw.mppt_amp[1]    = spv1020_report.current[1]; 				/* MPPT device 1 current in amp */
+		raw.mppt_volt[1]   = spv1020_report.voltage[1]; 				/* MPPT device 1 voltage in volt*/
+		raw.mppt_pwm[1]    = spv1020_report.pwm[1]; 					/* MPPT device 1 pwm 		    */
+		raw.mppt_status[1] = spv1020_report.status[1]; 					/* MPPT device 1 status		    */
+
+		raw.mppt_amp[2]    = spv1020_report.current[2]; 				/* MPPT device 2 current in amp */
+		raw.mppt_volt[2]   = spv1020_report.voltage[2]; 				/* MPPT device 2 voltage in volt*/
+		raw.mppt_pwm[2]    = spv1020_report.pwm[2]; 					/* MPPT device 2 pwm 		    */
+		raw.mppt_status[2] = spv1020_report.status[2]; 					/* MPPT device 2 status		    */
+
+		raw.mppt_counter++;
+	}
+}
+#endif
+//////
 void
 Sensors::vehicle_control_mode_poll()
 {
@@ -1736,6 +2268,13 @@ Sensors::task_main()
 	gyro_init();
 	mag_init();
 	baro_init();
+	////dbaro_init();					// added
+	////amb_temp_init();				// added
+	////adc121_vspb_init();				// added
+	////adc121_cspb_init();				// added
+	////adc121_cs1_init();				// added
+	////adc121_cs2_init();				// added
+	////mppt_init();					// added
 	adc_init();
 
 	/*
@@ -1754,6 +2293,13 @@ Sensors::task_main()
 	_baro_sub = orb_subscribe(ORB_ID(sensor_baro0));
 	_diff_pres_sub = orb_subscribe(ORB_ID(differential_pressure));
 	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
+	////_dbaro_sub = orb_subscribe(ORB_ID(sensor_dbaro));							// added
+	////_amb_temp_sub = orb_subscribe(ORB_ID(sensor_lm73));							// added
+	////_adc121_vspb_sub = orb_subscribe(ORB_ID(sensor_adc121_vspb));				// added
+	////_adc121_cspb_sub = orb_subscribe(ORB_ID(sensor_adc121_cspb));				// added
+	////_adc121_cs1_sub = orb_subscribe(ORB_ID(sensor_adc121_cs1));					// added
+	////_adc121_cs2_sub = orb_subscribe(ORB_ID(sensor_adc121_cs2));					// added
+	////_mppt_sub = orb_subscribe(ORB_ID(sensor_spv1020));							// added
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_manual_control_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
 
@@ -1785,7 +2331,14 @@ Sensors::task_main()
 	gyro_poll(raw);
 	mag_poll(raw);
 	baro_poll(raw);
-	diff_pres_poll(raw);
+	////diff_pres_poll(raw);
+	////dbaro_poll(raw);									// added
+	////amb_temp_poll(raw);									// added
+	////adc121_vspb_poll(raw);								// added
+	////adc121_cspb_poll(raw);								// added
+	////adc121_cs1_poll(raw);								// added
+	////adc121_cs2_poll(raw);								// added
+	////mppt_poll(raw);										// added
 
 	parameter_update_poll(true /* forced */);
 
@@ -1827,11 +2380,18 @@ Sensors::task_main()
 		accel_poll(raw);
 		mag_poll(raw);
 		baro_poll(raw);
+		////dbaro_poll(raw);													// added
+		////amb_temp_poll(raw);													// added
+		////adc121_vspb_poll(raw);												// added
+		////adc121_cspb_poll(raw);												// added
+		////adc121_cs1_poll(raw);												// added
+		////adc121_cs2_poll(raw);												// added
+		////mppt_poll(raw);														// added
 
 		/* check battery voltage */
 		adc_poll(raw);
 
-		diff_pres_poll(raw);
+		////diff_pres_poll(raw);
 
 		/* Inform other processes that new data is available to copy */
 		if (_publishing) {

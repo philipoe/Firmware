@@ -191,4 +191,61 @@ SPI::_transfer(uint8_t *send, uint8_t *recv, unsigned len)
 	return OK;
 }
 
+#ifdef PX4_IMU_CONF_ADIS16448
+int
+SPI::transferword(uint16_t *send, uint16_t *recv, unsigned len)
+{
+	irqstate_t	state;
+
+	if ((send == nullptr) && (recv == nullptr))
+		return -EINVAL;
+
+	/* lock the bus as required */
+	if (!up_interrupt_context()) {
+		switch (locking_mode) {
+		default:
+		case LOCK_PREEMPTION:
+			state = irqsave();
+			break;
+		case LOCK_THREADS:
+			SPI_LOCK(_dev, true);
+			break;
+		case LOCK_NONE:
+			break;
+		}
+	}
+
+	SPI_SETFREQUENCY(_dev, _frequency);
+	SPI_SETMODE(_dev, _mode);
+	SPI_SETBITS(_dev, 16);							/* 16 bit transfer */
+	SPI_SELECT(_dev, _device, true);
+
+	/* do the transfer */
+	//SPI_EXCHANGE(_dev, send, recv, len);			/* Try to be compatible with the t_stall of the ADIS16448 which is 9usec (by applying 5usec delay ) */
+	SPI_EXCHANGE(_dev, send, nullptr, 1);
+	up_udelay(5);									/* Reduced to 5 usec (from 10 use) */
+	SPI_EXCHANGE(_dev, nullptr, recv+1, len-1);
+	////
+
+	/* and clean up */
+	SPI_SELECT(_dev, _device, false);
+
+	if (!up_interrupt_context()) {
+		switch (locking_mode) {
+		default:
+		case LOCK_PREEMPTION:
+			irqrestore(state);
+			break;
+		case LOCK_THREADS:
+			SPI_LOCK(_dev, false);
+			break;
+		case LOCK_NONE:
+			break;
+		}
+	}
+
+	return OK;
+}
+#endif
+
 } // namespace device
