@@ -73,20 +73,23 @@ ORB_DEFINE(output_pwm, struct pwm_output_values);
 #include <drivers/drv_rc_input.h>
 ORB_DEFINE(input_rc, struct rc_input_values);
 
-#include "topics/state_estimator_EKF_parameters.h"											// added for testing the EKF state estimator (ASL/Amir)
-ORB_DEFINE(state_estimator_EKF_parameters, struct state_estimator_EKF_parameters_s);		// added for testing the EKF state estimator (ASL/Amir)
+#include "topics/state_estimator_EKF_parameters.h"
+ORB_DEFINE(state_estimator_EKF_parameters, struct state_estimator_EKF_parameters_s);
 
-#include "topics/aslctrl_parameters.h"								// added for testing ASLCTRL (PhOe)
-ORB_DEFINE(aslctrl_parameters, struct aslctrl_parameters_s);		// added for testing ASLCTRL (PhOe)
+#include "topics/aslctrl_parameters.h"
+ORB_DEFINE(aslctrl_parameters, struct aslctrl_parameters_s);
 
-#include "topics/aslctrl_data.h"									// added for testing ASLCTRL (PhOe)
-ORB_DEFINE(aslctrl_data, struct aslctrl_data_s);					// added for testing ASLCTRL (PhOe)
+#include "topics/aslctrl_data.h"
+ORB_DEFINE(aslctrl_data, struct aslctrl_data_s);
 
-#include "topics/sensor_mppt.h"										// added for testing ASLCTRL (PhOe)
-ORB_DEFINE(sensor_mppt, struct sensor_mppt_s);						// added for testing ASLCTRL (PhOe)
+#include "topics/sensor_mppt.h"
+ORB_DEFINE(sensor_mppt, struct sensor_mppt_s);
 
-#include "topics/sensor_power.h"									// added for testing ASLCTRL (PhOe)
-ORB_DEFINE(sensor_power, struct sensor_power_s);					// added for testing ASLCTRL (PhOe)
+#include "topics/sensor_power.h"
+ORB_DEFINE(sensor_power, struct sensor_power_s);
+
+#include "topics/hdim010_i2c_wd.h"
+ORB_DEFINE(hdim010_i2c_wd, struct hdim010_i2c_wd_s);
 
 #include "topics/vehicle_attitude.h"
 ORB_DEFINE(vehicle_attitude, struct vehicle_attitude_s);

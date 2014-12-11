@@ -9,7 +9,7 @@ ROMFS_ROOT	 = $(PX4_BASE)/ROMFS/px4fmu_common
 ROMFS_OPTIONAL_FILES = $(PX4_BASE)/Images/px4io-v1_default.bin
 
 #
-# Board support modules
+# Board support drivers
 #
 MODULES		+= drivers/device
 MODULES		+= drivers/stm32
@@ -47,7 +47,12 @@ MODULES		+= drivers/hdim010
 #MODULES		+= drivers/ets_airspeed
 #MODULES		+= drivers/meas_airspeed
 #MODULES		+= drivers/frsky_telemetry
+
+#
+# Board support modules
+#
 MODULES		+= modules/sensors
+MODULES		+= modules/i2c_wd
 
 #
 # System commands
