@@ -91,6 +91,9 @@ ORB_DEFINE(sensor_power, struct sensor_power_s);
 #include "topics/hdim010_i2c_wd.h"
 ORB_DEFINE(hdim010_i2c_wd, struct hdim010_i2c_wd_s);
 
+#include <drivers/drv_dbaro.h>							////////// delete after merging with differential_pressure orb
+ORB_DEFINE(sensor_dbaro, struct dbaro_report);			////////// delete after merging with differential_pressure orb
+
 #include "topics/vehicle_attitude.h"
 ORB_DEFINE(vehicle_attitude, struct vehicle_attitude_s);
 
