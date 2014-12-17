@@ -5,7 +5,7 @@
 #
 # Use the configuration's ROMFS.
 #
-ROMFS_ROOT	 = $(PX4_BASE)/ROMFS/px4fmu_common
+ROMFS_ROOT	 		 = $(PX4_BASE)/ROMFS/px4fmu_common
 ROMFS_OPTIONAL_FILES = $(PX4_BASE)/Images/px4io-v1_default.bin
 
 #
@@ -43,7 +43,7 @@ MODULES		+= drivers/hdim010
 #MODULES		+= drivers/blinkm
 #MODULES		+= drivers/rgbled
 #MODULES		+= drivers/mkblctrl
-#MODULES		+= drivers/airspeed
+MODULES			+= drivers/airspeed
 #MODULES		+= drivers/ets_airspeed
 #MODULES		+= drivers/meas_airspeed
 #MODULES		+= drivers/frsky_telemetry
