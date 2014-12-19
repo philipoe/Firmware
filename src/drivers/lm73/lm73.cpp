@@ -69,7 +69,7 @@
 
 #include <drivers/drv_amb_temp.h>
 
-#include <uORB/topics/lm73_i2c_wd.h>														/* added for the I2C WD */
+////#include <uORB/topics/lm73_i2c_wd.h>														/* added for the I2C WD */
 
 
 /* oddly, ERROR is not defined for c++ */
@@ -122,10 +122,10 @@ private:
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
 
-	struct lm73_i2c_wd_s 	 _lm73_i2c_wd_report;	         	/* added for the I2C WD */
-	orb_advert_t		 	 _lm73_i2c_wd_pub;					/* added for the I2C WD */
+	//struct lm73_i2c_wd_s 	 _lm73_i2c_wd_report;	         	/* added for the I2C WD */
+	//orb_advert_t		 	 _lm73_i2c_wd_pub;					/* added for the I2C WD */
 
-	uint8_t lm73_error_counter;									/* LM73 I2C reset		*/
+	//uint8_t lm73_error_counter;									/* LM73 I2C reset		*/
 
 
 	/**
@@ -202,7 +202,6 @@ private:
  */
 
 /* internal conversion time: 5 ms  */
-//#define LM73_CONVERSION_INTERVAL	5000	/* microseconds */
 #define LM73_CONVERSION_INTERVAL	50000	/* microseconds */
 
 #define LM73_BUS				PX4_I2C_BUS_EXPANSION
@@ -240,8 +239,8 @@ LM73::LM73(int bus) :
 	_ambient_temperature_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "LM73_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "LM73_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "LM73_buffer_overflows")),
-	 lm73_error_counter(0)														/* LM73 I2C reset		*/  // added test
+	_buffer_overflows(perf_alloc(PC_COUNT, "LM73_buffer_overflows"))
+	 //lm73_error_counter(0)														/* LM73 I2C reset		*/  // added test
 
 {
 	// enable debug() calls
@@ -286,8 +285,8 @@ LM73::init()
 	if (_ambient_temperature_topic < 0)
 		debug("failed to create sensor_lm73 object");
 
-	_lm73_i2c_wd_report.lm73_i2c_error = false;												/* added for the I2C WD */
-	_lm73_i2c_wd_pub = orb_advertise(ORB_ID(lm73_i2c_wd), &_lm73_i2c_wd_report);    		/* added for the I2C WD */
+	//_lm73_i2c_wd_report.lm73_i2c_error = false;												/* added for the I2C WD */
+	//_lm73_i2c_wd_pub = orb_advertise(ORB_ID(lm73_i2c_wd), &_lm73_i2c_wd_report);    		/* added for the I2C WD */
 
 	ret = OK;
 out:
@@ -530,13 +529,13 @@ LM73::cycle()
 			probe();
 #endif
 			// added for testing
-			lm73_error_counter++;
-			if (lm73_error_counter > LM73_MAXIMAL_ERROR_COUNTER){
-				_lm73_i2c_wd_report.lm73_i2c_error = true;
-				orb_publish(ORB_ID(lm73_i2c_wd), _lm73_i2c_wd_pub, &_lm73_i2c_wd_report.lm73_i2c_error);
-				usleep(250000);
-				lm73_error_counter = 0;
-			}
+			//lm73_error_counter++;
+			//if (lm73_error_counter > LM73_MAXIMAL_ERROR_COUNTER){
+			//	_lm73_i2c_wd_report.lm73_i2c_error = true;
+			//	orb_publish(ORB_ID(lm73_i2c_wd), _lm73_i2c_wd_pub, &_lm73_i2c_wd_report.lm73_i2c_error);
+			//	usleep(250000);
+			//	lm73_error_counter = 0;
+			//}
 			// till here ----->>
 
 			//_lm73_i2c_wd_report.lm73_i2c_error = true;														// temp marked
@@ -545,11 +544,11 @@ LM73::cycle()
 			start();
 			return;
 		}
-		lm73_error_counter = 0;									/// added for testing
+		//lm73_error_counter = 0;									/// added for testing
 
 		/* Ideal command to the I2C WD board */
-		_lm73_i2c_wd_report.lm73_i2c_error = false;
-		orb_publish(ORB_ID(lm73_i2c_wd), _lm73_i2c_wd_pub, &_lm73_i2c_wd_report.lm73_i2c_error);
+		//_lm73_i2c_wd_report.lm73_i2c_error = false;
+		//orb_publish(ORB_ID(lm73_i2c_wd), _lm73_i2c_wd_pub, &_lm73_i2c_wd_report.lm73_i2c_error);
 
 		/* next phase is measurement */
 		_measurement_phase = true;
