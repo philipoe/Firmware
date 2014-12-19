@@ -68,7 +68,7 @@ static bool thread_should_exit = false;		/**< daemon exit flag 				*/
 static bool thread_running = false;			/**< daemon status flag 			*/
 static int daemon_task;						/**< Handle of daemon task / thread */
 
-int		_diff_pres_sub;			/**< raw differential pressure subscription */
+int		_diff_pres_sub;						/**< raw differential pressure subscription */
 
 struct differential_pressure_s _diff_pres;
 
@@ -166,7 +166,7 @@ int i2c_wd_thread_main(int argc, char *argv[]) {
 
 	thread_running = true;
 
-	uint32_t hdim010_i2c_reset_counter = 0;
+	//uint32_t hdim010_i2c_reset_counter = 0;
 
 	_diff_pres_sub = orb_subscribe(ORB_ID(differential_pressure));
 
@@ -179,7 +179,7 @@ int i2c_wd_thread_main(int argc, char *argv[]) {
 			current_hdim010_error_count = differential_presure_error_counter_poll();
 
 			if (current_hdim010_error_count - last_hdim010_error_count > ERROR_COUNTER_FOR_RESET){
-				hdim010_i2c_reset_counter++;
+				//hdim010_i2c_reset_counter++;
 				//if (hdim010_i2c_reset_counter < I2C_MAX_RESET_COUNTER) {
 					warnx("Performing I2C reset due to the HDIM010 error ");
 					enable_i2c_reset = true;

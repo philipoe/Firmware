@@ -35,7 +35,6 @@
 # Reset I2C devices via GPIO driver
 #
 
-MODULE_COMMAND	= i2c_wd
-MODULE_STACKSIZE	= 1024
-SRCS			= i2c_wd.c
-MAXOPTIMIZATION	 	= -O0
+MODULE_COMMAND	 = i2c_wd
+MODULE_STACKSIZE = 1024
+SRCS			 = i2c_wd.c
