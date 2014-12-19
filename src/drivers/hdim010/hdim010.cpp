@@ -41,7 +41,6 @@
  *
  */
 
-
 #include <nuttx/config.h>
 
 #include <drivers/device/i2c.h>
@@ -74,34 +73,34 @@
 
 #include <drivers/drv_airspeed.h>
 #include <drivers/drv_hrt.h>
+#include <drivers/device/ringbuffer.h>
 
 #include <uORB/uORB.h>
 #include <uORB/topics/differential_pressure.h>
 #include <uORB/topics/subsystem_info.h>
-#include <uORB/topics/system_power.h>
-
 #include <drivers/airspeed/airspeed.h>
 
+
+/* I2C bus address */
 #define I2C_ADDRESS_HDIM010	0x78
+
 #define PATH_HDIM010		"/dev/hdim010"
 
-////* Register address */
-////#define ADDR_READ_MR			0x00	/* write to this address to start conversion */
+/* Measurement rate is 50Hz */
+#define MEAS_RATE 50
+#define MEAS_DRIVER_FILTER_FREQ 5.0f
+#define CONVERSION_INTERVAL	(1000000 / MEAS_RATE)			/* microseconds */
 
-/* Measurement rate is 100Hz */
-#define MEAS_RATE 100
-#define MEAS_DRIVER_FILTER_FREQ 1.2f
-#define CONVERSION_INTERVAL	(1000000 / MEAS_RATE)	/* microseconds */
 
 /* Conversion factors */
-#define HDIM010_SENSITIVITY				1092.2f						/* Sensitivity of the sensor S = (24575-2731)/(10- (-10)) 	*/
-#define HDIM010_PRESSURE_OUTPUT_MIN		2731.0f						/* Output at minimum specified pressure 					*/
-#define HDIM010_PRESSURE_VALUE_MIN      -10.0f						/* Min. value of pressure range [mbar]						*/
+#define HDIM010_SENSITIVITY				1092.2f				/* Sensitivity of the sensor S = (24575-2731)/(10- (-10)) 	*/
+#define HDIM010_PRESSURE_OUTPUT_MIN		2731.0f				/* Output at minimum specified pressure 					*/
+#define HDIM010_PRESSURE_VALUE_MIN      -10.0f				/* Min. value of pressure range [mbar]						*/
 
 class HDIM010 : public Airspeed
 {
 public:
-	HDIM010(int bus, int address = I2C_ADDRESS_HDIM010, const char *path = PATH_HDIM010);
+	HDIM010(int bus, int address = I2C_ADDRESS_HDIM010, const char* path = PATH_HDIM010);
 
 protected:
 
@@ -115,13 +114,6 @@ protected:
 
 	math::LowPassFilter2p	_filter;
 
-	/**
-	 * Correct for 5V rail voltage variations
-	 */
-	////void voltage_correction(float &diff_pres_pa, float &temperature);
-
-	int _t_system_power;
-	struct system_power_s system_power;
 };
 
 /*
@@ -129,17 +121,22 @@ protected:
  */
 extern "C" __EXPORT int hdim010_main(int argc, char *argv[]);
 
-HDIM010::HDIM010(int bus, int address, const char *path) : Airspeed(bus, address,
+HDIM010::HDIM010(int bus, int address, const char* path) : Airspeed(bus, address,
 	CONVERSION_INTERVAL, path),
-	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ),
-	_t_system_power(-1),
-	system_power{}
+	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ)
 {
 }
 
 int
 HDIM010::measure()
 {
+	return OK;
+}
+
+int
+HDIM010::collect()
+{
+
 	uint8_t data[2];
 	union {
 		uint8_t	b[2];
@@ -166,17 +163,17 @@ HDIM010::measure()
 	/* pressure calculation, result in mbar */
 	dPressure = (((float)((int16_t)(cvt.w & 0x7fff))) - HDIM010_PRESSURE_OUTPUT_MIN)/HDIM010_SENSITIVITY +(HDIM010_PRESSURE_VALUE_MIN);
 
+	/* convert mbar to pa					*/
+	dPressure *= 100.0f;
+
 	/* reduce measurement offset 			*/
 	dPressure -= _diff_pres_offset;
 
 	/* Range check /failure accordingly */
-	if ( (dPressure > 10.0f) | (dPressure < -10.0f) ) {
-		warnx("HDIM010: Differential pressure is out of range: %3.6f [mbar]", (double) dPressure);
+	if ( (dPressure > 1000.0f) | (dPressure < -1000.0f) ) {
+		warnx("HDIM010: Differential pressure is out of range: %3.6f [Pa]", (double) dPressure);
 		return -EIO;
 	}
-
-	//warnx("calculated effective differential pressure %3.6f [mbar]", (double) dPressure);   				// removed display
-	warnx("calculated effective differential pressure %3.6f [Pa]", (double) (dPressure * 100.0f));   	    // removed display
 
 	struct differential_pressure_s report;
 
@@ -193,6 +190,8 @@ HDIM010::measure()
 	report.differential_pressure_raw_pa = dPressure;
 	report.max_differential_pressure_pa = _max_differential_pressure_pa;
 
+	//warnx("calculated effective differential pressure %3.6f [Pa]", (double) dPressure);   	    // removed display
+
 	if (_airspeed_pub > 0 && !(_pub_blocked)) {
 		/* publish it */
 		orb_publish(ORB_ID(differential_pressure), _airspeed_pub, &report);
@@ -208,38 +207,61 @@ HDIM010::measure()
 	return OK;
 }
 
-int
-HDIM010::collect()
-{
-	return OK;
-}
-
 void
 HDIM010::cycle()
 {
 	int ret;
 
-	/* measurement phase (_collect_phase used for keeping the airspeed conventions) */
-	if (~_collect_phase) {
+	/* collection phase? */
+	if (_collect_phase) {
 
-		/* measurement phase */
-		ret = measure();
+		/* perform collection */
+		ret = collect();
 		if (OK != ret) {
-			debug("measure error");
-		}
+			perf_count(_comms_errors);
 
-		_sensor_ok = (ret == OK);
+			/* restart the measurement state machine */
+			start();
+			_sensor_ok = false;
+			return;
+		}
 
 		/* next phase is measurement */
 		_collect_phase = false;
 
-		/* schedule a fresh cycle call when the measurement is done */
-		work_queue(HPWORK,
-			   &_work,
-			   (worker_t)&Airspeed::cycle_trampoline,
-			   this,
-			   USEC2TICK(CONVERSION_INTERVAL));
+		/*
+		 * Is there a collect->measure gap?
+		 */
+		if (_measure_ticks > USEC2TICK(CONVERSION_INTERVAL)) {
+
+			/* schedule a fresh cycle call when we are ready to measure again */
+			work_queue(HPWORK,
+				   &_work,
+				   (worker_t)&Airspeed::cycle_trampoline,
+				   this,
+				   _measure_ticks - USEC2TICK(CONVERSION_INTERVAL));
+
+			return;
+		}
 	}
+
+	/* measurement phase */
+	ret = measure();
+	if (OK != ret) {
+		debug("measure error");
+	}
+
+	_sensor_ok = (ret == OK);
+
+	/* next phase is collection */
+	_collect_phase = true;
+
+	/* schedule a fresh cycle call when the measurement is done */
+	work_queue(HPWORK,
+		   &_work,
+		   (worker_t)&Airspeed::cycle_trampoline,
+		   this,
+		   USEC2TICK(CONVERSION_INTERVAL));
 }
 
 /**
@@ -254,7 +276,7 @@ namespace hdim010
 #endif
 const int ERROR = -1;
 
-HDIM010		*g_dev = nullptr;
+HDIM010	*g_dev;
 
 void	start(int i2c_bus);
 void	stop();
@@ -265,41 +287,34 @@ void	info();
 /**
  * Start the driver.
  *
- * This function call only returns once the driver is up and running
- * or failed to detect the sensor.
+ * This function only returns if the sensor is up and running
+ * or could not be detected successfully.
  */
 void
 start(int i2c_bus)
 {
 	int fd;
 
-	if (g_dev != nullptr) {
+	if (g_dev != nullptr)
 		errx(1, "already started");
-	}
 
-	/* create the driver, try the HDIM010 first */
-	g_dev = new HDIM010(i2c_bus, I2C_ADDRESS_HDIM010, PATH_HDIM010);
+	/* create the driver */
+	g_dev = new HDIM010(i2c_bus);
 
-	/* check if the HDIM010 was instantiated */
-	if (g_dev == nullptr) {
+	if (g_dev == nullptr)
 		goto fail;
-	}
 
-	/* try the HDIM010 next if init fails */
-	if (OK != g_dev->Airspeed::init()) {
+	if (OK != g_dev->Airspeed::init())
 		goto fail;
-	}
 
 	/* set the poll rate to default, starts automatic data collection */
 	fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
 
-	if (fd < 0) {
+	if (fd < 0)
 		goto fail;
-	}
 
-	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0) {
+	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
 		goto fail;
-	}
 
 	exit(0);
 
@@ -344,24 +359,22 @@ test()
 
 	int fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
 
-	if (fd < 0) {
+	if (fd < 0)
 		err(1, "%s open failed (try 'hdim010 start' if the driver is not running", AIRSPEED_DEVICE_PATH);
-	}
 
 	/* do a simple demand read */
 	sz = read(fd, &report, sizeof(report));
 
-	if (sz != sizeof(report)) {
+	if (sz != sizeof(report))
 		err(1, "immediate read failed");
-	}
 
 	warnx("single read");
-	warnx("diff pressure: %d pa", (int)report.differential_pressure_filtered_pa);
+	warnx("Effective differential pressure %3.3f [Pa]", (double)report.differential_pressure_filtered_pa);
+
 
 	/* start the sensor polling at 2Hz */
-	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2)) {
+	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2))
 		errx(1, "failed to set 2Hz poll rate");
-	}
 
 	/* read the sensor 5x and report each value */
 	for (unsigned i = 0; i < 5; i++) {
@@ -372,26 +385,22 @@ test()
 		fds.events = POLLIN;
 		ret = poll(&fds, 1, 2000);
 
-		if (ret != 1) {
-			errx(1, "timed out");
-		}
+		if (ret != 1)
+			errx(1, "timed out waiting for sensor data");
 
 		/* now go get it */
 		sz = read(fd, &report, sizeof(report));
 
-		if (sz != sizeof(report)) {
+		if (sz != sizeof(report))
 			err(1, "periodic read failed");
-		}
 
 		warnx("periodic read %u", i);
-		warnx("diff pressure: %d pa", (int)report.differential_pressure_filtered_pa);
-		warnx("temperature: %d C (0x%02x)", (int)report.temperature, (unsigned) report.temperature);
+		warnx("Effective differential pressure %3.3f [Pa]", (double)report.differential_pressure_filtered_pa);
 	}
 
 	/* reset the sensor polling to its default rate */
-	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT)) {
+	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT))
 		errx(1, "failed to set default rate");
-	}
 
 	errx(0, "PASS");
 }
@@ -404,17 +413,14 @@ reset()
 {
 	int fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
 
-	if (fd < 0) {
+	if (fd < 0)
 		err(1, "failed ");
-	}
 
-	if (ioctl(fd, SENSORIOCRESET, 0) < 0) {
+	if (ioctl(fd, SENSORIOCRESET, 0) < 0)
 		err(1, "driver reset failed");
-	}
 
-	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0) {
+	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
 		err(1, "driver poll restart failed");
-	}
 
 	exit(0);
 }
@@ -425,9 +431,8 @@ reset()
 void
 info()
 {
-	if (g_dev == nullptr) {
+	if (g_dev == nullptr)
 		errx(1, "driver not running");
-	}
 
 	printf("state @ %p\n", g_dev);
 	g_dev->print_info();
@@ -435,11 +440,10 @@ info()
 	exit(0);
 }
 
-} // namespace
-
+}
 
 static void
-hdim010_usage()
+hdim010_airspeed_usage()
 {
 	warnx("usage: hdim010 command [options]");
 	warnx("options:");
@@ -466,38 +470,33 @@ hdim010_main(int argc, char *argv[])
 	/*
 	 * Start/load the driver.
 	 */
-	if (!strcmp(argv[1], "start")) {
+	if (!strcmp(argv[1], "start"))
 		hdim010::start(i2c_bus);
-	}
 
 	/*
 	 * Stop the driver
 	 */
-	if (!strcmp(argv[1], "stop")) {
+	if (!strcmp(argv[1], "stop"))
 		hdim010::stop();
-	}
 
 	/*
 	 * Test the driver/device.
 	 */
-	if (!strcmp(argv[1], "test")) {
+	if (!strcmp(argv[1], "test"))
 		hdim010::test();
-	}
 
 	/*
 	 * Reset the driver.
 	 */
-	if (!strcmp(argv[1], "reset")) {
+	if (!strcmp(argv[1], "reset"))
 		hdim010::reset();
-	}
 
 	/*
 	 * Print driver information.
 	 */
-	if (!strcmp(argv[1], "info") || !strcmp(argv[1], "status")) {
+	if (!strcmp(argv[1], "info") || !strcmp(argv[1], "status"))
 		hdim010::info();
-	}
 
-	hdim010_usage();
+	hdim010_airspeed_usage();
 	exit(0);
 }

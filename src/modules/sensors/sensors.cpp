@@ -1570,7 +1570,7 @@ Sensors::dbaro_poll(struct sensor_combined_s &raw)
 		dbaro_velocity_calc(raw);
 	}
 }
-
+#endif
 /*		 Velocity calculation (exported code to the dbaro_velocity_eval app )  		 */
 void
 Sensors::diff_pres_poll(struct sensor_combined_s &raw)
@@ -1604,6 +1604,7 @@ Sensors::diff_pres_poll(struct sensor_combined_s &raw)
 		}
 	}
 }
+#if 0
 //
 float
 Sensors::dbaro_pressure_corr(struct sensor_combined_s &raw)
@@ -2331,7 +2332,7 @@ Sensors::task_main()
 	gyro_poll(raw);
 	mag_poll(raw);
 	baro_poll(raw);
-	////diff_pres_poll(raw);
+	diff_pres_poll(raw);
 	////dbaro_poll(raw);									// added
 	////amb_temp_poll(raw);									// added
 	////adc121_vspb_poll(raw);								// added
@@ -2391,7 +2392,7 @@ Sensors::task_main()
 		/* check battery voltage */
 		adc_poll(raw);
 
-		////diff_pres_poll(raw);
+		diff_pres_poll(raw);
 
 		/* Inform other processes that new data is available to copy */
 		if (_publishing) {

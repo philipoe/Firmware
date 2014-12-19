@@ -36,6 +36,7 @@
  * I2C WD driver for PX4 autopilot
  *
  * @author: Amir Melzer <amir.melzer@mavt.ethz.ch>
+ *  	    Lorenz Meier <lm@inf.ethz.ch>
  */
 
 #include <nuttx/config.h>
@@ -49,7 +50,11 @@
 #include <systemlib/err.h>
 #include <board_config.h>
 #include <uORB/uORB.h>
-#include <uORB/topics/hdim010_i2c_wd.h>
+#include <uORB/topics/airspeed.h>
+
+#include <uORB/topics/airspeed.h>
+#include <uORB/topics/differential_pressure.h>
+
 
 #include <drivers/drv_gpio.h>
 
@@ -57,12 +62,20 @@
 #define I2C_WD_INTERVAL_US 600000
 #define RESET_TIME_US 	   200000
 #define I2C_MAX_RESET_COUNTER 100
+#define ERROR_COUNTER_FOR_RESET 20
 
 static bool thread_should_exit = false;		/**< daemon exit flag 				*/
 static bool thread_running = false;			/**< daemon status flag 			*/
 static int daemon_task;						/**< Handle of daemon task / thread */
 
-int			_hdim010_i2c_wd_sub;			/**< I2C WD board subscription		*/
+int		_diff_pres_sub;			/**< raw differential pressure subscription */
+
+struct differential_pressure_s _diff_pres;
+
+
+uint64_t last_hdim010_error_count = 0LL;
+uint64_t current_hdim010_error_count = 0LL;
+
 
 /**
  * daemon management function.
@@ -73,6 +86,11 @@ __EXPORT int i2c_wd_main(int argc, char *argv[]);
  * Mainloop of daemon.
  */
 int i2c_wd_thread_main(int argc, char *argv[]);
+
+/**
+ * Poll differential presure data
+ */
+uint64_t differential_presure_error_counter_poll(void);
 
 /**
  * Print the correct usage.
@@ -110,7 +128,7 @@ int i2c_wd_main(int argc, char *argv[])
 		/* Setting the I2C WD:						*/
 
 		/* rate limit i2c_wd status updates to 10Hz */
-		orb_set_interval(_hdim010_i2c_wd_sub, 100);
+		orb_set_interval(_diff_pres_sub, 100);
 
 
 		/* Setting the I2C WD HW					*/
@@ -150,44 +168,35 @@ int i2c_wd_thread_main(int argc, char *argv[]) {
 
 	uint32_t hdim010_i2c_reset_counter = 0;
 
-	_hdim010_i2c_wd_sub = orb_subscribe(ORB_ID(hdim010_i2c_wd));
+	_diff_pres_sub = orb_subscribe(ORB_ID(differential_pressure));
 
 	while (!thread_should_exit) {
-
 		bool hdim010_i2c_wd_updated;
-		orb_check(_hdim010_i2c_wd_sub, &hdim010_i2c_wd_updated);
-
+		orb_check(_diff_pres_sub, &hdim010_i2c_wd_updated);
 		bool enable_i2c_reset = false;
 
 		if (hdim010_i2c_wd_updated) {
-			struct hdim010_i2c_wd_s	hdim010_i2c_wd_report;
+			current_hdim010_error_count = differential_presure_error_counter_poll();
 
-			orb_copy(ORB_ID(hdim010_i2c_wd), _hdim010_i2c_wd_sub, &hdim010_i2c_wd_report);
-
-			if (hdim010_i2c_wd_report.hdim010_i2c_error){
+			if (current_hdim010_error_count - last_hdim010_error_count > ERROR_COUNTER_FOR_RESET){
 				hdim010_i2c_reset_counter++;
-				if (hdim010_i2c_reset_counter < I2C_MAX_RESET_COUNTER) {
+				//if (hdim010_i2c_reset_counter < I2C_MAX_RESET_COUNTER) {
 					warnx("Performing I2C reset due to the HDIM010 error ");
 					enable_i2c_reset = true;
-				}
+				//}
 			}
-			else{
-				hdim010_i2c_reset_counter = 0;
-			}
+			//else
+				//hdim010_i2c_reset_counter = 0;
+			last_hdim010_error_count = current_hdim010_error_count;
 		}
 
 		if (enable_i2c_reset) {
-#if 0
-				/*Reset the external I2C line*/
-				stm32_gpiowrite(GPIO_GPIO1_OUTPUT, false);					/* Pull line down to switch off */
-				usleep(RESET_TIME_US);										/* wait 200 ms for the reset	*/
-				stm32_gpiowrite(GPIO_GPIO1_OUTPUT, true);					/* Pull line up to switch on 	*/
-#endif
-				////////////////// new code (compliant with the Xbee reset)
+
 				int	fd = open(PX4FMU_DEVICE_PATH, 0);
 				if (fd < 0) {
 					printf("GPIO: open fail\n");
 				}
+
 				// set GPIO2 to outputs and reset the external I2C line
 				ioctl(fd, GPIO_SET_OUTPUT, GPIO_EXT_2);
 				ioctl(fd, GPIO_CLEAR, GPIO_EXT_2);
@@ -195,8 +204,7 @@ int i2c_wd_thread_main(int argc, char *argv[]) {
 				ioctl(fd, GPIO_SET_INPUT, GPIO_EXT_2);
 				if(close(fd)!=0)
 					printf("Warning: Closing of GPIO file descriptor failed.");
-				//////////////////
-			}
+		}
 
 		usleep(I2C_WD_INTERVAL_US);											/* WD interval 					*/
 	}
@@ -207,3 +215,17 @@ int i2c_wd_thread_main(int argc, char *argv[]) {
 
 	return 0;
 }
+
+uint64_t differential_presure_error_counter_poll(void){
+	bool updated;
+	orb_check(_diff_pres_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(differential_pressure), _diff_pres_sub, &_diff_pres);
+		current_hdim010_error_count = _diff_pres.error_count;
+	}
+
+	return (current_hdim010_error_count);
+}
+
+

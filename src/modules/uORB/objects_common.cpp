@@ -88,9 +88,6 @@ ORB_DEFINE(sensor_mppt, struct sensor_mppt_s);
 #include "topics/sensor_power.h"
 ORB_DEFINE(sensor_power, struct sensor_power_s);
 
-#include "topics/hdim010_i2c_wd.h"
-ORB_DEFINE(hdim010_i2c_wd, struct hdim010_i2c_wd_s);
-
 #include "topics/vehicle_attitude.h"
 ORB_DEFINE(vehicle_attitude, struct vehicle_attitude_s);
 
