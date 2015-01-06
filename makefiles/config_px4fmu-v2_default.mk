@@ -27,13 +27,14 @@ MODULES		+= drivers/l3gd20
 MODULES		+= drivers/hmc5883
 MODULES		+= drivers/ms5611
 MODULES		+= drivers/mb12xx
-MODULES		+= drivers/sf0x
+# MODULES		+= drivers/sf0x
 MODULES		+= drivers/ll40ls
+# MODULES		+= drivers/trone
 MODULES		+= drivers/gps
 MODULES		+= drivers/hil
 MODULES		+= drivers/hott/hott_telemetry
 MODULES		+= drivers/hott/hott_sensors
-MODULES		+= drivers/blinkm
+# MODULES		+= drivers/blinkm
 MODULES		+= drivers/airspeed
 MODULES		+= drivers/ets_airspeed
 MODULES		+= drivers/meas_airspeed
@@ -85,6 +86,7 @@ MODULES		+= modules/fw_pos_control_l1
 MODULES		+= modules/fw_att_control
 MODULES		+= modules/mc_att_control
 MODULES		+= modules/mc_pos_control
+MODULES 	+= modules/vtol_att_control
 
 #
 # Logging
@@ -140,6 +142,9 @@ MODULES		+= modules/bottle_drop
 
 # Hardware test
 #MODULES			+= examples/hwtest
+
+# Generate parameter XML file
+GEN_PARAM_XML = 1
 
 #
 # Transitional support - add commands from the NuttX export archive.
