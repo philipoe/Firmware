@@ -10,6 +10,8 @@ PARAM_DEFINE_INT32(LOG_MPPT, 1);	// " ... MPPT messages
 PARAM_DEFINE_INT32(LOG_ASLC, 1);
 PARAM_DEFINE_INT32(LOG_ASLD, 1);
 
+void GetLogEnablerParams(void);
+
 struct log_params {
 	bool LOG_EKF;	//bool is used to save RAM here. The parameters themselves are int32 !
 	bool LOG_RCIn;

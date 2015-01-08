@@ -197,12 +197,12 @@ void ASLAutopilot::update()
 	//******************************************************************************************************************
 	// Control Augmented System (CAS) control.
 	// Attitude (Angle) Control with reference inputs from RC-transmitter.
-	if(subs.vstatus.main_state >= MODE_CAS && (counter % params.p.CAS_fMult == 0))
+	if(subs.vstatus.main_state >= (main_state_t)MODE_CAS && (counter % params.p.CAS_fMult == 0))
 	{
 		//if((counter %20==0) && (params.p.ASLC_DEBUG==2)) printf("dt_cas:%8.6f\n", double(hrt_absolute_time()-t2_old)/1.0e6f);
 		//t2_old=hrt_absolute_time();
 
-		if(subs.vstatus.main_state == MODE_CAS && !subs.vstatus.rc_signal_lost) {
+		if(subs.vstatus.main_state == (main_state_t)MODE_CAS && !subs.vstatus.rc_signal_lost) {
 			//We are exactly in CAS mode, update references
 			ctrldata.aslctrl_mode = MODE_CAS;
 			ctrldata.RollAngleRef = -params.p.SAS_RollPDir*subs.manual_sp.y * params.p.CAS_RollAngleLim; //Inputs scaled to reference angles
@@ -231,7 +231,7 @@ void ASLAutopilot::update()
 	//******************************************************************************************************************
 	// Stability Augmented System (SAS) control
 	// Damping of roll, pitch and yaw with reference inputs from RC-transmitter.
-	if(subs.vstatus.main_state>=MODE_SAS) {
+	if(subs.vstatus.main_state>=(main_state_t)MODE_SAS) {
 		if((counter %20==0) && (params.p.ASLC_DEBUG==2)) {
 			printf("dt_sas:%8.6f\n", double(hrt_absolute_time()-t1_old)/1.0e6);
 		}
@@ -243,7 +243,7 @@ void ASLAutopilot::update()
 			if(MavlinkSendOK(6)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: dt=%u [us] != SAS_tSample!",ctrldata.dt);}
 		}
 
-		if(subs.vstatus.main_state==MODE_SAS) {
+		if(subs.vstatus.main_state==(main_state_t)MODE_SAS) {
 			//We are exactly in SAS mode, update references
 			ctrldata.aslctrl_mode = MODE_SAS;
 			ctrldata.uElev=-subs.manual_sp.x;
@@ -491,7 +491,7 @@ int ASLAutopilot::HandleRCLoss(void)
 			subs.manual_sp.posctl_switch = SWITCH_POS_ON;
 			//Set RTL references
 			//subs.position_setpoint_triplet.nav_state = NAV_CMD_RETURN_TO_LAUNCH; //TODO check whether this works
-			subs.position_setpoint_triplet.current.type == SETPOINT_TYPE_POSITION;
+			subs.position_setpoint_triplet.current.type = SETPOINT_TYPE_POSITION;
 			subs.position_setpoint_triplet.current.alt = subs.home_pos.alt + 100.0f;
 			subs.position_setpoint_triplet.current.lat = subs.home_pos.lat;
 			subs.position_setpoint_triplet.current.lon = subs.home_pos.lon;

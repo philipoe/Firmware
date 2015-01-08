@@ -93,14 +93,14 @@ float CAS::PitchControl(float const& pitchRef, float& pitchRefCT, float const& p
 		// b) to avoid overwriting the normal PI-Roll-Ctrler command due to a too high turn-compensation feed-forward
 		//TODO1: 1.0 is not correct.
 		float remaining_ctrl_action = 1.0f-fabs(qref);
-		float roll_lim = limit1(roll, params->p.CAS_RollAngleLim);
-		float qref_ff = limit1(params->p.CAS_uElevTurnFF*fabs(sinf(roll_lim)*sinf(roll_lim)*inv_cosroll), remaining_ctrl_action);
+		float roll_lim2 = limit1(roll, params->p.CAS_RollAngleLim);
+		float qref_ff = limit1(params->p.CAS_uElevTurnFF*fabs(sinf(roll_lim2)*sinf(roll_lim2)*inv_cosroll), remaining_ctrl_action);
 		if(params->p.ASLC_DEBUG==16) printf("roll: %.2f qref:%.2f qref_ff %.2f qref_rem:%.2f \n",(double)roll, (double)qref,(double)qref_ff,(double)remaining_ctrl_action);
 		qref += qref_ff;
 	}
 
 	// Throttle feed forward
-	if((params->p.ASLC_CoordTurn == 1 || params->p.ASLC_CoordTurn >= 4 && aslctrl_mode==MODE_CAS) && fabs(roll) < 85.0f*DEG2RAD) {
+	if(((params->p.ASLC_CoordTurn == 1 || params->p.ASLC_CoordTurn >= 4) && aslctrl_mode==MODE_CAS) && fabs(roll) < 85.0f*DEG2RAD) {
 		// Throttle feed forward (necessary due to 1) higher stall speed and 2) higher drag in curve)
 		// Note: This is taken from TECS, and is just a "hack"to have the necessary throttle feed-forward - with the
 		// same behaviour as in TECS - also in a pure CAS mode.

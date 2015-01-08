@@ -106,7 +106,7 @@ int aslctrl_main(int argc, char *argv[])
 					 SCHED_PRIORITY_MAX - 10,
 					 6144,
 					 aslctrl_thread_main,
-					 (argv) ? (const char **)&argv[2] : (const char **)NULL);
+					 (argv) ? (char * const *)&argv[2] : (char * const *)NULL);
 		exit(0);
 	}
 
@@ -139,11 +139,11 @@ int aslctrl_thread_main(int argc, char *argv[])
 {
 	warnx("starting...");
 
-	ASLAutopilot autopilot;
+	ASLAutopilot *autopilot(new ASLAutopilot());
 
 	//Sleep for 5 seconds. Then reload&republish parameters, as necessary for proper logging in sdlog2
 	usleep(5000000);
-	autopilot.ReloadParameters();
+	autopilot->ReloadParameters();
 
 	warnx("ready.");
 
@@ -153,10 +153,12 @@ int aslctrl_thread_main(int argc, char *argv[])
 		// update uorb subscriptions
 		// update parameters
 		// perform control
-		autopilot.update();
+		autopilot->update();
 	}
 
 	warnx("exiting.");
+
+	delete autopilot;
 
 	thread_running = false;
 

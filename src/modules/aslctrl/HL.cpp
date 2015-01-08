@@ -11,6 +11,8 @@
 #include "helpers/helpfuncs.h"
 #include "helpers/consts.h"
 
+#define ALTEPS (0.1f)				    //Altitude boundary at which it is assumed to be at the Goal
+
 HL::HL() : LP_Airspeed(0,0),MA_Airspeed(4,0.0f),LP_vZ(0,0),LP_h(0,0)
 {
 	bSpoilerAltExceeded=false;
@@ -197,7 +199,7 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 	PitchAngleRef=limit1(PitchAngleRef,params->p.CAS_PitchAngleLim);
 
 	// Set ALTITUDE_STATUS
-	if(hRef_t == hRef) AltitudeStatus = ALTITUDE_OK_LEVELING;
+	if(fabs(hRef_t-hRef) < ALTEPS) AltitudeStatus = ALTITUDE_OK_LEVELING;
 	else if(hRef_t < hRef) AltitudeStatus = ALTITUDE_OK_CLIMBING;
 	else if(hRef_t > hRef) AltitudeStatus = ALTITUDE_OK_DESCENDING;
 	if(h < hRef_t - 20.0f && PitchAngleRef>params->p.CAS_PitchAngleLim) {
