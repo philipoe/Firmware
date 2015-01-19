@@ -1406,11 +1406,6 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("ATTITUDE_TARGET", 3.0f);
 		configure_stream("DISTANCE_SENSOR", 0.5f);
 		configure_stream("OPTICAL_FLOW", 5.0f);
-		//Added by ASL/PhilippOe
-		configure_stream("SERVO_OUTPUT_RAW_0", 1.0f);
-		configure_stream("MANUAL_CONTROL", 1.0f);
-		configure_stream("ASLCTRL_DATA", 10.0f);
-		configure_stream("ASLCTRL_DEBUG", 10.0f);
 		break;
 
 	case MAVLINK_MODE_ONBOARD:
@@ -1421,25 +1416,6 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("ATTITUDE_TARGET", 10.0f);
 		configure_stream("POSITION_TARGET_GLOBAL_INT", 10.0f);
 		configure_stream("VFR_HUD", 10.0f);
-		break;
-
-	case MAVLINK_MODE_CUSTOM: //Added by ASL/PhilippOe for low data-rate testing (in flight via telemetry)
-		configure_stream("SYS_STATUS", 1.0f);
-		configure_stream("GPS_GLOBAL_ORIGIN", 0.0f);
-		configure_stream("HIGHRES_IMU", 0.5f);
-		configure_stream("ATTITUDE", 2.0f);
-		configure_stream("VFR_HUD", 2.0f);
-		configure_stream("GPS_RAW_INT", 0.5f);
-		configure_stream("GLOBAL_POSITION_INT", 0.5f);
-		configure_stream("LOCAL_POSITION_NED", 0.5f);
-		configure_stream("RC_CHANNELS_RAW", 0.5f);
-		configure_stream("POSITION_TARGET_GLOBAL_INT", 0.5f);
-		configure_stream("ASLCTRL_DATA", 3.0f);
-		configure_stream("ASLCTRL_DEBUG", 3.0f);
-
-		configure_stream("ATTITUDE_TARGET", 0.0f);
-		configure_stream("DISTANCE_SENSOR", 0.0f);
-		configure_stream("OPTICAL_FLOW", 0.0f);
 		break;
 
 	default:
