@@ -104,6 +104,8 @@
 #define ADC_HEALTH_COUNTER_LIMIT_OK  5
 
 #define ADIS16448_Product		0x4040						   /* Product ID of the ADIS16448 IMU */
+
+#define USE_AMBIENT_TEMPERATURE_SENSOR 1					   /* 0: Standard PX4 configuration. 1:Usage of Ambient Temperature Sensor (ASL UAVs) */
 /**
  * Analog layout:
  * FMU:
@@ -517,7 +519,7 @@ private:
 
 	void		dbaro_velocity_calc(struct sensor_combined_s &raw);
 
-	/**																		// added
+	/**
 	 * Poll the ambient temperature for updated data.
 	 *
 	 * @param raw			Combined sensor data structure into which
@@ -1587,7 +1589,11 @@ Sensors::diff_pres_poll(struct sensor_combined_s &raw)
 		raw.differential_pressure_timestamp = _diff_pres.timestamp;
 		raw.differential_pressure_filtered_pa = _diff_pres.differential_pressure_filtered_pa;
 
+#if USE_AMBIENT_TEMPERATURE_SENSOR
+		float air_temperature_celsius = (raw.amb_temp_celcius > -300.0f)   ? raw.amb_temp_celcius : (raw.baro_temp_celcius - PCB_TEMP_ESTIMATE_DEG);
+#else
 		float air_temperature_celsius = (_diff_pres.temperature > -300.0f) ? _diff_pres.temperature : (raw.baro_temp_celcius - PCB_TEMP_ESTIMATE_DEG);
+#endif
 
 		_airspeed.timestamp = _diff_pres.timestamp;
 
@@ -2270,7 +2276,7 @@ Sensors::task_main()
 	mag_init();
 	baro_init();
 	////dbaro_init();					// added
-	amb_temp_init();				// added
+	amb_temp_init();
 	////adc121_vspb_init();				// added
 	////adc121_cspb_init();				// added
 	////adc121_cs1_init();				// added
@@ -2334,7 +2340,7 @@ Sensors::task_main()
 	baro_poll(raw);
 	diff_pres_poll(raw);
 	////dbaro_poll(raw);									// added
-	amb_temp_poll(raw);									// added
+	amb_temp_poll(raw);
 	////adc121_vspb_poll(raw);								// added
 	////adc121_cspb_poll(raw);								// added
 	////adc121_cs1_poll(raw);								// added
@@ -2382,7 +2388,7 @@ Sensors::task_main()
 		mag_poll(raw);
 		baro_poll(raw);
 		////dbaro_poll(raw);													// added
-		amb_temp_poll(raw);													// added
+		amb_temp_poll(raw);
 		////adc121_vspb_poll(raw);												// added
 		////adc121_cspb_poll(raw);												// added
 		////adc121_cs1_poll(raw);												// added

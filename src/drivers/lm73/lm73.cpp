@@ -69,8 +69,6 @@
 
 #include <drivers/drv_amb_temp.h>
 
-////#include <uORB/topics/lm73_i2c_wd.h>														/* added for the I2C WD */
-
 
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
@@ -122,12 +120,6 @@ private:
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
 
-	//struct lm73_i2c_wd_s 	 _lm73_i2c_wd_report;	         	/* added for the I2C WD */
-	//orb_advert_t		 	 _lm73_i2c_wd_pub;					/* added for the I2C WD */
-
-	//uint8_t lm73_error_counter;									/* LM73 I2C reset		*/
-
-
 	/**
 	 * Test whether the device supported by the driver is present at a
 	 * specific address.
@@ -135,7 +127,7 @@ private:
 	 * @param address	The I2C bus address to probe.
 	 * @return			True if the device is present.
 	 */
-	int			probe_address(uint8_t address);
+	int				probe_address(uint8_t address);
 
 	/**
 	 * Initialize the automatic measurement state machine and start it.
@@ -174,20 +166,19 @@ private:
 	 *
 	 * @return		OK if the measurement command was successful.
 	 */
-	int			temp_measurement();
+	int				temp_measurement();
 
 	/**
 	 * Send a reset command to the LM73.
 	 *
 	 */
-	int			cmd_reset();
+	int				cmd_reset();
 
 	/**
 	 * Set measurement resolution for the LM73.
 	 *
 	 */
-
-	int 		res_change(uint8_t res);
+	int 			res_change(uint8_t res);
 
 };
 
@@ -204,21 +195,21 @@ private:
 /* internal conversion time: 5 ms  */
 #define LM73_CONVERSION_INTERVAL	50000	/* microseconds */
 
-#define LM73_BUS				PX4_I2C_BUS_EXPANSION
+#define LM73_BUS					PX4_I2C_BUS_EXPANSION
 
-#define LM73_ADDRESS			0x48    /* LM73 I2C address (LM73-0: Address pin Float connection) */
+#define LM73_ADDRESS				0x48    /* LM73 I2C address (LM73-0: Address pin Float connection) */
 
-#define TEMP_REG_ADD			0x00	/* Pointer to the address of the temperature register 	   */
-#define CONF_REG_ADD			0x01	/* Pointer to the address of the configuration register	   */
-#define TH_REG_ADD				0x02	/* Pointer to the address of the Thigh register 		   */
-#define TL_REG_ADD				0x03	/* Pointer to the address of the Tlow register 		  	   */
-#define CONT_STAT_REG_ADD		0x04	/* Pointer to the address of the configuration register    */
-#define IDENT_REG_ADD			0x07	/* Pointer to the address of the Identification register   */
+#define TEMP_REG_ADD				0x00	/* Pointer to the address of the temperature register 	   */
+#define CONF_REG_ADD				0x01	/* Pointer to the address of the configuration register	   */
+#define TH_REG_ADD					0x02	/* Pointer to the address of the Thigh register 		   */
+#define TL_REG_ADD					0x03	/* Pointer to the address of the Tlow register 		  	   */
+#define CONT_STAT_REG_ADD			0x04	/* Pointer to the address of the configuration register    */
+#define IDENT_REG_ADD				0x07	/* Pointer to the address of the Identification register   */
 
-#define TEMP_RES_11bit			0x00	/* 10 bits temperature measurement resolution 			   */
-#define TEMP_RES_12bit			0x01	/* 11 bits temperature measurement resolution 			   */
-#define TEMP_RES_13bit			0x10	/* 12 bits temperature measurement resolution 			   */
-#define TEMP_RES_14bit			0x11	/* 13 bits temperature measurement resolution 			   */
+#define TEMP_RES_11bit				0x00	/* 10 bits temperature measurement resolution 			   */
+#define TEMP_RES_12bit				0x01	/* 11 bits temperature measurement resolution 			   */
+#define TEMP_RES_13bit				0x10	/* 12 bits temperature measurement resolution 			   */
+#define TEMP_RES_14bit				0x11	/* 13 bits temperature measurement resolution 			   */
 
 #define LM73_MAXIMAL_ERROR_COUNTER	10	/* Added for the LM73 reset (number of error required for the I2C reset) */    //// <<<--- checkb
 
@@ -229,7 +220,7 @@ extern "C" __EXPORT int lm73_main(int argc, char *argv[]);
 
 
 LM73::LM73(int bus) :
-	I2C("LM73", LM73_DEVICE_PATH, bus, 0, 400000),							// change to 400KHz if possible
+	I2C("LM73", LM73_DEVICE_PATH, bus, 0, 400000),
 	_measure_ticks(0),
 	_num_reports(0),
 	_next_report(0),
@@ -240,8 +231,6 @@ LM73::LM73(int bus) :
 	_sample_perf(perf_alloc(PC_ELAPSED, "LM73_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "LM73_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "LM73_buffer_overflows"))
-	 //lm73_error_counter(0)														/* LM73 I2C reset		*/  // added test
-
 {
 	// enable debug() calls
 	_debug_enabled = true;
@@ -284,9 +273,6 @@ LM73::init()
 
 	if (_ambient_temperature_topic < 0)
 		debug("failed to create sensor_lm73 object");
-
-	//_lm73_i2c_wd_report.lm73_i2c_error = false;												/* added for the I2C WD */
-	//_lm73_i2c_wd_pub = orb_advertise(ORB_ID(lm73_i2c_wd), &_lm73_i2c_wd_report);    		/* added for the I2C WD */
 
 	ret = OK;
 out:
@@ -528,27 +514,10 @@ LM73::cycle()
 				delete[] _reports;
 			probe();
 #endif
-			// added for testing
-			//lm73_error_counter++;
-			//if (lm73_error_counter > LM73_MAXIMAL_ERROR_COUNTER){
-			//	_lm73_i2c_wd_report.lm73_i2c_error = true;
-			//	orb_publish(ORB_ID(lm73_i2c_wd), _lm73_i2c_wd_pub, &_lm73_i2c_wd_report.lm73_i2c_error);
-			//	usleep(250000);
-			//	lm73_error_counter = 0;
-			//}
-			// till here ----->>
 
-			//_lm73_i2c_wd_report.lm73_i2c_error = true;														// temp marked
-			//orb_publish(ORB_ID(lm73_i2c_wd), _lm73_i2c_wd_pub, &_lm73_i2c_wd_report.lm73_i2c_error);			// temp marked
-			//usleep(250000);																					// temp marked
 			start();
 			return;
 		}
-		//lm73_error_counter = 0;									/// added for testing
-
-		/* Ideal command to the I2C WD board */
-		//_lm73_i2c_wd_report.lm73_i2c_error = false;
-		//orb_publish(ORB_ID(lm73_i2c_wd), _lm73_i2c_wd_pub, &_lm73_i2c_wd_report.lm73_i2c_error);
 
 		/* next phase is measurement */
 		_measurement_phase = true;
@@ -560,7 +529,6 @@ LM73::cycle()
 			   this,
 			   //USEC2TICK(LM73_CONVERSION_INTERVAL));				// temp marked for testing the replacement of LM73_CONVERSION_INTERVAL
 		   	   _measure_ticks);										// LM73_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
-
 	}
 }
 
@@ -593,9 +561,9 @@ LM73::temp_measurement()
 	cvt.b[1] = data[0];
 
 	/* temperature calculation, result in C */
-	temperature = (float)((int16_t)(cvt.w & 0xffff)) / 128;
+	temperature = (float)((int16_t)(cvt.w & 0xffff)) / 128.0f;
 
-	if ( (temperature > 150) | (temperature < -40) ) {
+	if ( (temperature > 150.0f) | (temperature < -40.0f) ) {
 			warnx("LM73: Temperature is out of range: %3.2f C", (double) temperature);
 			return -EIO;
 			}
