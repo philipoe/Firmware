@@ -64,6 +64,9 @@ ORB_DEFINE(sensor_gyro2, struct gyro_report);
 ORB_DEFINE(sensor_baro0, struct baro_report);
 ORB_DEFINE(sensor_baro1, struct baro_report);
 
+#include <drivers/drv_amb_temp.h>
+ORB_DEFINE(sensor_lm73, struct lm73_report);
+
 #include <drivers/drv_range_finder.h>
 ORB_DEFINE(sensor_range_finder, struct range_finder_report);
 

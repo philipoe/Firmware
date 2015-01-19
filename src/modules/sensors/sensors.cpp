@@ -63,7 +63,7 @@
 #include <drivers/drv_baro.h>
 #include <drivers/drv_rc_input.h>
 ////#include <drivers/drv_dbaro.h>					// added
-////#include <drivers/drv_amb_temp.h>				// added
+#include <drivers/drv_amb_temp.h>
 ////#include <drivers/drv_voltage_current.h>		// added
 ////#include <drivers/drv_mppt.h>					// added
 ////#include <drivers/drv_rc_input.h>
@@ -104,6 +104,8 @@
 #define ADC_HEALTH_COUNTER_LIMIT_OK  5
 
 #define ADIS16448_Product		0x4040						   /* Product ID of the ADIS16448 IMU */
+
+#define USE_AMBIENT_TEMPERATURE_SENSOR 1					   /* 0: Standard PX4 configuration. 1:Usage of Ambient Temperature Sensor (ASL UAVs) */
 /**
  * Analog layout:
  * FMU:
@@ -215,54 +217,54 @@ private:
 	void		rc_poll();
 
 	/* XXX should not be here - should be own driver */
-	int 		_fd_adc;			/**< ADC driver handle */
-	hrt_abstime	_last_adc;			/**< last time we took input from the ADC */
+	int 		_fd_adc;				/**< ADC driver handle */
+	hrt_abstime	_last_adc;				/**< last time we took input from the ADC */
 
-	bool 		_task_should_exit;		/**< if true, sensor task should exit */
-	int 		_sensors_task;			/**< task handle for sensor task */
+	bool 	_task_should_exit;			/**< if true, sensor task should exit */
+	int 	_sensors_task;				/**< task handle for sensor task */
 
-	bool		_hil_enabled;			/**< if true, HIL is active */
-	bool		_publishing;			/**< if true, we are publishing sensor data */
+	bool	_hil_enabled;				/**< if true, HIL is active */
+	bool	_publishing;				/**< if true, we are publishing sensor data */
 
-	int		_gyro_sub;			/**< raw gyro0 data subscription */
-	int		_accel_sub;			/**< raw accel0 data subscription */
-	int		_mag_sub;			/**< raw mag0 data subscription */
-	int		_gyro1_sub;			/**< raw gyro1 data subscription */
-	int		_accel1_sub;			/**< raw accel1 data subscription */
-	int		_mag1_sub;			/**< raw mag1 data subscription */
-	int		_gyro2_sub;			/**< raw gyro2 data subscription */
-	int		_accel2_sub;			/**< raw accel2 data subscription */
-	int		_mag2_sub;			/**< raw mag2 data subscription */
-	int 		_rc_sub;			/**< raw rc channels data subscription */
-	int		_baro_sub;			/**< raw baro data subscription */
-	int		_airspeed_sub;			/**< airspeed subscription */
-	int		_diff_pres_sub;			/**< raw differential pressure subscription */
+	int		_gyro_sub;					/**< raw gyro0 data subscription */
+	int		_accel_sub;					/**< raw accel0 data subscription */
+	int		_mag_sub;					/**< raw mag0 data subscription */
+	int		_gyro1_sub;					/**< raw gyro1 data subscription */
+	int		_accel1_sub;				/**< raw accel1 data subscription */
+	int		_mag1_sub;					/**< raw mag1 data subscription */
+	int		_gyro2_sub;					/**< raw gyro2 data subscription */
+	int		_accel2_sub;				/**< raw accel2 data subscription */
+	int		_mag2_sub;					/**< raw mag2 data subscription */
+	int 	_rc_sub;					/**< raw rc channels data subscription */
+	int		_baro_sub;					/**< raw baro data subscription */
+	int		_airspeed_sub;				/**< airspeed subscription */
+	int		_diff_pres_sub;				/**< raw differential pressure subscription */
 	int		_vcontrol_mode_sub;			/**< vehicle control mode subscription */
-	int 		_params_sub;			/**< notification of parameter updates */
-	int 		_manual_control_sub;			/**< notification of manual control updates */
-
-	orb_advert_t	_sensor_pub;			/**< combined sensor data topic */
+	int		_amb_temp_sub;				/**< raw ambient temperature data subscription */
+	int 	_params_sub;				/**< notification of parameter updates */
+	int 	_manual_control_sub;		/**< notification of manual control updates */
+	orb_advert_t	_sensor_pub;				/**< combined sensor data topic */
 	orb_advert_t	_manual_control_pub;		/**< manual control signal topic */
 	orb_advert_t	_actuator_group_3_pub;		/**< manual control as actuator topic */
-	orb_advert_t	_rc_pub;			/**< raw r/c control topic */
-	orb_advert_t	_battery_pub;			/**< battery status */
-	orb_advert_t	_airspeed_pub;			/**< airspeed */
-	orb_advert_t	_diff_pres_pub;			/**< differential_pressure */
+	orb_advert_t	_rc_pub;					/**< raw r/c control topic */
+	orb_advert_t	_battery_pub;				/**< battery status */
+	orb_advert_t	_airspeed_pub;				/**< airspeed */
+	orb_advert_t	_diff_pres_pub;				/**< differential_pressure */
 
-	perf_counter_t	_loop_perf;			/**< loop performance counter */
+	perf_counter_t	_loop_perf;					/**< loop performance counter */
 
-	struct rc_channels_s _rc;			/**< r/c channel data */
+	struct rc_channels_s _rc;					/**< r/c channel data */
 	struct battery_status_s _battery_status;	/**< battery status */
-	struct baro_report _barometer;			/**< barometer data */
+	struct baro_report _barometer;				/**< barometer data */
 	struct differential_pressure_s _diff_pres;
 	struct airspeed_s _airspeed;
 
 	math::Matrix<3, 3>	_board_rotation;		/**< rotation matrix for the orientation that the board is mounted */
-	math::Matrix<3, 3>	_external_mag_rotation;		/**< rotation matrix for the orientation that an external mag is mounted */
-	bool		_mag_is_external;		/**< true if the active mag is on an external board */
+	math::Matrix<3, 3>	_external_mag_rotation;	/**< rotation matrix for the orientation that an external mag is mounted */
+	bool		_mag_is_external;				/**< true if the active mag is on an external board */
 
-	uint64_t _battery_discharged;			/**< battery discharged current in mA*ms */
-	hrt_abstime _battery_current_timestamp;	/**< timestamp of last battery current reading */
+	uint64_t _battery_discharged;				/**< battery discharged current in mA*ms */
+	hrt_abstime _battery_current_timestamp;		/**< timestamp of last battery current reading */
 
 	struct {
 		float min[_rc_max_chan_count];
@@ -517,7 +519,7 @@ private:
 
 	void		dbaro_velocity_calc(struct sensor_combined_s &raw);
 
-	/**																		// added
+	/**
 	 * Poll the ambient temperature for updated data.
 	 *
 	 * @param raw			Combined sensor data structure into which
@@ -631,7 +633,7 @@ Sensors::Sensors() :
 	_baro_sub(-1),
 	_vcontrol_mode_sub(-1),
 	////_dbaro_sub(-1),												// added
-	////_amb_temp_sub(-1),											// added
+	_amb_temp_sub(-1),
 	////_adc121_vspb_sub(-1),										// added
 	////_adc121_cspb_sub(-1),										// added
 	////_adc121_cs1_sub(-1),										// added
@@ -1224,6 +1226,7 @@ Sensors::dbaro_init()
 }
 /////
 ///// added
+#endif
 void
 Sensors::amb_temp_init()
 {
@@ -1240,6 +1243,7 @@ Sensors::amb_temp_init()
 
 	close(fd);
 }
+#if 0
 /////
 ///// added
 void
@@ -1585,7 +1589,11 @@ Sensors::diff_pres_poll(struct sensor_combined_s &raw)
 		raw.differential_pressure_timestamp = _diff_pres.timestamp;
 		raw.differential_pressure_filtered_pa = _diff_pres.differential_pressure_filtered_pa;
 
+#if USE_AMBIENT_TEMPERATURE_SENSOR
+		float air_temperature_celsius = (raw.amb_temp_celcius > -300.0f)   ? raw.amb_temp_celcius : (raw.baro_temp_celcius - PCB_TEMP_ESTIMATE_DEG);
+#else
 		float air_temperature_celsius = (_diff_pres.temperature > -300.0f) ? _diff_pres.temperature : (raw.baro_temp_celcius - PCB_TEMP_ESTIMATE_DEG);
+#endif
 
 		_airspeed.timestamp = _diff_pres.timestamp;
 
@@ -1670,7 +1678,7 @@ Sensors::dbaro_velocity_calc(struct sensor_combined_s &raw)
 	//printf("dbaro_vel_calc: (Pres_Pa/dbaro_velo_ms/ias/tas/timestamp) %0.2f %0.2f %0.2f %0.2f %llu\n",raw.dbaro_pres_pa,raw.dbaro_velo_ms,
 	//		_airspeed.indicated_airspeed_m_s,_airspeed.true_airspeed_m_s,_airspeed.timestamp);
 }
-
+#endif
 void
 Sensors::amb_temp_poll(struct sensor_combined_s &raw)
 {
@@ -1681,14 +1689,12 @@ Sensors::amb_temp_poll(struct sensor_combined_s &raw)
 		struct lm73_report	amb_temp_report;
 
 		orb_copy(ORB_ID(sensor_lm73), _amb_temp_sub, &amb_temp_report);
-
 		raw.amb_temp_timestamp = amb_temp_report.timestamp;
-
 		raw.amb_temp_celcius = amb_temp_report.ambient_temperature; 			// Ambient temperature in degrees celcius
-
-		raw.amb_temp_counter++;
+		//raw.amb_temp_counter++;
 	}
 }
+#if 0
 void
 Sensors::adc121_vspb_poll(struct sensor_combined_s &raw)
 {
@@ -2270,7 +2276,7 @@ Sensors::task_main()
 	mag_init();
 	baro_init();
 	////dbaro_init();					// added
-	////amb_temp_init();				// added
+	amb_temp_init();
 	////adc121_vspb_init();				// added
 	////adc121_cspb_init();				// added
 	////adc121_cs1_init();				// added
@@ -2295,7 +2301,7 @@ Sensors::task_main()
 	_diff_pres_sub = orb_subscribe(ORB_ID(differential_pressure));
 	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	////_dbaro_sub = orb_subscribe(ORB_ID(sensor_dbaro));							// added
-	////_amb_temp_sub = orb_subscribe(ORB_ID(sensor_lm73));							// added
+	_amb_temp_sub = orb_subscribe(ORB_ID(sensor_lm73));
 	////_adc121_vspb_sub = orb_subscribe(ORB_ID(sensor_adc121_vspb));				// added
 	////_adc121_cspb_sub = orb_subscribe(ORB_ID(sensor_adc121_cspb));				// added
 	////_adc121_cs1_sub = orb_subscribe(ORB_ID(sensor_adc121_cs1));					// added
@@ -2334,7 +2340,7 @@ Sensors::task_main()
 	baro_poll(raw);
 	diff_pres_poll(raw);
 	////dbaro_poll(raw);									// added
-	////amb_temp_poll(raw);									// added
+	amb_temp_poll(raw);
 	////adc121_vspb_poll(raw);								// added
 	////adc121_cspb_poll(raw);								// added
 	////adc121_cs1_poll(raw);								// added
@@ -2382,7 +2388,7 @@ Sensors::task_main()
 		mag_poll(raw);
 		baro_poll(raw);
 		////dbaro_poll(raw);													// added
-		////amb_temp_poll(raw);													// added
+		amb_temp_poll(raw);
 		////adc121_vspb_poll(raw);												// added
 		////adc121_cspb_poll(raw);												// added
 		////adc121_cs1_poll(raw);												// added
