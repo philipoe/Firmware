@@ -192,8 +192,8 @@ private:
  * LM73 internal constants and data structures.
  */
 
-/* internal conversion time: 5 ms  */
-#define LM73_CONVERSION_INTERVAL	50000	/* microseconds */
+/* internal conversion time: 100 ms  */
+#define LM73_CONVERSION_INTERVAL	100000	/* microseconds */
 
 #define LM73_BUS					PX4_I2C_BUS_EXPANSION
 
@@ -527,8 +527,8 @@ LM73::cycle()
 			   &_work,
 			   (worker_t)&LM73::cycle_trampoline,
 			   this,
-			   //USEC2TICK(LM73_CONVERSION_INTERVAL));				// temp marked for testing the replacement of LM73_CONVERSION_INTERVAL
-		   	   _measure_ticks);										// LM73_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
+			   USEC2TICK(LM73_CONVERSION_INTERVAL));
+		   	   //_measure_ticks);										// LM73_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
 	}
 }
 
@@ -743,6 +743,10 @@ test()
 		warnx("time:        %lld", report.timestamp);
 
 	}
+
+	/* reset the sensor polling to its default rate */
+	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT))
+		errx(1, "failed to set default rate");
 
 	errx(0, "PASS");
 }
