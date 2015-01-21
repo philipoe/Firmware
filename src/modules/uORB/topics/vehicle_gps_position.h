@@ -58,6 +58,7 @@ struct vehicle_gps_position_s {
 	int32_t lat;					/**< Latitude in 1E-7 degrees */
 	int32_t lon;					/**< Longitude in 1E-7 degrees */
 	int32_t alt;					/**< Altitude in 1E-3 meters (millimeters) above MSL  */
+	int32_t alt_ellipsoid;				/**< Altitude in 1E3 meters (millimeters) above Ellipsoid  */
 
 	uint64_t timestamp_variance;
 	float s_variance_m_s;				/**< speed accuracy estimate m/s */
