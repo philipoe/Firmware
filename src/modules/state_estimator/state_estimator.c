@@ -537,7 +537,7 @@ int state_estimator_thread_main(int argc, char *argv[])
 				if (gps.fix_type > 2) {
 					/* reset GPS outage flag				*/
 					GPS_outage = !(gps.fix_type > 2);
-					geoid_separation = ((float)(gps.alt_ellipsoid - gps.alt)) * 1e-3f; // moved here to the 3d fix condition due problem at initialization time under outage condition
+					geoid_separation = ((float)(gps.alt_ellipsoid - gps.alt)) * 1e-3f;
 					/*update the GPS position and velocity update vector */
 					update_vect[6] = 1;
 					update_vect[7] = gps.vel_ned_valid;
