@@ -36,11 +36,9 @@
 #
 
 MODULE_COMMAND		= state_estimator
-#MODULE_PRIORITY	= SCHED_PRIORITY_DEFAULT
-MODULE_PRIORITY	 	= SCHED_PRIORITY_MAX-30
 MODULE_STACKSIZE	= 4096
-#MAXOPTIMIZATION		= -Os
-MAXOPTIMIZATION		= -O0
+#MODULE_PRIORITY		= SCHED_PRIORITY_MAX-30
+#MAXOPTIMIZATION		= -O0
 
 SRCS		 = state_estimator.c 													\
 			state_estimator_params.c 												\
@@ -76,13 +74,7 @@ SRCS		 = state_estimator.c 													\
 			codegen_state_estimator/autogen_FPF.c									\
 			codegen_state_estimator/autogen_pressure2.c								\
 			codegen_state_estimator/autogen_TasUpdate_withAerodynamics_alpha_set.c
-			
-
-#			codegen_state_estimator/autogen_TasUpdate_withAerodynamics_c_L_max.c	\
-#			codegen_state_estimator/autogen_TasUpdate_withAerodynamics_c_L_min.c	\
-#			codegen_state_estimator/autogen_angleJacobian2dAccDir.c					\
-#			codegen_state_estimator/svd.c											\
-	    			
+			    			
 # XXX this is *horribly* broken
 INCLUDE_DIRS		+= $(TOPDIR)/../mavlink/include/mavlink
 
