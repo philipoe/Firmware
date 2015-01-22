@@ -40,7 +40,7 @@ MODULE_COMMAND		= state_estimator
 MODULE_PRIORITY	 	= SCHED_PRIORITY_MAX-30
 MODULE_STACKSIZE	= 4096
 #MAXOPTIMIZATION		= -Os
-#MAXOPTIMIZATION		= -O0
+MAXOPTIMIZATION		= -O0
 
 SRCS		 = state_estimator.c 													\
 			state_estimator_params.c 												\

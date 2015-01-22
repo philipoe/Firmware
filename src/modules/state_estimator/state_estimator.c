@@ -281,7 +281,6 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 	mag_date   = (double)ekf_params.mag_date_year + ((double)ekf_params.mag_date_month)/10;
 
-	//uint64_t last_data = 0;
 	uint64_t last_measurement = 0;
 
 
@@ -431,7 +430,6 @@ int state_estimator_thread_main(int argc, char *argv[])
 	float sensor_update_hz[8] = {0, 0, 0, 0, 0, 0, 0, 0};			/* update hz fields: 	  [gyro||accel||mag||baro||dbaro||amb_temp||gps_pos||gps_vel] */
 
 	/* check for sensor updates */
-	//uint32_t sensor_last_count[8] = {0, 0, 0, 0, 0, 0, 0, 0};		/* counter fields: 		  [gyro||accel||mag||baro||dbaro||amb_temp||gps_pos||gps_vel] */
 	uint64_t sensor_last_timestamp[8] = {0, 0, 0, 0, 0, 0, 0, 0};	/* last timestamp fields: [gyro||accel||mag||baro||dbaro||amb_temp||gps_pos||gps_vel] */
 
 	uint64_t start_time = hrt_absolute_time();
@@ -441,7 +439,6 @@ int state_estimator_thread_main(int argc, char *argv[])
 	volatile unsigned offset_count = 0;
 
 	static float mag_initial[3]  = {0.0f, 0.0f, 0.0f};
-	//volatile unsigned magnetometer_counter_last = 0;		// change to timestamp
 	volatile uint64_t magnetometer_timestamp_last = 0;
 	volatile unsigned mag_initial_count = 0;
 
@@ -460,11 +457,10 @@ int state_estimator_thread_main(int argc, char *argv[])
 	/* reset update vector fields: [gyro||accel||mag||baro||dbaro||amb_temp||gps_pos||gps_vel] */
 	uint8_t update_vect[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
-	// added for checking HIL mode:
+	/* Checking HIL mode: */
 	orb_copy(ORB_ID(vehicle_control_mode), sub_control_mode, &control_mode);
 	if (control_mode.flag_system_hil_enabled)
 		printf("[state estimator] Info: State Estimator works in HIL mode\n");
-	//
 
 	/* Main loop*/
 	while (!thread_should_exit) {
@@ -603,14 +599,13 @@ int state_estimator_thread_main(int argc, char *argv[])
 					(last_measurement == 0) ? (last_measurement = raw.timestamp - 10000) : 0;
 
 					/* Calculate data time difference in seconds */
-					dt = (raw.timestamp - last_measurement) / 1000000.0f;
+					dt = (float) (raw.timestamp - last_measurement) / 1000000.0f;
 					last_measurement = raw.timestamp;
 
 					/* check for new gyroscope measurements */
 					if (sensor_last_timestamp[0] != raw.timestamp) {
 						update_vect[0] = 1;
-						//sensor_last_count[0] = raw.gyro_counter;
-						sensor_update_hz[0] = (raw.timestamp > 0) ? (1e6f / (raw.timestamp - sensor_last_timestamp[0])) : 0.0f;
+						sensor_update_hz[0] = (raw.timestamp > 0) ? (1e6f / (float) (raw.timestamp - sensor_last_timestamp[0])) : 0.0f;
 						sensor_last_timestamp[0] = raw.timestamp;
 					}
 					gyro_b[0] =  raw.gyro_rad_s[0];
@@ -620,8 +615,7 @@ int state_estimator_thread_main(int argc, char *argv[])
 					/* check for new accelerometer measurements */
 					if (sensor_last_timestamp[1] != raw.accelerometer_timestamp) {
 						update_vect[1] = 1;
-						//sensor_last_count[1] = raw.accelerometer_counter;
-						sensor_update_hz[1] = (raw.accelerometer_timestamp > 0) ? (1e6f / (raw.accelerometer_timestamp - sensor_last_timestamp[1])) : 0.0f;
+						sensor_update_hz[1] = (raw.accelerometer_timestamp > 0) ? (1e6f / (float) (raw.accelerometer_timestamp - sensor_last_timestamp[1])) : 0.0f;
 						sensor_last_timestamp[1] = raw.accelerometer_timestamp;
 					}
 					accel_b[0] = raw.accelerometer_m_s2[0];
@@ -638,26 +632,25 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 						if (mag_average_count > mag_average_count_limit){
 							update_vect[2] = 1;
-							//sensor_last_count[2] = raw.magnetometer_timestamp;
-							sensor_update_hz[2] = (raw.magnetometer_timestamp > 0) ? (1e6f / (raw.magnetometer_timestamp - sensor_last_timestamp[2])) : 0.0f;
-							sensor_last_timestamp[2] = raw.magnetometer_timestamp;
+							sensor_update_hz[2] = (raw.magnetometer_timestamp > 0) ? (1e6f / (float) (raw.magnetometer_timestamp - sensor_last_timestamp[2]) / (float) mag_average_count) : 0.0f;
 
 							mag_b[0] = (mag_average[0] / mag_average_count)*100.0f;        /*convert magnetometer measurements from [gauss] -> [uT] */
 							mag_b[1] = (mag_average[1] / mag_average_count)*100.0f;        /*convert magnetometer measurements from [gauss] -> [uT] */
 							mag_b[2] = (mag_average[2] / mag_average_count)*100.0f;        /*convert magnetometer measurements from [gauss] -> [uT] */
 
-							mag_average[0] =0.0f;
-							mag_average[1] =0.0f;
-							mag_average[2] =0.0f;
+							mag_average[0] = 0.0f;
+							mag_average[1] = 0.0f;
+							mag_average[2] = 0.0f;
 							mag_average_count = 0;
 						}
+						sensor_last_timestamp[2] = raw.magnetometer_timestamp;
+
 					}
 
 					/* check for new baro measurements */
 					if (sensor_last_timestamp[3] != raw.baro_timestamp) {
 						update_vect[3] = 1;
-						//sensor_last_count[3] = raw.baro_counter;
-						sensor_update_hz[3] = (raw.baro_timestamp > 0) ? (1e6f / (raw.baro_timestamp - sensor_last_timestamp[3])) : 0.0f;
+						sensor_update_hz[3] = (raw.baro_timestamp > 0) ? (1e6f / (float) (raw.baro_timestamp - sensor_last_timestamp[3])) : 0.0f;
 						sensor_last_timestamp[3] = raw.baro_timestamp;
 					}
 					baro_b = raw.baro_pres_mbar;
@@ -665,19 +658,17 @@ int state_estimator_thread_main(int argc, char *argv[])
 					/* check for new dbaro measurements */
 					if (sensor_last_timestamp[4] != raw.differential_pressure_timestamp) {
 						update_vect[4] = 1;
-						//sensor_last_count[4] = raw.dbaro_counter;
-						sensor_update_hz[4] = (raw.differential_pressure_timestamp > 0) ? (1e6f / (raw.differential_pressure_timestamp - sensor_last_timestamp[4])) : 0.0f;
+						sensor_update_hz[4] = (raw.differential_pressure_timestamp > 0) ? (1e6f / (float) (raw.differential_pressure_timestamp - sensor_last_timestamp[4])) : 0.0f;
 						sensor_last_timestamp[4] = raw.differential_pressure_timestamp;
 					}
-					dbaro_b = (raw.differential_pressure_pa>0) ? raw.differential_pressure_pa : 0.0f;				/* take only the positive values of the dbaro 						*/
-					//dbaro_b = raw.differential_pressure_pa - dbaro_initial;							/* removed! (remove dbaro constant measurement bias) 	*/
-					//dbaro_b = (dbaro_b>0) ? dbaro_b : 0.0f;								/* removed! (take only the positive values of the dbaro) */
+					dbaro_b = (raw.differential_pressure_pa>0) ? raw.differential_pressure_pa : 0.0f;				/* take only the positive values of the dbaro 			 */
+					//dbaro_b = raw.differential_pressure_pa - dbaro_initial;										/* removed! (remove dbaro constant measurement bias) 	 */
+					//dbaro_b = (dbaro_b>0) ? dbaro_b : 0.0f;														/* removed! (take only the positive values of the dbaro) */
 
 					/* check for new amb_temp measurements */
 					if (sensor_last_timestamp[5] != raw.amb_temp_timestamp) {
 						update_vect[5] = 1;
-						//sensor_last_count[5] = raw.amb_temp_counter;
-						sensor_update_hz[5] = (raw.amb_temp_timestamp > 0) ? (1e6f / (raw.amb_temp_timestamp - sensor_last_timestamp[5])) : 0.0f;
+						sensor_update_hz[5] = (raw.amb_temp_timestamp > 0) ? (1e6f / (float) (raw.amb_temp_timestamp - sensor_last_timestamp[5])) : 0.0f;
 						sensor_last_timestamp[5] = raw.amb_temp_timestamp;
 					}
 					amb_temp_b = raw.amb_temp_celcius + CONV_CELSIUS_KELVIN;
@@ -825,7 +816,7 @@ int state_estimator_thread_main(int argc, char *argv[])
 					//printf("Update rate: %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| , dt = %3.6f |\n",(double) sensor_update_hz[0],(double) sensor_update_hz[1],(double) sensor_update_hz[2],(double) sensor_update_hz[3],(double) sensor_update_hz[4],(double) sensor_update_hz[5],(double) sensor_update_hz[6],(double) sensor_update_hz[7],(double) dt);  /// delete!!!!!!!!!!
 
 					//printf("dt = %3.6f |\n",(double) dt);  /// delete!!!!!!!!!!
-					printf("dt = %3.6f |\n",(double) sensor_update_hz[5]);  /// delete!!!!!!!!!!
+					printf("dt = %3.6f |\n",(double) sensor_update_hz[2]);  /// delete!!!!!!!!!!
 #endif
 					att.rollspeed  = raw.gyro_rad_s[0] - x_state.b_g[0];			/* x angular velocity with gyro bias deduction */
 					att.pitchspeed = raw.gyro_rad_s[1] - x_state.b_g[1];			/* y angular velocity with gyro bias deduction */
@@ -942,13 +933,10 @@ int state_estimator_thread_main(int argc, char *argv[])
 					vehicle_global_pos.lon = x_state.p[1]*1e-7l*RAD2DEG;
 
 					vehicle_global_pos.alt = (float) x_state.p[2];
-					//vehicle_global_pos.valid = true;
 
 					vehicle_global_pos.vel_n = x_state.v_N[0];
 					vehicle_global_pos.vel_e = x_state.v_N[1];
 					vehicle_global_pos.vel_d = x_state.v_N[2];
-
-					//vehicle_global_pos.relative_alt = vehicle_global_pos.alt - _home_alt;
 
 					vehicle_global_pos.yaw = att.yaw;
 
@@ -963,10 +951,6 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 					/* Reset update vector */
 					memset(update_vect, 0, sizeof(update_vect));
-
-					////for (uint8_t i=0; i<8;i++){
-					////	update_vect[i] = 0;
-					////}
 
 					perf_end(ekf_loop_perf);
 				}

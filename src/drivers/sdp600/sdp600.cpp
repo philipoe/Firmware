@@ -257,8 +257,8 @@ private:
 
 #define CRC_POLYNOM 			0x131  	/* define the SDP600 CRC8 Polynomial: P(x)=x^8+x^5+x^4+1 = 100110001 */
 
-/* Measurement rate is 30Hz */
-#define MEAS_RATE 30
+/* Measurement rate is 20Hz */
+#define MEAS_RATE 20
 #define MEAS_DRIVER_FILTER_FREQ 5.0f
 #define SDP600_CONVERSION_INTERVAL	(1000000 / MEAS_RATE)			/* microseconds */
 
