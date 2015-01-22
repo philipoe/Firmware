@@ -90,6 +90,7 @@
 #define CONV_CELSIUS_KELVIN 273.15f
 #define PI 		3.14159265358979323846l
 #define DEG2RAD 0.01745329251994329577l
+#define RAD2DEG 57.2957795130823208767l
 #define UERE_H 1.5f 									/* User Equivalent Range Error (horizontal) */
 #define UERE_V 2.0f 									/* User Equivalent Range Error (vertical) 	*/
 
@@ -937,8 +938,9 @@ int state_estimator_thread_main(int argc, char *argv[])
 					vehicle_global_pos.timestamp = hrt_absolute_time();
 					vehicle_global_pos.time_gps_usec = gps.timestamp_position;
 
-					vehicle_global_pos.lat = (int32_t) x_state.p[0]*180.0l/PI;
-					vehicle_global_pos.lon = (int32_t) x_state.p[1]*180.0l/PI;
+					vehicle_global_pos.lat = x_state.p[0]*1e-7l*RAD2DEG;
+					vehicle_global_pos.lon = x_state.p[1]*1e-7l*RAD2DEG;
+
 					vehicle_global_pos.alt = (float) x_state.p[2];
 					//vehicle_global_pos.valid = true;
 
