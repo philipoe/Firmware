@@ -3,7 +3,7 @@
  *
  * Code generation for function 'HyEst_data'
  *
- * C source code generated on: Fri Jul 11 14:42:13 2014
+ * C source code generated on: Fri Jan 23 17:57:25 2015
  *
  */
 
@@ -35,6 +35,7 @@ b_struct_T igrf11dataCurrent;
 airplane_T senseSoarAirplane;
 airplane_T easyGliderAirplane;
 airplane_T AtlantikSolarAirplane;
+airplane_T TechPodAirplane;
 
 /* Function Declarations */
 

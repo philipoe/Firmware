@@ -3,7 +3,7 @@
  *
  * Code generation for function 'HyEst_rtwutil'
  *
- * C source code generated on: Fri Jul 11 14:42:13 2014
+ * C source code generated on: Fri Jan 23 17:57:25 2015
  *
  */
 

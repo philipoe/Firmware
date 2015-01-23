@@ -3,7 +3,7 @@
  *
  * Code generation for function 'getAirplane'
  *
- * C source code generated on: Fri Jul 11 14:42:14 2014
+ * C source code generated on: Fri Jan 23 17:57:27 2015
  *
  */
 
@@ -49,6 +49,10 @@ void getAirplane(int8_T idx, airplane_T *airplane, boolean_T *exists)
 
    case 2:
     *airplane = AtlantikSolarAirplane;
+    break;
+
+   case 3:
+    *airplane = TechPodAirplane;
     break;
 
    default:

@@ -3,7 +3,7 @@
  *
  * Code generation for function 'updatePosition'
  *
- * C source code generated on: Fri Jul 11 14:42:13 2014
+ * C source code generated on: Fri Jan 23 17:57:26 2015
  *
  */
 
@@ -76,17 +76,17 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
   real32_T K[60];
   boolean_T selector[20];
   int32_T i;
-  emxArray_int32_T *r5;
-  boolean_T b_selector[20];
   emxArray_int32_T *r6;
-  emxArray_real32_T *b_a;
+  boolean_T b_selector[20];
   emxArray_int32_T *r7;
+  emxArray_real32_T *b_a;
   emxArray_int32_T *r8;
-  int32_T iy;
   emxArray_int32_T *r9;
+  int32_T iy;
   emxArray_int32_T *r10;
   emxArray_int32_T *r11;
   emxArray_int32_T *r12;
+  emxArray_int32_T *r13;
   int8_T H[60];
   static const int8_T iv1[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 
@@ -101,12 +101,12 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
   emxArray_real32_T *d_a;
   emxArray_real32_T *KH;
   uint32_T unnamed_idx_0;
-  emxArray_real32_T *r13;
+  emxArray_real32_T *r14;
   emxArray_real32_T *C;
   emxArray_real32_T *b_C;
   emxArray_real32_T *b_y;
-  emxArray_int32_T *r14;
   emxArray_int32_T *r15;
+  emxArray_int32_T *r16;
   static const int32_T iv2[3] = { 10000000, 10000000, 1 };
 
   real32_T delta_x[20];
@@ -203,96 +203,9 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
     selector[15] = FALSE;
   }
 
-  emxInit_int32_T(&r5, 1);
+  emxInit_int32_T(&r6, 1);
 
   /*  remove correlations of fixed states with active states */
-  eml_li_find(selector, r5);
-  i7 = r5->size[0];
-  r5->size[0] = r5->size[0];
-  emxEnsureCapacity((emxArray__common *)r5, i7, (int32_T)sizeof(int32_T));
-  i = r5->size[0];
-  for (i7 = 0; i7 < i; i7++) {
-    r5->data[i7]--;
-  }
-
-  for (i = 0; i < 20; i++) {
-    b_selector[i] = !selector[i];
-  }
-
-  emxInit_int32_T(&r6, 1);
-  eml_li_find(b_selector, r6);
-  i7 = r6->size[0];
-  r6->size[0] = r6->size[0];
-  emxEnsureCapacity((emxArray__common *)r6, i7, (int32_T)sizeof(int32_T));
-  i = r6->size[0];
-  for (i7 = 0; i7 < i; i7++) {
-    r6->data[i7]--;
-  }
-
-  for (i = 0; i < 20; i++) {
-    b_selector[i] = !selector[i];
-  }
-
-  emxInit_real32_T(&b_a, 2);
-  emxInit_int32_T(&r7, 1);
-  emxInit_int32_T(&r8, 1);
-  eml_li_find(b_selector, r7);
-  eml_li_find(selector, r8);
-  i7 = b_a->size[0] * b_a->size[1];
-  b_a->size[0] = r8->size[0];
-  b_a->size[1] = r7->size[0];
-  emxEnsureCapacity((emxArray__common *)b_a, i7, (int32_T)sizeof(real32_T));
-  i = r7->size[0];
-  for (i7 = 0; i7 < i; i7++) {
-    iy = r8->size[0];
-    for (i8 = 0; i8 < iy; i8++) {
-      b_a->data[i8 + b_a->size[0] * i7] = P[(r8->data[i8] + 20 * (r7->data[i7] -
-        1)) - 1];
-    }
-  }
-
-  emxInit_int32_T(&r9, 1);
-  i7 = r9->size[0];
-  r9->size[0] = r6->size[0];
-  emxEnsureCapacity((emxArray__common *)r9, i7, (int32_T)sizeof(int32_T));
-  i = r6->size[0];
-  for (i7 = 0; i7 < i; i7++) {
-    r9->data[i7] = r6->data[i7];
-  }
-
-  emxInit_int32_T(&r10, 1);
-  i7 = r10->size[0];
-  r10->size[0] = r5->size[0];
-  emxEnsureCapacity((emxArray__common *)r10, i7, (int32_T)sizeof(int32_T));
-  i = r5->size[0];
-  for (i7 = 0; i7 < i; i7++) {
-    r10->data[i7] = r5->data[i7];
-  }
-
-  i = b_a->size[1];
-  for (i7 = 0; i7 < i; i7++) {
-    iy = b_a->size[0];
-    for (i8 = 0; i8 < iy; i8++) {
-      P[r10->data[i8] + 20 * r9->data[i7]] = b_a->data[i8 + b_a->size[0] * i7] *
-        0.0F;
-    }
-  }
-
-  emxFree_int32_T(&r10);
-  emxFree_int32_T(&r9);
-  for (i = 0; i < 20; i++) {
-    b_selector[i] = !selector[i];
-  }
-
-  eml_li_find(b_selector, r5);
-  i7 = r5->size[0];
-  r5->size[0] = r5->size[0];
-  emxEnsureCapacity((emxArray__common *)r5, i7, (int32_T)sizeof(int32_T));
-  i = r5->size[0];
-  for (i7 = 0; i7 < i; i7++) {
-    r5->data[i7]--;
-  }
-
   eml_li_find(selector, r6);
   i7 = r6->size[0];
   r6->size[0] = r6->size[0];
@@ -302,26 +215,51 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
     r6->data[i7]--;
   }
 
-  eml_li_find(selector, r7);
   for (i = 0; i < 20; i++) {
     b_selector[i] = !selector[i];
   }
 
-  eml_li_find(b_selector, r8);
-  i7 = b_a->size[0] * b_a->size[1];
-  b_a->size[0] = r8->size[0];
-  b_a->size[1] = r7->size[0];
-  emxEnsureCapacity((emxArray__common *)b_a, i7, (int32_T)sizeof(real32_T));
+  emxInit_int32_T(&r7, 1);
+  eml_li_find(b_selector, r7);
+  i7 = r7->size[0];
+  r7->size[0] = r7->size[0];
+  emxEnsureCapacity((emxArray__common *)r7, i7, (int32_T)sizeof(int32_T));
   i = r7->size[0];
   for (i7 = 0; i7 < i; i7++) {
-    iy = r8->size[0];
+    r7->data[i7]--;
+  }
+
+  for (i = 0; i < 20; i++) {
+    b_selector[i] = !selector[i];
+  }
+
+  emxInit_real32_T(&b_a, 2);
+  emxInit_int32_T(&r8, 1);
+  emxInit_int32_T(&r9, 1);
+  eml_li_find(b_selector, r8);
+  eml_li_find(selector, r9);
+  i7 = b_a->size[0] * b_a->size[1];
+  b_a->size[0] = r9->size[0];
+  b_a->size[1] = r8->size[0];
+  emxEnsureCapacity((emxArray__common *)b_a, i7, (int32_T)sizeof(real32_T));
+  i = r8->size[0];
+  for (i7 = 0; i7 < i; i7++) {
+    iy = r9->size[0];
     for (i8 = 0; i8 < iy; i8++) {
-      b_a->data[i8 + b_a->size[0] * i7] = P[(r8->data[i8] + 20 * (r7->data[i7] -
+      b_a->data[i8 + b_a->size[0] * i7] = P[(r9->data[i8] + 20 * (r8->data[i7] -
         1)) - 1];
     }
   }
 
-  emxFree_int32_T(&r8);
+  emxInit_int32_T(&r10, 1);
+  i7 = r10->size[0];
+  r10->size[0] = r7->size[0];
+  emxEnsureCapacity((emxArray__common *)r10, i7, (int32_T)sizeof(int32_T));
+  i = r7->size[0];
+  for (i7 = 0; i7 < i; i7++) {
+    r10->data[i7] = r7->data[i7];
+  }
+
   emxInit_int32_T(&r11, 1);
   i7 = r11->size[0];
   r11->size[0] = r6->size[0];
@@ -331,26 +269,88 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
     r11->data[i7] = r6->data[i7];
   }
 
+  i = b_a->size[1];
+  for (i7 = 0; i7 < i; i7++) {
+    iy = b_a->size[0];
+    for (i8 = 0; i8 < iy; i8++) {
+      P[r11->data[i8] + 20 * r10->data[i7]] = b_a->data[i8 + b_a->size[0] * i7] *
+        0.0F;
+    }
+  }
+
+  emxFree_int32_T(&r11);
+  emxFree_int32_T(&r10);
+  for (i = 0; i < 20; i++) {
+    b_selector[i] = !selector[i];
+  }
+
+  eml_li_find(b_selector, r6);
+  i7 = r6->size[0];
+  r6->size[0] = r6->size[0];
+  emxEnsureCapacity((emxArray__common *)r6, i7, (int32_T)sizeof(int32_T));
+  i = r6->size[0];
+  for (i7 = 0; i7 < i; i7++) {
+    r6->data[i7]--;
+  }
+
+  eml_li_find(selector, r7);
+  i7 = r7->size[0];
+  r7->size[0] = r7->size[0];
+  emxEnsureCapacity((emxArray__common *)r7, i7, (int32_T)sizeof(int32_T));
+  i = r7->size[0];
+  for (i7 = 0; i7 < i; i7++) {
+    r7->data[i7]--;
+  }
+
+  eml_li_find(selector, r8);
+  for (i = 0; i < 20; i++) {
+    b_selector[i] = !selector[i];
+  }
+
+  eml_li_find(b_selector, r9);
+  i7 = b_a->size[0] * b_a->size[1];
+  b_a->size[0] = r9->size[0];
+  b_a->size[1] = r8->size[0];
+  emxEnsureCapacity((emxArray__common *)b_a, i7, (int32_T)sizeof(real32_T));
+  i = r8->size[0];
+  for (i7 = 0; i7 < i; i7++) {
+    iy = r9->size[0];
+    for (i8 = 0; i8 < iy; i8++) {
+      b_a->data[i8 + b_a->size[0] * i7] = P[(r9->data[i8] + 20 * (r8->data[i7] -
+        1)) - 1];
+    }
+  }
+
+  emxFree_int32_T(&r9);
   emxInit_int32_T(&r12, 1);
   i7 = r12->size[0];
-  r12->size[0] = r5->size[0];
+  r12->size[0] = r7->size[0];
   emxEnsureCapacity((emxArray__common *)r12, i7, (int32_T)sizeof(int32_T));
-  i = r5->size[0];
+  i = r7->size[0];
   for (i7 = 0; i7 < i; i7++) {
-    r12->data[i7] = r5->data[i7];
+    r12->data[i7] = r7->data[i7];
+  }
+
+  emxInit_int32_T(&r13, 1);
+  i7 = r13->size[0];
+  r13->size[0] = r6->size[0];
+  emxEnsureCapacity((emxArray__common *)r13, i7, (int32_T)sizeof(int32_T));
+  i = r6->size[0];
+  for (i7 = 0; i7 < i; i7++) {
+    r13->data[i7] = r6->data[i7];
   }
 
   i = b_a->size[1];
   for (i7 = 0; i7 < i; i7++) {
     iy = b_a->size[0];
     for (i8 = 0; i8 < iy; i8++) {
-      P[r12->data[i8] + 20 * r11->data[i7]] = b_a->data[i8 + b_a->size[0] * i7] *
+      P[r13->data[i8] + 20 * r12->data[i7]] = b_a->data[i8 + b_a->size[0] * i7] *
         0.0F;
     }
   }
 
+  emxFree_int32_T(&r13);
   emxFree_int32_T(&r12);
-  emxFree_int32_T(&r11);
 
   /* P(~selector,~selector)=P(~selector,~selector)*0; */
   for (i7 = 0; i7 < 60; i7++) {
@@ -365,45 +365,45 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
   }
 
   /*  set float type */
-  eml_li_find(selector, r5);
-  i7 = r5->size[0];
-  r5->size[0] = r5->size[0];
-  emxEnsureCapacity((emxArray__common *)r5, i7, (int32_T)sizeof(int32_T));
-  i = r5->size[0];
+  eml_li_find(selector, r6);
+  i7 = r6->size[0];
+  r6->size[0] = r6->size[0];
+  emxEnsureCapacity((emxArray__common *)r6, i7, (int32_T)sizeof(int32_T));
+  i = r6->size[0];
   for (i7 = 0; i7 < i; i7++) {
-    r5->data[i7]--;
+    r6->data[i7]--;
   }
 
   emxInit_real32_T(&c_a, 2);
-  eml_li_find(selector, r6);
+  eml_li_find(selector, r7);
   i7 = c_a->size[0] * c_a->size[1];
   c_a->size[0] = 3;
-  c_a->size[1] = r6->size[0];
+  c_a->size[1] = r7->size[0];
   emxEnsureCapacity((emxArray__common *)c_a, i7, (int32_T)sizeof(real32_T));
-  i = r6->size[0];
+  i = r7->size[0];
   for (i7 = 0; i7 < i; i7++) {
     for (i8 = 0; i8 < 3; i8++) {
-      c_a->data[i8 + c_a->size[0] * i7] = (real32_T)H[i8 + 3 * (r6->data[i7] - 1)];
+      c_a->data[i8 + c_a->size[0] * i7] = (real32_T)H[i8 + 3 * (r7->data[i7] - 1)];
     }
   }
 
   emxInit_real32_T(&b_b, 2);
-  eml_li_find(selector, r6);
   eml_li_find(selector, r7);
+  eml_li_find(selector, r8);
   i7 = b_b->size[0] * b_b->size[1];
-  b_b->size[0] = r7->size[0];
-  b_b->size[1] = r6->size[0];
+  b_b->size[0] = r8->size[0];
+  b_b->size[1] = r7->size[0];
   emxEnsureCapacity((emxArray__common *)b_b, i7, (int32_T)sizeof(real32_T));
-  i = r6->size[0];
+  i = r7->size[0];
   for (i7 = 0; i7 < i; i7++) {
-    iy = r7->size[0];
+    iy = r8->size[0];
     for (i8 = 0; i8 < iy; i8++) {
-      b_b->data[i8 + b_b->size[0] * i7] = P[(r7->data[i8] + 20 * (r6->data[i7] -
+      b_b->data[i8 + b_b->size[0] * i7] = P[(r8->data[i8] + 20 * (r7->data[i7] -
         1)) - 1];
     }
   }
 
-  emxFree_int32_T(&r7);
+  emxFree_int32_T(&r8);
   emxInit_real32_T(&y, 2);
   if ((c_a->size[1] == 1) || (b_b->size[0] == 1)) {
     i7 = y->size[0] * y->size[1];
@@ -481,7 +481,7 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
   for (i7 = 0; i7 < 3; i7++) {
     i = d_a->size[0];
     for (i8 = 0; i8 < i; i8++) {
-      K[r5->data[i8] + 20 * i7] = d_a->data[i8 + d_a->size[0] * i7];
+      K[r6->data[i8] + 20 * i7] = d_a->data[i8 + d_a->size[0] * i7];
     }
   }
 
@@ -497,27 +497,27 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
   /*  delta_x=(K*e);  */
   /*  */
   /*  update: */
-  eml_li_find(selector, r5);
+  eml_li_find(selector, r6);
   i7 = d_a->size[0] * d_a->size[1];
-  d_a->size[0] = r5->size[0];
+  d_a->size[0] = r6->size[0];
   d_a->size[1] = 3;
   emxEnsureCapacity((emxArray__common *)d_a, i7, (int32_T)sizeof(real32_T));
   for (i7 = 0; i7 < 3; i7++) {
-    i = r5->size[0];
+    i = r6->size[0];
     for (i8 = 0; i8 < i; i8++) {
-      d_a->data[i8 + d_a->size[0] * i7] = K[(r5->data[i8] + 20 * i7) - 1];
+      d_a->data[i8 + d_a->size[0] * i7] = K[(r6->data[i8] + 20 * i7) - 1];
     }
   }
 
-  eml_li_find(selector, r5);
+  eml_li_find(selector, r6);
   i7 = c_a->size[0] * c_a->size[1];
   c_a->size[0] = 3;
-  c_a->size[1] = r5->size[0];
+  c_a->size[1] = r6->size[0];
   emxEnsureCapacity((emxArray__common *)c_a, i7, (int32_T)sizeof(real32_T));
-  i = r5->size[0];
+  i = r6->size[0];
   for (i7 = 0; i7 < i; i7++) {
     for (i8 = 0; i8 < 3; i8++) {
-      c_a->data[i8 + c_a->size[0] * i7] = (real32_T)H[i8 + 3 * (r5->data[i7] - 1)];
+      c_a->data[i8 + c_a->size[0] * i7] = (real32_T)H[i8 + 3 * (r6->data[i7] - 1)];
     }
   }
 
@@ -565,33 +565,33 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
     }
   }
 
-  emxInit_real32_T(&r13, 2);
-  eml_li_find(selector, r5);
+  emxInit_real32_T(&r14, 2);
   eml_li_find(selector, r6);
-  i7 = r13->size[0] * r13->size[1];
-  r13->size[0] = r6->size[0];
-  r13->size[1] = r5->size[0];
-  emxEnsureCapacity((emxArray__common *)r13, i7, (int32_T)sizeof(real32_T));
-  i = r5->size[0];
+  eml_li_find(selector, r7);
+  i7 = r14->size[0] * r14->size[1];
+  r14->size[0] = r7->size[0];
+  r14->size[1] = r6->size[0];
+  emxEnsureCapacity((emxArray__common *)r14, i7, (int32_T)sizeof(real32_T));
+  i = r6->size[0];
   for (i7 = 0; i7 < i; i7++) {
-    iy = r6->size[0];
+    iy = r7->size[0];
     for (i8 = 0; i8 < iy; i8++) {
-      r13->data[i8 + r13->size[0] * i7] = P[(r6->data[i8] + 20 * (r5->data[i7] -
+      r14->data[i8 + r14->size[0] * i7] = P[(r7->data[i8] + 20 * (r6->data[i7] -
         1)) - 1];
     }
   }
 
-  eml_li_find(selector, r5);
   eml_li_find(selector, r6);
+  eml_li_find(selector, r7);
   i7 = b_b->size[0] * b_b->size[1];
-  b_b->size[0] = r6->size[0];
-  b_b->size[1] = r5->size[0];
+  b_b->size[0] = r7->size[0];
+  b_b->size[1] = r6->size[0];
   emxEnsureCapacity((emxArray__common *)b_b, i7, (int32_T)sizeof(real32_T));
-  i = r5->size[0];
+  i = r6->size[0];
   for (i7 = 0; i7 < i; i7++) {
-    iy = r6->size[0];
+    iy = r7->size[0];
     for (i8 = 0; i8 < iy; i8++) {
-      b_b->data[i8 + b_b->size[0] * i7] = P[(r6->data[i8] + 20 * (r5->data[i7] -
+      b_b->data[i8 + b_b->size[0] * i7] = P[(r7->data[i8] + 20 * (r6->data[i7] -
         1)) - 1];
     }
   }
@@ -660,17 +660,17 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
     }
   }
 
-  eml_li_find(selector, r5);
   eml_li_find(selector, r6);
+  eml_li_find(selector, r7);
   i7 = b_a->size[0] * b_a->size[1];
-  b_a->size[0] = r6->size[0];
-  b_a->size[1] = r5->size[0];
+  b_a->size[0] = r7->size[0];
+  b_a->size[1] = r6->size[0];
   emxEnsureCapacity((emxArray__common *)b_a, i7, (int32_T)sizeof(real32_T));
-  i = r5->size[0];
+  i = r6->size[0];
   for (i7 = 0; i7 < i; i7++) {
-    iy = r6->size[0];
+    iy = r7->size[0];
     for (i8 = 0; i8 < iy; i8++) {
-      b_a->data[i8 + b_a->size[0] * i7] = P[(r6->data[i8] + 20 * (r5->data[i7] -
+      b_a->data[i8 + b_a->size[0] * i7] = P[(r7->data[i8] + 20 * (r6->data[i7] -
         1)) - 1];
     }
   }
@@ -753,15 +753,15 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
 
   emxFree_real32_T(&b_b);
   emxFree_real32_T(&b_a);
-  eml_li_find(selector, r5);
+  eml_li_find(selector, r6);
   i7 = d_a->size[0] * d_a->size[1];
-  d_a->size[0] = r5->size[0];
+  d_a->size[0] = r6->size[0];
   d_a->size[1] = 3;
   emxEnsureCapacity((emxArray__common *)d_a, i7, (int32_T)sizeof(real32_T));
   for (i7 = 0; i7 < 3; i7++) {
-    i = r5->size[0];
+    i = r6->size[0];
     for (i8 = 0; i8 < i; i8++) {
-      d_a->data[i8 + d_a->size[0] * i7] = K[(r5->data[i8] + 20 * i7) - 1];
+      d_a->data[i8 + d_a->size[0] * i7] = K[(r6->data[i8] + 20 * i7) - 1];
     }
   }
 
@@ -807,15 +807,15 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
   }
 
   emxFree_real32_T(&d_a);
-  eml_li_find(selector, r5);
+  eml_li_find(selector, r6);
   i7 = c_a->size[0] * c_a->size[1];
   c_a->size[0] = 3;
-  c_a->size[1] = r5->size[0];
+  c_a->size[1] = r6->size[0];
   emxEnsureCapacity((emxArray__common *)c_a, i7, (int32_T)sizeof(real32_T));
-  i = r5->size[0];
+  i = r6->size[0];
   for (i7 = 0; i7 < i; i7++) {
     for (i8 = 0; i8 < 3; i8++) {
-      c_a->data[i8 + c_a->size[0] * i7] = K[(r5->data[i7] + 20 * i8) - 1];
+      c_a->data[i8 + c_a->size[0] * i7] = K[(r6->data[i7] + 20 * i8) - 1];
     }
   }
 
@@ -864,15 +864,6 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
 
   emxFree_real32_T(&b_y);
   emxFree_real32_T(&c_a);
-  eml_li_find(selector, r5);
-  i7 = r5->size[0];
-  r5->size[0] = r5->size[0];
-  emxEnsureCapacity((emxArray__common *)r5, i7, (int32_T)sizeof(int32_T));
-  i = r5->size[0];
-  for (i7 = 0; i7 < i; i7++) {
-    r5->data[i7]--;
-  }
-
   eml_li_find(selector, r6);
   i7 = r6->size[0];
   r6->size[0] = r6->size[0];
@@ -882,41 +873,50 @@ void updatePosition(states_T *x, real32_T P[400], const real_T y_GpsPos_rad[3],
     r6->data[i7]--;
   }
 
-  emxInit_int32_T(&r14, 1);
-  i7 = r14->size[0];
-  r14->size[0] = r6->size[0];
-  emxEnsureCapacity((emxArray__common *)r14, i7, (int32_T)sizeof(int32_T));
+  eml_li_find(selector, r7);
+  i7 = r7->size[0];
+  r7->size[0] = r7->size[0];
+  emxEnsureCapacity((emxArray__common *)r7, i7, (int32_T)sizeof(int32_T));
+  i = r7->size[0];
+  for (i7 = 0; i7 < i; i7++) {
+    r7->data[i7]--;
+  }
+
+  emxInit_int32_T(&r15, 1);
+  i7 = r15->size[0];
+  r15->size[0] = r7->size[0];
+  emxEnsureCapacity((emxArray__common *)r15, i7, (int32_T)sizeof(int32_T));
+  i = r7->size[0];
+  for (i7 = 0; i7 < i; i7++) {
+    r15->data[i7] = r7->data[i7];
+  }
+
+  emxFree_int32_T(&r7);
+  emxInit_int32_T(&r16, 1);
+  i7 = r16->size[0];
+  r16->size[0] = r6->size[0];
+  emxEnsureCapacity((emxArray__common *)r16, i7, (int32_T)sizeof(int32_T));
   i = r6->size[0];
   for (i7 = 0; i7 < i; i7++) {
-    r14->data[i7] = r6->data[i7];
+    r16->data[i7] = r6->data[i7];
   }
 
   emxFree_int32_T(&r6);
-  emxInit_int32_T(&r15, 1);
-  i7 = r15->size[0];
-  r15->size[0] = r5->size[0];
-  emxEnsureCapacity((emxArray__common *)r15, i7, (int32_T)sizeof(int32_T));
-  i = r5->size[0];
+  i = r14->size[1];
   for (i7 = 0; i7 < i; i7++) {
-    r15->data[i7] = r5->data[i7];
-  }
-
-  emxFree_int32_T(&r5);
-  i = r13->size[1];
-  for (i7 = 0; i7 < i; i7++) {
-    iy = r13->size[0];
+    iy = r14->size[0];
     for (i8 = 0; i8 < iy; i8++) {
-      P[r15->data[i8] + 20 * r14->data[i7]] = ((r13->data[i8 + r13->size[0] * i7]
+      P[r16->data[i8] + 20 * r15->data[i7]] = ((r14->data[i8 + r14->size[0] * i7]
         - C->data[i8 + C->size[0] * i7]) - b_C->data[i8 + b_C->size[0] * i7]) +
         KH->data[i8 + KH->size[0] * i7];
     }
   }
 
+  emxFree_int32_T(&r16);
   emxFree_int32_T(&r15);
-  emxFree_int32_T(&r14);
   emxFree_real32_T(&b_C);
   emxFree_real32_T(&C);
-  emxFree_real32_T(&r13);
+  emxFree_real32_T(&r14);
   emxFree_real32_T(&KH);
   for (i7 = 0; i7 < 3; i7++) {
     scaling[i7] = (real32_T)(y_GpsPos_rad[i7] * (real_T)iv2[i7] - x->p[i7]);

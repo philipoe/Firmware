@@ -3,7 +3,7 @@
  *
  * Code generation for function 'updateCompass2'
  *
- * C source code generated on: Fri Jul 11 14:42:13 2014
+ * C source code generated on: Fri Jan 23 17:57:26 2015
  *
  */
 
@@ -75,17 +75,17 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
   real32_T H[20];
   real32_T b_y[3];
   boolean_T selector[20];
-  emxArray_int32_T *r27;
-  boolean_T b_selector[20];
   emxArray_int32_T *r28;
-  emxArray_real32_T *c_a;
+  boolean_T b_selector[20];
   emxArray_int32_T *r29;
+  emxArray_real32_T *c_a;
   emxArray_int32_T *r30;
-  int32_T br;
   emxArray_int32_T *r31;
+  int32_T br;
   emxArray_int32_T *r32;
   emxArray_int32_T *r33;
   emxArray_int32_T *r34;
+  emxArray_int32_T *r35;
   emxArray_real32_T *d_a;
   emxArray_real32_T *b_b;
   emxArray_real32_T *c_y;
@@ -94,12 +94,12 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
   int32_T ia;
   emxArray_real32_T *e_a;
   emxArray_real32_T *KH;
-  emxArray_real32_T *r35;
+  emxArray_real32_T *r36;
   emxArray_real32_T *C;
   uint32_T unnamed_idx_0;
   int32_T c;
-  emxArray_int32_T *r36;
   emxArray_int32_T *r37;
+  emxArray_int32_T *r38;
   real32_T dq[4];
   real32_T Q[16];
 
@@ -438,96 +438,9 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
       selector[15] = FALSE;
     }
 
-    emxInit_int32_T(&r27, 1);
+    emxInit_int32_T(&r28, 1);
 
     /*  remove correlations of fixed states with active states */
-    eml_li_find(selector, r27);
-    i13 = r27->size[0];
-    r27->size[0] = r27->size[0];
-    emxEnsureCapacity((emxArray__common *)r27, i13, (int32_T)sizeof(int32_T));
-    i = r27->size[0];
-    for (i13 = 0; i13 < i; i13++) {
-      r27->data[i13]--;
-    }
-
-    for (i = 0; i < 20; i++) {
-      b_selector[i] = !selector[i];
-    }
-
-    emxInit_int32_T(&r28, 1);
-    eml_li_find(b_selector, r28);
-    i13 = r28->size[0];
-    r28->size[0] = r28->size[0];
-    emxEnsureCapacity((emxArray__common *)r28, i13, (int32_T)sizeof(int32_T));
-    i = r28->size[0];
-    for (i13 = 0; i13 < i; i13++) {
-      r28->data[i13]--;
-    }
-
-    for (i = 0; i < 20; i++) {
-      b_selector[i] = !selector[i];
-    }
-
-    emxInit_real32_T(&c_a, 2);
-    emxInit_int32_T(&r29, 1);
-    emxInit_int32_T(&r30, 1);
-    eml_li_find(b_selector, r29);
-    eml_li_find(selector, r30);
-    i13 = c_a->size[0] * c_a->size[1];
-    c_a->size[0] = r30->size[0];
-    c_a->size[1] = r29->size[0];
-    emxEnsureCapacity((emxArray__common *)c_a, i13, (int32_T)sizeof(real32_T));
-    i = r29->size[0];
-    for (i13 = 0; i13 < i; i13++) {
-      br = r30->size[0];
-      for (i14 = 0; i14 < br; i14++) {
-        c_a->data[i14 + c_a->size[0] * i13] = P[(r30->data[i14] + 20 *
-          (r29->data[i13] - 1)) - 1];
-      }
-    }
-
-    emxInit_int32_T(&r31, 1);
-    i13 = r31->size[0];
-    r31->size[0] = r28->size[0];
-    emxEnsureCapacity((emxArray__common *)r31, i13, (int32_T)sizeof(int32_T));
-    i = r28->size[0];
-    for (i13 = 0; i13 < i; i13++) {
-      r31->data[i13] = r28->data[i13];
-    }
-
-    emxInit_int32_T(&r32, 1);
-    i13 = r32->size[0];
-    r32->size[0] = r27->size[0];
-    emxEnsureCapacity((emxArray__common *)r32, i13, (int32_T)sizeof(int32_T));
-    i = r27->size[0];
-    for (i13 = 0; i13 < i; i13++) {
-      r32->data[i13] = r27->data[i13];
-    }
-
-    i = c_a->size[1];
-    for (i13 = 0; i13 < i; i13++) {
-      br = c_a->size[0];
-      for (i14 = 0; i14 < br; i14++) {
-        P[r32->data[i14] + 20 * r31->data[i13]] = c_a->data[i14 + c_a->size[0] *
-          i13] * 0.0F;
-      }
-    }
-
-    emxFree_int32_T(&r32);
-    emxFree_int32_T(&r31);
-    for (i = 0; i < 20; i++) {
-      b_selector[i] = !selector[i];
-    }
-
-    eml_li_find(b_selector, r27);
-    i13 = r27->size[0];
-    r27->size[0] = r27->size[0];
-    emxEnsureCapacity((emxArray__common *)r27, i13, (int32_T)sizeof(int32_T));
-    i = r27->size[0];
-    for (i13 = 0; i13 < i; i13++) {
-      r27->data[i13]--;
-    }
-
     eml_li_find(selector, r28);
     i13 = r28->size[0];
     r28->size[0] = r28->size[0];
@@ -537,26 +450,51 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
       r28->data[i13]--;
     }
 
-    eml_li_find(selector, r29);
     for (i = 0; i < 20; i++) {
       b_selector[i] = !selector[i];
     }
 
-    eml_li_find(b_selector, r30);
-    i13 = c_a->size[0] * c_a->size[1];
-    c_a->size[0] = r30->size[0];
-    c_a->size[1] = r29->size[0];
-    emxEnsureCapacity((emxArray__common *)c_a, i13, (int32_T)sizeof(real32_T));
+    emxInit_int32_T(&r29, 1);
+    eml_li_find(b_selector, r29);
+    i13 = r29->size[0];
+    r29->size[0] = r29->size[0];
+    emxEnsureCapacity((emxArray__common *)r29, i13, (int32_T)sizeof(int32_T));
     i = r29->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      br = r30->size[0];
+      r29->data[i13]--;
+    }
+
+    for (i = 0; i < 20; i++) {
+      b_selector[i] = !selector[i];
+    }
+
+    emxInit_real32_T(&c_a, 2);
+    emxInit_int32_T(&r30, 1);
+    emxInit_int32_T(&r31, 1);
+    eml_li_find(b_selector, r30);
+    eml_li_find(selector, r31);
+    i13 = c_a->size[0] * c_a->size[1];
+    c_a->size[0] = r31->size[0];
+    c_a->size[1] = r30->size[0];
+    emxEnsureCapacity((emxArray__common *)c_a, i13, (int32_T)sizeof(real32_T));
+    i = r30->size[0];
+    for (i13 = 0; i13 < i; i13++) {
+      br = r31->size[0];
       for (i14 = 0; i14 < br; i14++) {
-        c_a->data[i14 + c_a->size[0] * i13] = P[(r30->data[i14] + 20 *
-          (r29->data[i13] - 1)) - 1];
+        c_a->data[i14 + c_a->size[0] * i13] = P[(r31->data[i14] + 20 *
+          (r30->data[i13] - 1)) - 1];
       }
     }
 
-    emxFree_int32_T(&r30);
+    emxInit_int32_T(&r32, 1);
+    i13 = r32->size[0];
+    r32->size[0] = r29->size[0];
+    emxEnsureCapacity((emxArray__common *)r32, i13, (int32_T)sizeof(int32_T));
+    i = r29->size[0];
+    for (i13 = 0; i13 < i; i13++) {
+      r32->data[i13] = r29->data[i13];
+    }
+
     emxInit_int32_T(&r33, 1);
     i13 = r33->size[0];
     r33->size[0] = r28->size[0];
@@ -566,65 +504,127 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
       r33->data[i13] = r28->data[i13];
     }
 
+    i = c_a->size[1];
+    for (i13 = 0; i13 < i; i13++) {
+      br = c_a->size[0];
+      for (i14 = 0; i14 < br; i14++) {
+        P[r33->data[i14] + 20 * r32->data[i13]] = c_a->data[i14 + c_a->size[0] *
+          i13] * 0.0F;
+      }
+    }
+
+    emxFree_int32_T(&r33);
+    emxFree_int32_T(&r32);
+    for (i = 0; i < 20; i++) {
+      b_selector[i] = !selector[i];
+    }
+
+    eml_li_find(b_selector, r28);
+    i13 = r28->size[0];
+    r28->size[0] = r28->size[0];
+    emxEnsureCapacity((emxArray__common *)r28, i13, (int32_T)sizeof(int32_T));
+    i = r28->size[0];
+    for (i13 = 0; i13 < i; i13++) {
+      r28->data[i13]--;
+    }
+
+    eml_li_find(selector, r29);
+    i13 = r29->size[0];
+    r29->size[0] = r29->size[0];
+    emxEnsureCapacity((emxArray__common *)r29, i13, (int32_T)sizeof(int32_T));
+    i = r29->size[0];
+    for (i13 = 0; i13 < i; i13++) {
+      r29->data[i13]--;
+    }
+
+    eml_li_find(selector, r30);
+    for (i = 0; i < 20; i++) {
+      b_selector[i] = !selector[i];
+    }
+
+    eml_li_find(b_selector, r31);
+    i13 = c_a->size[0] * c_a->size[1];
+    c_a->size[0] = r31->size[0];
+    c_a->size[1] = r30->size[0];
+    emxEnsureCapacity((emxArray__common *)c_a, i13, (int32_T)sizeof(real32_T));
+    i = r30->size[0];
+    for (i13 = 0; i13 < i; i13++) {
+      br = r31->size[0];
+      for (i14 = 0; i14 < br; i14++) {
+        c_a->data[i14 + c_a->size[0] * i13] = P[(r31->data[i14] + 20 *
+          (r30->data[i13] - 1)) - 1];
+      }
+    }
+
+    emxFree_int32_T(&r31);
     emxInit_int32_T(&r34, 1);
     i13 = r34->size[0];
-    r34->size[0] = r27->size[0];
+    r34->size[0] = r29->size[0];
     emxEnsureCapacity((emxArray__common *)r34, i13, (int32_T)sizeof(int32_T));
-    i = r27->size[0];
+    i = r29->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      r34->data[i13] = r27->data[i13];
+      r34->data[i13] = r29->data[i13];
+    }
+
+    emxInit_int32_T(&r35, 1);
+    i13 = r35->size[0];
+    r35->size[0] = r28->size[0];
+    emxEnsureCapacity((emxArray__common *)r35, i13, (int32_T)sizeof(int32_T));
+    i = r28->size[0];
+    for (i13 = 0; i13 < i; i13++) {
+      r35->data[i13] = r28->data[i13];
     }
 
     i = c_a->size[1];
     for (i13 = 0; i13 < i; i13++) {
       br = c_a->size[0];
       for (i14 = 0; i14 < br; i14++) {
-        P[r34->data[i14] + 20 * r33->data[i13]] = c_a->data[i14 + c_a->size[0] *
+        P[r35->data[i14] + 20 * r34->data[i13]] = c_a->data[i14 + c_a->size[0] *
           i13] * 0.0F;
       }
     }
 
+    emxFree_int32_T(&r35);
     emxFree_int32_T(&r34);
-    emxFree_int32_T(&r33);
 
     /* P(~selector,~selector)=P(~selector,~selector)*0; */
-    eml_li_find(selector, r27);
-    i13 = r27->size[0];
-    r27->size[0] = r27->size[0];
-    emxEnsureCapacity((emxArray__common *)r27, i13, (int32_T)sizeof(int32_T));
-    i = r27->size[0];
+    eml_li_find(selector, r28);
+    i13 = r28->size[0];
+    r28->size[0] = r28->size[0];
+    emxEnsureCapacity((emxArray__common *)r28, i13, (int32_T)sizeof(int32_T));
+    i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      r27->data[i13]--;
+      r28->data[i13]--;
     }
 
     emxInit_real32_T(&d_a, 2);
-    eml_li_find(selector, r28);
+    eml_li_find(selector, r29);
     i13 = d_a->size[0] * d_a->size[1];
     d_a->size[0] = 1;
-    d_a->size[1] = r28->size[0];
+    d_a->size[1] = r29->size[0];
     emxEnsureCapacity((emxArray__common *)d_a, i13, (int32_T)sizeof(real32_T));
-    i = r28->size[0];
+    i = r29->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      d_a->data[d_a->size[0] * i13] = H[r28->data[i13] - 1];
+      d_a->data[d_a->size[0] * i13] = H[r29->data[i13] - 1];
     }
 
     emxInit_real32_T(&b_b, 2);
-    eml_li_find(selector, r28);
     eml_li_find(selector, r29);
+    eml_li_find(selector, r30);
     i13 = b_b->size[0] * b_b->size[1];
-    b_b->size[0] = r29->size[0];
-    b_b->size[1] = r28->size[0];
+    b_b->size[0] = r30->size[0];
+    b_b->size[1] = r29->size[0];
     emxEnsureCapacity((emxArray__common *)b_b, i13, (int32_T)sizeof(real32_T));
-    i = r28->size[0];
+    i = r29->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      br = r29->size[0];
+      br = r30->size[0];
       for (i14 = 0; i14 < br; i14++) {
-        b_b->data[i14 + b_b->size[0] * i13] = P[(r29->data[i14] + 20 *
-          (r28->data[i13] - 1)) - 1];
+        b_b->data[i14 + b_b->size[0] * i13] = P[(r30->data[i14] + 20 *
+          (r29->data[i13] - 1)) - 1];
       }
     }
 
-    emxFree_int32_T(&r29);
+    emxFree_int32_T(&r30);
     emxInit_real32_T(&c_y, 2);
     if ((d_a->size[1] == 1) || (b_b->size[0] == 1)) {
       i13 = c_y->size[0] * c_y->size[1];
@@ -684,7 +684,7 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
 
     i = c_y->size[1];
     for (i13 = 0; i13 < i; i13++) {
-      K[r27->data[i13]] = c_y->data[i13] / r;
+      K[r28->data[i13]] = c_y->data[i13] / r;
     }
 
     emxFree_real32_T(&c_y);
@@ -699,23 +699,23 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
     /*  db_finiteDiff=[quat2r(q1)'*b_N-C_SN*b_N, quat2r(q2)'*b_N-C_SN*b_N, quat2r(q3)'*b_N-C_SN*b_N]; */
     /*  db-db_finiteDiff */
     /*  update: */
-    eml_li_find(selector, r27);
+    eml_li_find(selector, r28);
     i13 = e_a->size[0];
-    e_a->size[0] = r27->size[0];
+    e_a->size[0] = r28->size[0];
     emxEnsureCapacity((emxArray__common *)e_a, i13, (int32_T)sizeof(real32_T));
-    i = r27->size[0];
+    i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      e_a->data[i13] = K[r27->data[i13] - 1];
+      e_a->data[i13] = K[r28->data[i13] - 1];
     }
 
-    eml_li_find(selector, r27);
+    eml_li_find(selector, r28);
     i13 = d_a->size[0] * d_a->size[1];
     d_a->size[0] = 1;
-    d_a->size[1] = r27->size[0];
+    d_a->size[1] = r28->size[0];
     emxEnsureCapacity((emxArray__common *)d_a, i13, (int32_T)sizeof(real32_T));
-    i = r27->size[0];
+    i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      d_a->data[d_a->size[0] * i13] = H[r27->data[i13] - 1];
+      d_a->data[d_a->size[0] * i13] = H[r28->data[i13] - 1];
     }
 
     emxInit_real32_T(&KH, 2);
@@ -732,34 +732,34 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
       }
     }
 
-    emxInit_real32_T(&r35, 2);
-    eml_li_find(selector, r27);
+    emxInit_real32_T(&r36, 2);
     eml_li_find(selector, r28);
-    i13 = r35->size[0] * r35->size[1];
-    r35->size[0] = r28->size[0];
-    r35->size[1] = r27->size[0];
-    emxEnsureCapacity((emxArray__common *)r35, i13, (int32_T)sizeof(real32_T));
-    i = r27->size[0];
+    eml_li_find(selector, r29);
+    i13 = r36->size[0] * r36->size[1];
+    r36->size[0] = r29->size[0];
+    r36->size[1] = r28->size[0];
+    emxEnsureCapacity((emxArray__common *)r36, i13, (int32_T)sizeof(real32_T));
+    i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      br = r28->size[0];
+      br = r29->size[0];
       for (i14 = 0; i14 < br; i14++) {
-        r35->data[i14 + r35->size[0] * i13] = P[(r28->data[i14] + 20 *
-          (r27->data[i13] - 1)) - 1];
+        r36->data[i14 + r36->size[0] * i13] = P[(r29->data[i14] + 20 *
+          (r28->data[i13] - 1)) - 1];
       }
     }
 
-    eml_li_find(selector, r27);
     eml_li_find(selector, r28);
+    eml_li_find(selector, r29);
     i13 = b_b->size[0] * b_b->size[1];
-    b_b->size[0] = r28->size[0];
-    b_b->size[1] = r27->size[0];
+    b_b->size[0] = r29->size[0];
+    b_b->size[1] = r28->size[0];
     emxEnsureCapacity((emxArray__common *)b_b, i13, (int32_T)sizeof(real32_T));
-    i = r27->size[0];
+    i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      br = r28->size[0];
+      br = r29->size[0];
       for (i14 = 0; i14 < br; i14++) {
-        b_b->data[i14 + b_b->size[0] * i13] = P[(r28->data[i14] + 20 *
-          (r27->data[i13] - 1)) - 1];
+        b_b->data[i14 + b_b->size[0] * i13] = P[(r29->data[i14] + 20 *
+          (r28->data[i13] - 1)) - 1];
       }
     }
 
@@ -827,18 +827,18 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
       }
     }
 
-    eml_li_find(selector, r27);
     eml_li_find(selector, r28);
+    eml_li_find(selector, r29);
     i13 = c_a->size[0] * c_a->size[1];
-    c_a->size[0] = r28->size[0];
-    c_a->size[1] = r27->size[0];
+    c_a->size[0] = r29->size[0];
+    c_a->size[1] = r28->size[0];
     emxEnsureCapacity((emxArray__common *)c_a, i13, (int32_T)sizeof(real32_T));
-    i = r27->size[0];
+    i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      br = r28->size[0];
+      br = r29->size[0];
       for (i14 = 0; i14 < br; i14++) {
-        c_a->data[i14 + c_a->size[0] * i13] = P[(r28->data[i14] + 20 *
-          (r27->data[i13] - 1)) - 1];
+        c_a->data[i14 + c_a->size[0] * i13] = P[(r29->data[i14] + 20 *
+          (r28->data[i13] - 1)) - 1];
       }
     }
 
@@ -919,32 +919,23 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
 
     emxFree_real32_T(&b_b);
     emxFree_real32_T(&c_a);
-    eml_li_find(selector, r27);
+    eml_li_find(selector, r28);
     i13 = e_a->size[0];
-    e_a->size[0] = r27->size[0];
+    e_a->size[0] = r28->size[0];
     emxEnsureCapacity((emxArray__common *)e_a, i13, (int32_T)sizeof(real32_T));
-    i = r27->size[0];
+    i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      e_a->data[i13] = K[r27->data[i13] - 1];
+      e_a->data[i13] = K[r28->data[i13] - 1];
     }
 
-    eml_li_find(selector, r27);
+    eml_li_find(selector, r28);
     i13 = d_a->size[0] * d_a->size[1];
     d_a->size[0] = 1;
-    d_a->size[1] = r27->size[0];
+    d_a->size[1] = r28->size[0];
     emxEnsureCapacity((emxArray__common *)d_a, i13, (int32_T)sizeof(real32_T));
-    i = r27->size[0];
+    i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      d_a->data[d_a->size[0] * i13] = K[r27->data[i13] - 1];
-    }
-
-    eml_li_find(selector, r27);
-    i13 = r27->size[0];
-    r27->size[0] = r27->size[0];
-    emxEnsureCapacity((emxArray__common *)r27, i13, (int32_T)sizeof(int32_T));
-    i = r27->size[0];
-    for (i13 = 0; i13 < i; i13++) {
-      r27->data[i13]--;
+      d_a->data[d_a->size[0] * i13] = K[r28->data[i13] - 1];
     }
 
     eml_li_find(selector, r28);
@@ -956,43 +947,52 @@ void updateCompass2(states_T *x, real32_T P[400], const real32_T y_Compass[3],
       r28->data[i13]--;
     }
 
-    emxInit_int32_T(&r36, 1);
-    i13 = r36->size[0];
-    r36->size[0] = r28->size[0];
-    emxEnsureCapacity((emxArray__common *)r36, i13, (int32_T)sizeof(int32_T));
+    eml_li_find(selector, r29);
+    i13 = r29->size[0];
+    r29->size[0] = r29->size[0];
+    emxEnsureCapacity((emxArray__common *)r29, i13, (int32_T)sizeof(int32_T));
+    i = r29->size[0];
+    for (i13 = 0; i13 < i; i13++) {
+      r29->data[i13]--;
+    }
+
+    emxInit_int32_T(&r37, 1);
+    i13 = r37->size[0];
+    r37->size[0] = r29->size[0];
+    emxEnsureCapacity((emxArray__common *)r37, i13, (int32_T)sizeof(int32_T));
+    i = r29->size[0];
+    for (i13 = 0; i13 < i; i13++) {
+      r37->data[i13] = r29->data[i13];
+    }
+
+    emxFree_int32_T(&r29);
+    emxInit_int32_T(&r38, 1);
+    i13 = r38->size[0];
+    r38->size[0] = r28->size[0];
+    emxEnsureCapacity((emxArray__common *)r38, i13, (int32_T)sizeof(int32_T));
     i = r28->size[0];
     for (i13 = 0; i13 < i; i13++) {
-      r36->data[i13] = r28->data[i13];
+      r38->data[i13] = r28->data[i13];
     }
 
     emxFree_int32_T(&r28);
-    emxInit_int32_T(&r37, 1);
-    i13 = r37->size[0];
-    r37->size[0] = r27->size[0];
-    emxEnsureCapacity((emxArray__common *)r37, i13, (int32_T)sizeof(int32_T));
-    i = r27->size[0];
-    for (i13 = 0; i13 < i; i13++) {
-      r37->data[i13] = r27->data[i13];
-    }
-
-    emxFree_int32_T(&r27);
     i = e_a->size[0];
     for (i13 = 0; i13 < i; i13++) {
       br = d_a->size[1];
       for (i14 = 0; i14 < br; i14++) {
         dtheta_half_norm = e_a->data[i13] * r * d_a->data[d_a->size[0] * i14];
-        P[r37->data[i13] + 20 * r36->data[i14]] = ((r35->data[i13 + r35->size[0]
+        P[r38->data[i13] + 20 * r37->data[i14]] = ((r36->data[i13 + r36->size[0]
           * i14] - C->data[i13 + C->size[0] * i14]) - KH->data[i13 + KH->size[0]
           * i14]) + dtheta_half_norm;
       }
     }
 
+    emxFree_int32_T(&r38);
     emxFree_int32_T(&r37);
-    emxFree_int32_T(&r36);
     emxFree_real32_T(&e_a);
     emxFree_real32_T(&d_a);
     emxFree_real32_T(&C);
-    emxFree_real32_T(&r35);
+    emxFree_real32_T(&r36);
     emxFree_real32_T(&KH);
     for (i13 = 0; i13 < 20; i13++) {
       K[i13] *= e;

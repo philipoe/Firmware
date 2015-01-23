@@ -3,7 +3,7 @@
  *
  * Code generation for function 'HyEst_initialize'
  *
- * C source code generated on: Fri Jul 11 14:42:13 2014
+ * C source code generated on: Fri Jan 23 17:57:25 2015
  *
  */
 
@@ -38,6 +38,7 @@ static uint32_T states_dirty;
 static uint32_T senseSoarAirplane_dirty;
 static uint32_T easyGliderAirplane_dirty;
 static uint32_T AtlantikSolarAirplane_dirty;
+static uint32_T TechPodAirplane_dirty;
 
 /* Function Declarations */
 
@@ -97,11 +98,18 @@ void HyEst_initialize(void)
     { -0.0131047918F, 7.23460817F, -13.9426994F, 17.2970886F, -6.62192059F },
     -9.91655064F, 11.2498837F, -0.128382802F, 1.41673839F, 8.69128418F };
 
+  static airplane_T r5 = { { -0.00228700158F, 0.0971678272F, -1.5978148F }, { -
+      0.00037F, -0.00143F, 0.11257F, 0.35908F }, 0.3362F, 1.18F, { 2.5F, 2.5F },
+    0.47F, { -0.0102834338F, 6.67184401F, -4.24546337F, 8.66733646F,
+      -3.00241661F }, -11.14083F, 8.56425285F, -0.560904F, 0.985854387F,
+    6.49339962F };
+
   igrf11dataCurrent = r0;
   states = r1;
   senseSoarAirplane = r2;
   easyGliderAirplane = r3;
   AtlantikSolarAirplane = r4;
+  TechPodAirplane = r5;
   igrf11dataNext = igrf11dataCurrent;
   configuration.tau = 3600.0F;
   configuration.tau_w = 6.0F;
@@ -117,6 +125,7 @@ void HyEst_initialize(void)
   configuration.sigma_Td = 1.0F;
   configuration.sigma_md = 5.0F;
   rt_InitInfAndNaN(8U);
+  TechPodAirplane_dirty = 0U;
   AtlantikSolarAirplane_dirty = 0U;
   easyGliderAirplane_dirty = 0U;
   senseSoarAirplane_dirty = 0U;

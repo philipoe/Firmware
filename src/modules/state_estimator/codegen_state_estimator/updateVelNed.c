@@ -3,7 +3,7 @@
  *
  * Code generation for function 'updateVelNed'
  *
- * C source code generated on: Fri Jul 11 14:42:13 2014
+ * C source code generated on: Fri Jan 23 17:57:26 2015
  *
  */
 
@@ -46,17 +46,17 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
   real32_T K[60];
   boolean_T selector[20];
   int32_T i;
-  emxArray_int32_T *r16;
-  boolean_T b_selector[20];
   emxArray_int32_T *r17;
-  emxArray_real32_T *a;
+  boolean_T b_selector[20];
   emxArray_int32_T *r18;
+  emxArray_real32_T *a;
   emxArray_int32_T *r19;
-  int32_T iy;
   emxArray_int32_T *r20;
+  int32_T iy;
   emxArray_int32_T *r21;
   emxArray_int32_T *r22;
   emxArray_int32_T *r23;
+  emxArray_int32_T *r24;
   int8_T H[60];
   static const int8_T iv3[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 
@@ -77,12 +77,12 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
   real32_T delta_x[20];
   emxArray_real32_T *KH;
   uint32_T unnamed_idx_0;
-  emxArray_real32_T *r24;
+  emxArray_real32_T *r25;
   emxArray_real32_T *C;
   emxArray_real32_T *b_C;
   emxArray_real32_T *c_y;
-  emxArray_int32_T *r25;
   emxArray_int32_T *r26;
+  emxArray_int32_T *r27;
   real32_T dtheta_half_norm;
   real32_T dq[4];
   real32_T Q[16];
@@ -155,96 +155,9 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
     selector[15] = FALSE;
   }
 
-  emxInit_int32_T(&r16, 1);
+  emxInit_int32_T(&r17, 1);
 
   /*  remove correlations of fixed states with active states */
-  eml_li_find(selector, r16);
-  i9 = r16->size[0];
-  r16->size[0] = r16->size[0];
-  emxEnsureCapacity((emxArray__common *)r16, i9, (int32_T)sizeof(int32_T));
-  i = r16->size[0];
-  for (i9 = 0; i9 < i; i9++) {
-    r16->data[i9]--;
-  }
-
-  for (i = 0; i < 20; i++) {
-    b_selector[i] = !selector[i];
-  }
-
-  emxInit_int32_T(&r17, 1);
-  eml_li_find(b_selector, r17);
-  i9 = r17->size[0];
-  r17->size[0] = r17->size[0];
-  emxEnsureCapacity((emxArray__common *)r17, i9, (int32_T)sizeof(int32_T));
-  i = r17->size[0];
-  for (i9 = 0; i9 < i; i9++) {
-    r17->data[i9]--;
-  }
-
-  for (i = 0; i < 20; i++) {
-    b_selector[i] = !selector[i];
-  }
-
-  emxInit_real32_T(&a, 2);
-  emxInit_int32_T(&r18, 1);
-  emxInit_int32_T(&r19, 1);
-  eml_li_find(b_selector, r18);
-  eml_li_find(selector, r19);
-  i9 = a->size[0] * a->size[1];
-  a->size[0] = r19->size[0];
-  a->size[1] = r18->size[0];
-  emxEnsureCapacity((emxArray__common *)a, i9, (int32_T)sizeof(real32_T));
-  i = r18->size[0];
-  for (i9 = 0; i9 < i; i9++) {
-    iy = r19->size[0];
-    for (i10 = 0; i10 < iy; i10++) {
-      a->data[i10 + a->size[0] * i9] = P[(r19->data[i10] + 20 * (r18->data[i9] -
-        1)) - 1];
-    }
-  }
-
-  emxInit_int32_T(&r20, 1);
-  i9 = r20->size[0];
-  r20->size[0] = r17->size[0];
-  emxEnsureCapacity((emxArray__common *)r20, i9, (int32_T)sizeof(int32_T));
-  i = r17->size[0];
-  for (i9 = 0; i9 < i; i9++) {
-    r20->data[i9] = r17->data[i9];
-  }
-
-  emxInit_int32_T(&r21, 1);
-  i9 = r21->size[0];
-  r21->size[0] = r16->size[0];
-  emxEnsureCapacity((emxArray__common *)r21, i9, (int32_T)sizeof(int32_T));
-  i = r16->size[0];
-  for (i9 = 0; i9 < i; i9++) {
-    r21->data[i9] = r16->data[i9];
-  }
-
-  i = a->size[1];
-  for (i9 = 0; i9 < i; i9++) {
-    iy = a->size[0];
-    for (i10 = 0; i10 < iy; i10++) {
-      P[r21->data[i10] + 20 * r20->data[i9]] = a->data[i10 + a->size[0] * i9] *
-        0.0F;
-    }
-  }
-
-  emxFree_int32_T(&r21);
-  emxFree_int32_T(&r20);
-  for (i = 0; i < 20; i++) {
-    b_selector[i] = !selector[i];
-  }
-
-  eml_li_find(b_selector, r16);
-  i9 = r16->size[0];
-  r16->size[0] = r16->size[0];
-  emxEnsureCapacity((emxArray__common *)r16, i9, (int32_T)sizeof(int32_T));
-  i = r16->size[0];
-  for (i9 = 0; i9 < i; i9++) {
-    r16->data[i9]--;
-  }
-
   eml_li_find(selector, r17);
   i9 = r17->size[0];
   r17->size[0] = r17->size[0];
@@ -254,26 +167,51 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
     r17->data[i9]--;
   }
 
-  eml_li_find(selector, r18);
   for (i = 0; i < 20; i++) {
     b_selector[i] = !selector[i];
   }
 
-  eml_li_find(b_selector, r19);
-  i9 = a->size[0] * a->size[1];
-  a->size[0] = r19->size[0];
-  a->size[1] = r18->size[0];
-  emxEnsureCapacity((emxArray__common *)a, i9, (int32_T)sizeof(real32_T));
+  emxInit_int32_T(&r18, 1);
+  eml_li_find(b_selector, r18);
+  i9 = r18->size[0];
+  r18->size[0] = r18->size[0];
+  emxEnsureCapacity((emxArray__common *)r18, i9, (int32_T)sizeof(int32_T));
   i = r18->size[0];
   for (i9 = 0; i9 < i; i9++) {
-    iy = r19->size[0];
+    r18->data[i9]--;
+  }
+
+  for (i = 0; i < 20; i++) {
+    b_selector[i] = !selector[i];
+  }
+
+  emxInit_real32_T(&a, 2);
+  emxInit_int32_T(&r19, 1);
+  emxInit_int32_T(&r20, 1);
+  eml_li_find(b_selector, r19);
+  eml_li_find(selector, r20);
+  i9 = a->size[0] * a->size[1];
+  a->size[0] = r20->size[0];
+  a->size[1] = r19->size[0];
+  emxEnsureCapacity((emxArray__common *)a, i9, (int32_T)sizeof(real32_T));
+  i = r19->size[0];
+  for (i9 = 0; i9 < i; i9++) {
+    iy = r20->size[0];
     for (i10 = 0; i10 < iy; i10++) {
-      a->data[i10 + a->size[0] * i9] = P[(r19->data[i10] + 20 * (r18->data[i9] -
+      a->data[i10 + a->size[0] * i9] = P[(r20->data[i10] + 20 * (r19->data[i9] -
         1)) - 1];
     }
   }
 
-  emxFree_int32_T(&r19);
+  emxInit_int32_T(&r21, 1);
+  i9 = r21->size[0];
+  r21->size[0] = r18->size[0];
+  emxEnsureCapacity((emxArray__common *)r21, i9, (int32_T)sizeof(int32_T));
+  i = r18->size[0];
+  for (i9 = 0; i9 < i; i9++) {
+    r21->data[i9] = r18->data[i9];
+  }
+
   emxInit_int32_T(&r22, 1);
   i9 = r22->size[0];
   r22->size[0] = r17->size[0];
@@ -283,26 +221,88 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
     r22->data[i9] = r17->data[i9];
   }
 
+  i = a->size[1];
+  for (i9 = 0; i9 < i; i9++) {
+    iy = a->size[0];
+    for (i10 = 0; i10 < iy; i10++) {
+      P[r22->data[i10] + 20 * r21->data[i9]] = a->data[i10 + a->size[0] * i9] *
+        0.0F;
+    }
+  }
+
+  emxFree_int32_T(&r22);
+  emxFree_int32_T(&r21);
+  for (i = 0; i < 20; i++) {
+    b_selector[i] = !selector[i];
+  }
+
+  eml_li_find(b_selector, r17);
+  i9 = r17->size[0];
+  r17->size[0] = r17->size[0];
+  emxEnsureCapacity((emxArray__common *)r17, i9, (int32_T)sizeof(int32_T));
+  i = r17->size[0];
+  for (i9 = 0; i9 < i; i9++) {
+    r17->data[i9]--;
+  }
+
+  eml_li_find(selector, r18);
+  i9 = r18->size[0];
+  r18->size[0] = r18->size[0];
+  emxEnsureCapacity((emxArray__common *)r18, i9, (int32_T)sizeof(int32_T));
+  i = r18->size[0];
+  for (i9 = 0; i9 < i; i9++) {
+    r18->data[i9]--;
+  }
+
+  eml_li_find(selector, r19);
+  for (i = 0; i < 20; i++) {
+    b_selector[i] = !selector[i];
+  }
+
+  eml_li_find(b_selector, r20);
+  i9 = a->size[0] * a->size[1];
+  a->size[0] = r20->size[0];
+  a->size[1] = r19->size[0];
+  emxEnsureCapacity((emxArray__common *)a, i9, (int32_T)sizeof(real32_T));
+  i = r19->size[0];
+  for (i9 = 0; i9 < i; i9++) {
+    iy = r20->size[0];
+    for (i10 = 0; i10 < iy; i10++) {
+      a->data[i10 + a->size[0] * i9] = P[(r20->data[i10] + 20 * (r19->data[i9] -
+        1)) - 1];
+    }
+  }
+
+  emxFree_int32_T(&r20);
   emxInit_int32_T(&r23, 1);
   i9 = r23->size[0];
-  r23->size[0] = r16->size[0];
+  r23->size[0] = r18->size[0];
   emxEnsureCapacity((emxArray__common *)r23, i9, (int32_T)sizeof(int32_T));
-  i = r16->size[0];
+  i = r18->size[0];
   for (i9 = 0; i9 < i; i9++) {
-    r23->data[i9] = r16->data[i9];
+    r23->data[i9] = r18->data[i9];
+  }
+
+  emxInit_int32_T(&r24, 1);
+  i9 = r24->size[0];
+  r24->size[0] = r17->size[0];
+  emxEnsureCapacity((emxArray__common *)r24, i9, (int32_T)sizeof(int32_T));
+  i = r17->size[0];
+  for (i9 = 0; i9 < i; i9++) {
+    r24->data[i9] = r17->data[i9];
   }
 
   i = a->size[1];
   for (i9 = 0; i9 < i; i9++) {
     iy = a->size[0];
     for (i10 = 0; i10 < iy; i10++) {
-      P[r23->data[i10] + 20 * r22->data[i9]] = a->data[i10 + a->size[0] * i9] *
+      P[r24->data[i10] + 20 * r23->data[i9]] = a->data[i10 + a->size[0] * i9] *
         0.0F;
     }
   }
 
+  emxFree_int32_T(&r24);
   emxFree_int32_T(&r23);
-  emxFree_int32_T(&r22);
 
   /* P(~selector,~selector)=P(~selector,~selector)*0; */
   /* H=zeros(3,size(P,1));                                 % commented   */
@@ -319,46 +319,46 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
   }
 
   /*  set float type */
-  eml_li_find(selector, r16);
-  i9 = r16->size[0];
-  r16->size[0] = r16->size[0];
-  emxEnsureCapacity((emxArray__common *)r16, i9, (int32_T)sizeof(int32_T));
-  i = r16->size[0];
+  eml_li_find(selector, r17);
+  i9 = r17->size[0];
+  r17->size[0] = r17->size[0];
+  emxEnsureCapacity((emxArray__common *)r17, i9, (int32_T)sizeof(int32_T));
+  i = r17->size[0];
   for (i9 = 0; i9 < i; i9++) {
-    r16->data[i9]--;
+    r17->data[i9]--;
   }
 
   emxInit_real32_T(&b_a, 2);
-  eml_li_find(selector, r17);
+  eml_li_find(selector, r18);
   i9 = b_a->size[0] * b_a->size[1];
   b_a->size[0] = 3;
-  b_a->size[1] = r17->size[0];
+  b_a->size[1] = r18->size[0];
   emxEnsureCapacity((emxArray__common *)b_a, i9, (int32_T)sizeof(real32_T));
-  i = r17->size[0];
+  i = r18->size[0];
   for (i9 = 0; i9 < i; i9++) {
     for (i10 = 0; i10 < 3; i10++) {
-      b_a->data[i10 + b_a->size[0] * i9] = (real32_T)H[i10 + 3 * (r17->data[i9]
+      b_a->data[i10 + b_a->size[0] * i9] = (real32_T)H[i10 + 3 * (r18->data[i9]
         - 1)];
     }
   }
 
   emxInit_real32_T(&b, 2);
-  eml_li_find(selector, r17);
   eml_li_find(selector, r18);
+  eml_li_find(selector, r19);
   i9 = b->size[0] * b->size[1];
-  b->size[0] = r18->size[0];
-  b->size[1] = r17->size[0];
+  b->size[0] = r19->size[0];
+  b->size[1] = r18->size[0];
   emxEnsureCapacity((emxArray__common *)b, i9, (int32_T)sizeof(real32_T));
-  i = r17->size[0];
+  i = r18->size[0];
   for (i9 = 0; i9 < i; i9++) {
-    iy = r18->size[0];
+    iy = r19->size[0];
     for (i10 = 0; i10 < iy; i10++) {
-      b->data[i10 + b->size[0] * i9] = P[(r18->data[i10] + 20 * (r17->data[i9] -
+      b->data[i10 + b->size[0] * i9] = P[(r19->data[i10] + 20 * (r18->data[i9] -
         1)) - 1];
     }
   }
 
-  emxFree_int32_T(&r18);
+  emxFree_int32_T(&r19);
   emxInit_real32_T(&y, 2);
   if ((b_a->size[1] == 1) || (b->size[0] == 1)) {
     i9 = y->size[0] * y->size[1];
@@ -436,7 +436,7 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
   for (i9 = 0; i9 < 3; i9++) {
     i = c_a->size[0];
     for (i10 = 0; i10 < i; i10++) {
-      K[r16->data[i10] + 20 * i9] = c_a->data[i10 + c_a->size[0] * i9];
+      K[r17->data[i10] + 20 * i9] = c_a->data[i10 + c_a->size[0] * i9];
     }
   }
 
@@ -469,27 +469,27 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
     }
 
     /*  update: */
-    eml_li_find(selector, r16);
+    eml_li_find(selector, r17);
     i9 = c_a->size[0] * c_a->size[1];
-    c_a->size[0] = r16->size[0];
+    c_a->size[0] = r17->size[0];
     c_a->size[1] = 3;
     emxEnsureCapacity((emxArray__common *)c_a, i9, (int32_T)sizeof(real32_T));
     for (i9 = 0; i9 < 3; i9++) {
-      i = r16->size[0];
+      i = r17->size[0];
       for (i10 = 0; i10 < i; i10++) {
-        c_a->data[i10 + c_a->size[0] * i9] = K[(r16->data[i10] + 20 * i9) - 1];
+        c_a->data[i10 + c_a->size[0] * i9] = K[(r17->data[i10] + 20 * i9) - 1];
       }
     }
 
-    eml_li_find(selector, r16);
+    eml_li_find(selector, r17);
     i9 = b_a->size[0] * b_a->size[1];
     b_a->size[0] = 3;
-    b_a->size[1] = r16->size[0];
+    b_a->size[1] = r17->size[0];
     emxEnsureCapacity((emxArray__common *)b_a, i9, (int32_T)sizeof(real32_T));
-    i = r16->size[0];
+    i = r17->size[0];
     for (i9 = 0; i9 < i; i9++) {
       for (i10 = 0; i10 < 3; i10++) {
-        b_a->data[i10 + b_a->size[0] * i9] = (real32_T)H[i10 + 3 * (r16->data[i9]
+        b_a->data[i10 + b_a->size[0] * i9] = (real32_T)H[i10 + 3 * (r17->data[i9]
           - 1)];
       }
     }
@@ -538,33 +538,33 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
       }
     }
 
-    emxInit_real32_T(&r24, 2);
-    eml_li_find(selector, r16);
+    emxInit_real32_T(&r25, 2);
     eml_li_find(selector, r17);
-    i9 = r24->size[0] * r24->size[1];
-    r24->size[0] = r17->size[0];
-    r24->size[1] = r16->size[0];
-    emxEnsureCapacity((emxArray__common *)r24, i9, (int32_T)sizeof(real32_T));
-    i = r16->size[0];
+    eml_li_find(selector, r18);
+    i9 = r25->size[0] * r25->size[1];
+    r25->size[0] = r18->size[0];
+    r25->size[1] = r17->size[0];
+    emxEnsureCapacity((emxArray__common *)r25, i9, (int32_T)sizeof(real32_T));
+    i = r17->size[0];
     for (i9 = 0; i9 < i; i9++) {
-      iy = r17->size[0];
+      iy = r18->size[0];
       for (i10 = 0; i10 < iy; i10++) {
-        r24->data[i10 + r24->size[0] * i9] = P[(r17->data[i10] + 20 * (r16->
+        r25->data[i10 + r25->size[0] * i9] = P[(r18->data[i10] + 20 * (r17->
           data[i9] - 1)) - 1];
       }
     }
 
-    eml_li_find(selector, r16);
     eml_li_find(selector, r17);
+    eml_li_find(selector, r18);
     i9 = b->size[0] * b->size[1];
-    b->size[0] = r17->size[0];
-    b->size[1] = r16->size[0];
+    b->size[0] = r18->size[0];
+    b->size[1] = r17->size[0];
     emxEnsureCapacity((emxArray__common *)b, i9, (int32_T)sizeof(real32_T));
-    i = r16->size[0];
+    i = r17->size[0];
     for (i9 = 0; i9 < i; i9++) {
-      iy = r17->size[0];
+      iy = r18->size[0];
       for (i10 = 0; i10 < iy; i10++) {
-        b->data[i10 + b->size[0] * i9] = P[(r17->data[i10] + 20 * (r16->data[i9]
+        b->data[i10 + b->size[0] * i9] = P[(r18->data[i10] + 20 * (r17->data[i9]
           - 1)) - 1];
       }
     }
@@ -633,17 +633,17 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
       }
     }
 
-    eml_li_find(selector, r16);
     eml_li_find(selector, r17);
+    eml_li_find(selector, r18);
     i9 = a->size[0] * a->size[1];
-    a->size[0] = r17->size[0];
-    a->size[1] = r16->size[0];
+    a->size[0] = r18->size[0];
+    a->size[1] = r17->size[0];
     emxEnsureCapacity((emxArray__common *)a, i9, (int32_T)sizeof(real32_T));
-    i = r16->size[0];
+    i = r17->size[0];
     for (i9 = 0; i9 < i; i9++) {
-      iy = r17->size[0];
+      iy = r18->size[0];
       for (i10 = 0; i10 < iy; i10++) {
-        a->data[i10 + a->size[0] * i9] = P[(r17->data[i10] + 20 * (r16->data[i9]
+        a->data[i10 + a->size[0] * i9] = P[(r18->data[i10] + 20 * (r17->data[i9]
           - 1)) - 1];
       }
     }
@@ -724,15 +724,15 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
       }
     }
 
-    eml_li_find(selector, r16);
+    eml_li_find(selector, r17);
     i9 = c_a->size[0] * c_a->size[1];
-    c_a->size[0] = r16->size[0];
+    c_a->size[0] = r17->size[0];
     c_a->size[1] = 3;
     emxEnsureCapacity((emxArray__common *)c_a, i9, (int32_T)sizeof(real32_T));
     for (i9 = 0; i9 < 3; i9++) {
-      i = r16->size[0];
+      i = r17->size[0];
       for (i10 = 0; i10 < i; i10++) {
-        c_a->data[i10 + c_a->size[0] * i9] = K[(r16->data[i10] + 20 * i9) - 1];
+        c_a->data[i10 + c_a->size[0] * i9] = K[(r17->data[i10] + 20 * i9) - 1];
       }
     }
 
@@ -777,15 +777,15 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
       }
     }
 
-    eml_li_find(selector, r16);
+    eml_li_find(selector, r17);
     i9 = b_a->size[0] * b_a->size[1];
     b_a->size[0] = 3;
-    b_a->size[1] = r16->size[0];
+    b_a->size[1] = r17->size[0];
     emxEnsureCapacity((emxArray__common *)b_a, i9, (int32_T)sizeof(real32_T));
-    i = r16->size[0];
+    i = r17->size[0];
     for (i9 = 0; i9 < i; i9++) {
       for (i10 = 0; i10 < 3; i10++) {
-        b_a->data[i10 + b_a->size[0] * i9] = K[(r16->data[i9] + 20 * i10) - 1];
+        b_a->data[i10 + b_a->size[0] * i9] = K[(r17->data[i9] + 20 * i10) - 1];
       }
     }
 
@@ -833,15 +833,6 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
     }
 
     emxFree_real32_T(&c_y);
-    eml_li_find(selector, r16);
-    i9 = r16->size[0];
-    r16->size[0] = r16->size[0];
-    emxEnsureCapacity((emxArray__common *)r16, i9, (int32_T)sizeof(int32_T));
-    i = r16->size[0];
-    for (i9 = 0; i9 < i; i9++) {
-      r16->data[i9]--;
-    }
-
     eml_li_find(selector, r17);
     i9 = r17->size[0];
     r17->size[0] = r17->size[0];
@@ -851,39 +842,48 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
       r17->data[i9]--;
     }
 
-    emxInit_int32_T(&r25, 1);
-    i9 = r25->size[0];
-    r25->size[0] = r17->size[0];
-    emxEnsureCapacity((emxArray__common *)r25, i9, (int32_T)sizeof(int32_T));
-    i = r17->size[0];
+    eml_li_find(selector, r18);
+    i9 = r18->size[0];
+    r18->size[0] = r18->size[0];
+    emxEnsureCapacity((emxArray__common *)r18, i9, (int32_T)sizeof(int32_T));
+    i = r18->size[0];
     for (i9 = 0; i9 < i; i9++) {
-      r25->data[i9] = r17->data[i9];
+      r18->data[i9]--;
     }
 
     emxInit_int32_T(&r26, 1);
     i9 = r26->size[0];
-    r26->size[0] = r16->size[0];
+    r26->size[0] = r18->size[0];
     emxEnsureCapacity((emxArray__common *)r26, i9, (int32_T)sizeof(int32_T));
-    i = r16->size[0];
+    i = r18->size[0];
     for (i9 = 0; i9 < i; i9++) {
-      r26->data[i9] = r16->data[i9];
+      r26->data[i9] = r18->data[i9];
     }
 
-    i = r24->size[1];
+    emxInit_int32_T(&r27, 1);
+    i9 = r27->size[0];
+    r27->size[0] = r17->size[0];
+    emxEnsureCapacity((emxArray__common *)r27, i9, (int32_T)sizeof(int32_T));
+    i = r17->size[0];
     for (i9 = 0; i9 < i; i9++) {
-      iy = r24->size[0];
+      r27->data[i9] = r17->data[i9];
+    }
+
+    i = r25->size[1];
+    for (i9 = 0; i9 < i; i9++) {
+      iy = r25->size[0];
       for (i10 = 0; i10 < iy; i10++) {
-        P[r26->data[i10] + 20 * r25->data[i9]] = ((r24->data[i10 + r24->size[0] *
+        P[r27->data[i10] + 20 * r26->data[i9]] = ((r25->data[i10 + r25->size[0] *
           i9] - C->data[i10 + C->size[0] * i9]) - b_C->data[i10 + b_C->size[0] *
           i9]) + KH->data[i10 + KH->size[0] * i9];
       }
     }
 
+    emxFree_int32_T(&r27);
     emxFree_int32_T(&r26);
-    emxFree_int32_T(&r25);
     emxFree_real32_T(&b_C);
     emxFree_real32_T(&C);
-    emxFree_real32_T(&r24);
+    emxFree_real32_T(&r25);
     emxFree_real32_T(&KH);
 
     /* delta_x=(K*(y_VelNed-x.v_N)); */
@@ -979,8 +979,8 @@ void updateVelNed(states_T *x, real32_T P[400], const real32_T y_VelNed[3],
     x->K += delta_x[19];
   }
 
-  emxFree_int32_T(&r16);
   emxFree_int32_T(&r17);
+  emxFree_int32_T(&r18);
   emxFree_real32_T(&c_a);
   emxFree_real32_T(&b);
   emxFree_real32_T(&b_a);

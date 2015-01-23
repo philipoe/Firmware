@@ -3,7 +3,7 @@
  *
  * Code generation for function 'updatePressures_all'
  *
- * C source code generated on: Fri Jul 11 14:42:13 2014
+ * C source code generated on: Fri Jan 23 17:57:26 2015
  *
  */
 
@@ -90,17 +90,17 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
   real32_T b_y[4];
   real32_T K[80];
   boolean_T selector[20];
-  emxArray_int32_T *r49;
-  boolean_T b_selector[20];
   emxArray_int32_T *r50;
-  emxArray_real32_T *a;
+  boolean_T b_selector[20];
   emxArray_int32_T *r51;
+  emxArray_real32_T *a;
   emxArray_int32_T *r52;
-  int32_T iy;
   emxArray_int32_T *r53;
+  int32_T iy;
   emxArray_int32_T *r54;
   emxArray_int32_T *r55;
   emxArray_int32_T *r56;
+  emxArray_int32_T *r57;
   emxArray_real32_T *b_a;
   emxArray_real32_T *b;
   emxArray_real32_T *c_y;
@@ -112,12 +112,12 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
   emxArray_real32_T *c_a;
   emxArray_real32_T *KH;
   uint32_T unnamed_idx_0;
-  emxArray_real32_T *r57;
+  emxArray_real32_T *r58;
   emxArray_real32_T *C;
   emxArray_real32_T *b_C;
   emxArray_real32_T *d_y;
-  emxArray_int32_T *r58;
   emxArray_int32_T *r59;
+  emxArray_int32_T *r60;
   real32_T delta_x[20];
   real32_T Q[16];
 
@@ -480,96 +480,9 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
           selector[15] = FALSE;
         }
 
-        emxInit_int32_T(&r49, 1);
+        emxInit_int32_T(&r50, 1);
 
         /*  remove correlations of fixed states with active states */
-        eml_li_find(selector, r49);
-        i17 = r49->size[0];
-        r49->size[0] = r49->size[0];
-        emxEnsureCapacity((emxArray__common *)r49, i17, (int32_T)sizeof(int32_T));
-        i = r49->size[0];
-        for (i17 = 0; i17 < i; i17++) {
-          r49->data[i17]--;
-        }
-
-        for (i = 0; i < 20; i++) {
-          b_selector[i] = !selector[i];
-        }
-
-        emxInit_int32_T(&r50, 1);
-        eml_li_find(b_selector, r50);
-        i17 = r50->size[0];
-        r50->size[0] = r50->size[0];
-        emxEnsureCapacity((emxArray__common *)r50, i17, (int32_T)sizeof(int32_T));
-        i = r50->size[0];
-        for (i17 = 0; i17 < i; i17++) {
-          r50->data[i17]--;
-        }
-
-        for (i = 0; i < 20; i++) {
-          b_selector[i] = !selector[i];
-        }
-
-        emxInit_real32_T(&a, 2);
-        emxInit_int32_T(&r51, 1);
-        emxInit_int32_T(&r52, 1);
-        eml_li_find(b_selector, r51);
-        eml_li_find(selector, r52);
-        i17 = a->size[0] * a->size[1];
-        a->size[0] = r52->size[0];
-        a->size[1] = r51->size[0];
-        emxEnsureCapacity((emxArray__common *)a, i17, (int32_T)sizeof(real32_T));
-        i = r51->size[0];
-        for (i17 = 0; i17 < i; i17++) {
-          iy = r52->size[0];
-          for (i18 = 0; i18 < iy; i18++) {
-            a->data[i18 + a->size[0] * i17] = P[(r52->data[i18] + 20 *
-              (r51->data[i17] - 1)) - 1];
-          }
-        }
-
-        emxInit_int32_T(&r53, 1);
-        i17 = r53->size[0];
-        r53->size[0] = r50->size[0];
-        emxEnsureCapacity((emxArray__common *)r53, i17, (int32_T)sizeof(int32_T));
-        i = r50->size[0];
-        for (i17 = 0; i17 < i; i17++) {
-          r53->data[i17] = r50->data[i17];
-        }
-
-        emxInit_int32_T(&r54, 1);
-        i17 = r54->size[0];
-        r54->size[0] = r49->size[0];
-        emxEnsureCapacity((emxArray__common *)r54, i17, (int32_T)sizeof(int32_T));
-        i = r49->size[0];
-        for (i17 = 0; i17 < i; i17++) {
-          r54->data[i17] = r49->data[i17];
-        }
-
-        i = a->size[1];
-        for (i17 = 0; i17 < i; i17++) {
-          iy = a->size[0];
-          for (i18 = 0; i18 < iy; i18++) {
-            P[r54->data[i18] + 20 * r53->data[i17]] = a->data[i18 + a->size[0] *
-              i17] * 0.0F;
-          }
-        }
-
-        emxFree_int32_T(&r54);
-        emxFree_int32_T(&r53);
-        for (i = 0; i < 20; i++) {
-          b_selector[i] = !selector[i];
-        }
-
-        eml_li_find(b_selector, r49);
-        i17 = r49->size[0];
-        r49->size[0] = r49->size[0];
-        emxEnsureCapacity((emxArray__common *)r49, i17, (int32_T)sizeof(int32_T));
-        i = r49->size[0];
-        for (i17 = 0; i17 < i; i17++) {
-          r49->data[i17]--;
-        }
-
         eml_li_find(selector, r50);
         i17 = r50->size[0];
         r50->size[0] = r50->size[0];
@@ -579,26 +492,51 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
           r50->data[i17]--;
         }
 
-        eml_li_find(selector, r51);
         for (i = 0; i < 20; i++) {
           b_selector[i] = !selector[i];
         }
 
-        eml_li_find(b_selector, r52);
-        i17 = a->size[0] * a->size[1];
-        a->size[0] = r52->size[0];
-        a->size[1] = r51->size[0];
-        emxEnsureCapacity((emxArray__common *)a, i17, (int32_T)sizeof(real32_T));
+        emxInit_int32_T(&r51, 1);
+        eml_li_find(b_selector, r51);
+        i17 = r51->size[0];
+        r51->size[0] = r51->size[0];
+        emxEnsureCapacity((emxArray__common *)r51, i17, (int32_T)sizeof(int32_T));
         i = r51->size[0];
         for (i17 = 0; i17 < i; i17++) {
-          iy = r52->size[0];
+          r51->data[i17]--;
+        }
+
+        for (i = 0; i < 20; i++) {
+          b_selector[i] = !selector[i];
+        }
+
+        emxInit_real32_T(&a, 2);
+        emxInit_int32_T(&r52, 1);
+        emxInit_int32_T(&r53, 1);
+        eml_li_find(b_selector, r52);
+        eml_li_find(selector, r53);
+        i17 = a->size[0] * a->size[1];
+        a->size[0] = r53->size[0];
+        a->size[1] = r52->size[0];
+        emxEnsureCapacity((emxArray__common *)a, i17, (int32_T)sizeof(real32_T));
+        i = r52->size[0];
+        for (i17 = 0; i17 < i; i17++) {
+          iy = r53->size[0];
           for (i18 = 0; i18 < iy; i18++) {
-            a->data[i18 + a->size[0] * i17] = P[(r52->data[i18] + 20 *
-              (r51->data[i17] - 1)) - 1];
+            a->data[i18 + a->size[0] * i17] = P[(r53->data[i18] + 20 *
+              (r52->data[i17] - 1)) - 1];
           }
         }
 
-        emxFree_int32_T(&r52);
+        emxInit_int32_T(&r54, 1);
+        i17 = r54->size[0];
+        r54->size[0] = r51->size[0];
+        emxEnsureCapacity((emxArray__common *)r54, i17, (int32_T)sizeof(int32_T));
+        i = r51->size[0];
+        for (i17 = 0; i17 < i; i17++) {
+          r54->data[i17] = r51->data[i17];
+        }
+
         emxInit_int32_T(&r55, 1);
         i17 = r55->size[0];
         r55->size[0] = r50->size[0];
@@ -608,68 +546,130 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
           r55->data[i17] = r50->data[i17];
         }
 
+        i = a->size[1];
+        for (i17 = 0; i17 < i; i17++) {
+          iy = a->size[0];
+          for (i18 = 0; i18 < iy; i18++) {
+            P[r55->data[i18] + 20 * r54->data[i17]] = a->data[i18 + a->size[0] *
+              i17] * 0.0F;
+          }
+        }
+
+        emxFree_int32_T(&r55);
+        emxFree_int32_T(&r54);
+        for (i = 0; i < 20; i++) {
+          b_selector[i] = !selector[i];
+        }
+
+        eml_li_find(b_selector, r50);
+        i17 = r50->size[0];
+        r50->size[0] = r50->size[0];
+        emxEnsureCapacity((emxArray__common *)r50, i17, (int32_T)sizeof(int32_T));
+        i = r50->size[0];
+        for (i17 = 0; i17 < i; i17++) {
+          r50->data[i17]--;
+        }
+
+        eml_li_find(selector, r51);
+        i17 = r51->size[0];
+        r51->size[0] = r51->size[0];
+        emxEnsureCapacity((emxArray__common *)r51, i17, (int32_T)sizeof(int32_T));
+        i = r51->size[0];
+        for (i17 = 0; i17 < i; i17++) {
+          r51->data[i17]--;
+        }
+
+        eml_li_find(selector, r52);
+        for (i = 0; i < 20; i++) {
+          b_selector[i] = !selector[i];
+        }
+
+        eml_li_find(b_selector, r53);
+        i17 = a->size[0] * a->size[1];
+        a->size[0] = r53->size[0];
+        a->size[1] = r52->size[0];
+        emxEnsureCapacity((emxArray__common *)a, i17, (int32_T)sizeof(real32_T));
+        i = r52->size[0];
+        for (i17 = 0; i17 < i; i17++) {
+          iy = r53->size[0];
+          for (i18 = 0; i18 < iy; i18++) {
+            a->data[i18 + a->size[0] * i17] = P[(r53->data[i18] + 20 *
+              (r52->data[i17] - 1)) - 1];
+          }
+        }
+
+        emxFree_int32_T(&r53);
         emxInit_int32_T(&r56, 1);
         i17 = r56->size[0];
-        r56->size[0] = r49->size[0];
+        r56->size[0] = r51->size[0];
         emxEnsureCapacity((emxArray__common *)r56, i17, (int32_T)sizeof(int32_T));
-        i = r49->size[0];
+        i = r51->size[0];
         for (i17 = 0; i17 < i; i17++) {
-          r56->data[i17] = r49->data[i17];
+          r56->data[i17] = r51->data[i17];
+        }
+
+        emxInit_int32_T(&r57, 1);
+        i17 = r57->size[0];
+        r57->size[0] = r50->size[0];
+        emxEnsureCapacity((emxArray__common *)r57, i17, (int32_T)sizeof(int32_T));
+        i = r50->size[0];
+        for (i17 = 0; i17 < i; i17++) {
+          r57->data[i17] = r50->data[i17];
         }
 
         i = a->size[1];
         for (i17 = 0; i17 < i; i17++) {
           iy = a->size[0];
           for (i18 = 0; i18 < iy; i18++) {
-            P[r56->data[i18] + 20 * r55->data[i17]] = a->data[i18 + a->size[0] *
+            P[r57->data[i18] + 20 * r56->data[i17]] = a->data[i18 + a->size[0] *
               i17] * 0.0F;
           }
         }
 
+        emxFree_int32_T(&r57);
         emxFree_int32_T(&r56);
-        emxFree_int32_T(&r55);
 
         /* P(~selector,~selector)=P(~selector,~selector)*0; */
-        eml_li_find(selector, r49);
-        i17 = r49->size[0];
-        r49->size[0] = r49->size[0];
-        emxEnsureCapacity((emxArray__common *)r49, i17, (int32_T)sizeof(int32_T));
-        i = r49->size[0];
+        eml_li_find(selector, r50);
+        i17 = r50->size[0];
+        r50->size[0] = r50->size[0];
+        emxEnsureCapacity((emxArray__common *)r50, i17, (int32_T)sizeof(int32_T));
+        i = r50->size[0];
         for (i17 = 0; i17 < i; i17++) {
-          r49->data[i17]--;
+          r50->data[i17]--;
         }
 
         emxInit_real32_T(&b_a, 2);
-        eml_li_find(selector, r50);
+        eml_li_find(selector, r51);
         i17 = b_a->size[0] * b_a->size[1];
         b_a->size[0] = 4;
-        b_a->size[1] = r50->size[0];
+        b_a->size[1] = r51->size[0];
         emxEnsureCapacity((emxArray__common *)b_a, i17, (int32_T)sizeof(real32_T));
-        i = r50->size[0];
+        i = r51->size[0];
         for (i17 = 0; i17 < i; i17++) {
           for (i18 = 0; i18 < 4; i18++) {
-            b_a->data[i18 + b_a->size[0] * i17] = H[i18 + ((r50->data[i17] - 1) <<
+            b_a->data[i18 + b_a->size[0] * i17] = H[i18 + ((r51->data[i17] - 1) <<
               2)];
           }
         }
 
         emxInit_real32_T(&b, 2);
-        eml_li_find(selector, r50);
         eml_li_find(selector, r51);
+        eml_li_find(selector, r52);
         i17 = b->size[0] * b->size[1];
-        b->size[0] = r51->size[0];
-        b->size[1] = r50->size[0];
+        b->size[0] = r52->size[0];
+        b->size[1] = r51->size[0];
         emxEnsureCapacity((emxArray__common *)b, i17, (int32_T)sizeof(real32_T));
-        i = r50->size[0];
+        i = r51->size[0];
         for (i17 = 0; i17 < i; i17++) {
-          iy = r51->size[0];
+          iy = r52->size[0];
           for (i18 = 0; i18 < iy; i18++) {
-            b->data[i18 + b->size[0] * i17] = P[(r51->data[i18] + 20 *
-              (r50->data[i17] - 1)) - 1];
+            b->data[i18 + b->size[0] * i17] = P[(r52->data[i18] + 20 *
+              (r51->data[i17] - 1)) - 1];
           }
         }
 
-        emxFree_int32_T(&r51);
+        emxFree_int32_T(&r52);
         emxInit_real32_T(&c_y, 2);
         if ((b_a->size[1] == 1) || (b->size[0] == 1)) {
           i17 = c_y->size[0] * c_y->size[1];
@@ -751,33 +751,33 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
         for (i17 = 0; i17 < 4; i17++) {
           i = c_a->size[0];
           for (i18 = 0; i18 < i; i18++) {
-            K[r49->data[i18] + 20 * i17] = c_a->data[i18 + c_a->size[0] * i17];
+            K[r50->data[i18] + 20 * i17] = c_a->data[i18 + c_a->size[0] * i17];
           }
         }
 
         /*  update: */
-        eml_li_find(selector, r49);
+        eml_li_find(selector, r50);
         i17 = c_a->size[0] * c_a->size[1];
-        c_a->size[0] = r49->size[0];
+        c_a->size[0] = r50->size[0];
         c_a->size[1] = 4;
         emxEnsureCapacity((emxArray__common *)c_a, i17, (int32_T)sizeof(real32_T));
         for (i17 = 0; i17 < 4; i17++) {
-          i = r49->size[0];
+          i = r50->size[0];
           for (i18 = 0; i18 < i; i18++) {
-            c_a->data[i18 + c_a->size[0] * i17] = K[(r49->data[i18] + 20 * i17)
+            c_a->data[i18 + c_a->size[0] * i17] = K[(r50->data[i18] + 20 * i17)
               - 1];
           }
         }
 
-        eml_li_find(selector, r49);
+        eml_li_find(selector, r50);
         i17 = b_a->size[0] * b_a->size[1];
         b_a->size[0] = 4;
-        b_a->size[1] = r49->size[0];
+        b_a->size[1] = r50->size[0];
         emxEnsureCapacity((emxArray__common *)b_a, i17, (int32_T)sizeof(real32_T));
-        i = r49->size[0];
+        i = r50->size[0];
         for (i17 = 0; i17 < i; i17++) {
           for (i18 = 0; i18 < 4; i18++) {
-            b_a->data[i18 + b_a->size[0] * i17] = H[i18 + ((r49->data[i17] - 1) <<
+            b_a->data[i18 + b_a->size[0] * i17] = H[i18 + ((r50->data[i17] - 1) <<
               2)];
           }
         }
@@ -826,34 +826,34 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
           }
         }
 
-        emxInit_real32_T(&r57, 2);
-        eml_li_find(selector, r49);
+        emxInit_real32_T(&r58, 2);
         eml_li_find(selector, r50);
-        i17 = r57->size[0] * r57->size[1];
-        r57->size[0] = r50->size[0];
-        r57->size[1] = r49->size[0];
-        emxEnsureCapacity((emxArray__common *)r57, i17, (int32_T)sizeof(real32_T));
-        i = r49->size[0];
+        eml_li_find(selector, r51);
+        i17 = r58->size[0] * r58->size[1];
+        r58->size[0] = r51->size[0];
+        r58->size[1] = r50->size[0];
+        emxEnsureCapacity((emxArray__common *)r58, i17, (int32_T)sizeof(real32_T));
+        i = r50->size[0];
         for (i17 = 0; i17 < i; i17++) {
-          iy = r50->size[0];
+          iy = r51->size[0];
           for (i18 = 0; i18 < iy; i18++) {
-            r57->data[i18 + r57->size[0] * i17] = P[(r50->data[i18] + 20 *
-              (r49->data[i17] - 1)) - 1];
+            r58->data[i18 + r58->size[0] * i17] = P[(r51->data[i18] + 20 *
+              (r50->data[i17] - 1)) - 1];
           }
         }
 
-        eml_li_find(selector, r49);
         eml_li_find(selector, r50);
+        eml_li_find(selector, r51);
         i17 = b->size[0] * b->size[1];
-        b->size[0] = r50->size[0];
-        b->size[1] = r49->size[0];
+        b->size[0] = r51->size[0];
+        b->size[1] = r50->size[0];
         emxEnsureCapacity((emxArray__common *)b, i17, (int32_T)sizeof(real32_T));
-        i = r49->size[0];
+        i = r50->size[0];
         for (i17 = 0; i17 < i; i17++) {
-          iy = r50->size[0];
+          iy = r51->size[0];
           for (i18 = 0; i18 < iy; i18++) {
-            b->data[i18 + b->size[0] * i17] = P[(r50->data[i18] + 20 *
-              (r49->data[i17] - 1)) - 1];
+            b->data[i18 + b->size[0] * i17] = P[(r51->data[i18] + 20 *
+              (r50->data[i17] - 1)) - 1];
           }
         }
 
@@ -921,18 +921,18 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
           }
         }
 
-        eml_li_find(selector, r49);
         eml_li_find(selector, r50);
+        eml_li_find(selector, r51);
         i17 = a->size[0] * a->size[1];
-        a->size[0] = r50->size[0];
-        a->size[1] = r49->size[0];
+        a->size[0] = r51->size[0];
+        a->size[1] = r50->size[0];
         emxEnsureCapacity((emxArray__common *)a, i17, (int32_T)sizeof(real32_T));
-        i = r49->size[0];
+        i = r50->size[0];
         for (i17 = 0; i17 < i; i17++) {
-          iy = r50->size[0];
+          iy = r51->size[0];
           for (i18 = 0; i18 < iy; i18++) {
-            a->data[i18 + a->size[0] * i17] = P[(r50->data[i18] + 20 *
-              (r49->data[i17] - 1)) - 1];
+            a->data[i18 + a->size[0] * i17] = P[(r51->data[i18] + 20 *
+              (r50->data[i17] - 1)) - 1];
           }
         }
 
@@ -1017,15 +1017,15 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
 
         emxFree_real32_T(&b);
         emxFree_real32_T(&a);
-        eml_li_find(selector, r49);
+        eml_li_find(selector, r50);
         i17 = c_a->size[0] * c_a->size[1];
-        c_a->size[0] = r49->size[0];
+        c_a->size[0] = r50->size[0];
         c_a->size[1] = 4;
         emxEnsureCapacity((emxArray__common *)c_a, i17, (int32_T)sizeof(real32_T));
         for (i17 = 0; i17 < 4; i17++) {
-          i = r49->size[0];
+          i = r50->size[0];
           for (i18 = 0; i18 < i; i18++) {
-            c_a->data[i18 + c_a->size[0] * i17] = K[(r49->data[i18] + 20 * i17)
+            c_a->data[i18 + c_a->size[0] * i17] = K[(r50->data[i18] + 20 * i17)
               - 1];
           }
         }
@@ -1072,15 +1072,15 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
         }
 
         emxFree_real32_T(&c_a);
-        eml_li_find(selector, r49);
+        eml_li_find(selector, r50);
         i17 = b_a->size[0] * b_a->size[1];
         b_a->size[0] = 4;
-        b_a->size[1] = r49->size[0];
+        b_a->size[1] = r50->size[0];
         emxEnsureCapacity((emxArray__common *)b_a, i17, (int32_T)sizeof(real32_T));
-        i = r49->size[0];
+        i = r50->size[0];
         for (i17 = 0; i17 < i; i17++) {
           for (i18 = 0; i18 < 4; i18++) {
-            b_a->data[i18 + b_a->size[0] * i17] = K[(r49->data[i17] + 20 * i18)
+            b_a->data[i18 + b_a->size[0] * i17] = K[(r50->data[i17] + 20 * i18)
               - 1];
           }
         }
@@ -1130,15 +1130,6 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
 
         emxFree_real32_T(&d_y);
         emxFree_real32_T(&b_a);
-        eml_li_find(selector, r49);
-        i17 = r49->size[0];
-        r49->size[0] = r49->size[0];
-        emxEnsureCapacity((emxArray__common *)r49, i17, (int32_T)sizeof(int32_T));
-        i = r49->size[0];
-        for (i17 = 0; i17 < i; i17++) {
-          r49->data[i17]--;
-        }
-
         eml_li_find(selector, r50);
         i17 = r50->size[0];
         r50->size[0] = r50->size[0];
@@ -1148,41 +1139,50 @@ void updatePressures_all(states_T *x, real32_T P[400], real32_T y_p_stat,
           r50->data[i17]--;
         }
 
-        emxInit_int32_T(&r58, 1);
-        i17 = r58->size[0];
-        r58->size[0] = r50->size[0];
-        emxEnsureCapacity((emxArray__common *)r58, i17, (int32_T)sizeof(int32_T));
+        eml_li_find(selector, r51);
+        i17 = r51->size[0];
+        r51->size[0] = r51->size[0];
+        emxEnsureCapacity((emxArray__common *)r51, i17, (int32_T)sizeof(int32_T));
+        i = r51->size[0];
+        for (i17 = 0; i17 < i; i17++) {
+          r51->data[i17]--;
+        }
+
+        emxInit_int32_T(&r59, 1);
+        i17 = r59->size[0];
+        r59->size[0] = r51->size[0];
+        emxEnsureCapacity((emxArray__common *)r59, i17, (int32_T)sizeof(int32_T));
+        i = r51->size[0];
+        for (i17 = 0; i17 < i; i17++) {
+          r59->data[i17] = r51->data[i17];
+        }
+
+        emxFree_int32_T(&r51);
+        emxInit_int32_T(&r60, 1);
+        i17 = r60->size[0];
+        r60->size[0] = r50->size[0];
+        emxEnsureCapacity((emxArray__common *)r60, i17, (int32_T)sizeof(int32_T));
         i = r50->size[0];
         for (i17 = 0; i17 < i; i17++) {
-          r58->data[i17] = r50->data[i17];
+          r60->data[i17] = r50->data[i17];
         }
 
         emxFree_int32_T(&r50);
-        emxInit_int32_T(&r59, 1);
-        i17 = r59->size[0];
-        r59->size[0] = r49->size[0];
-        emxEnsureCapacity((emxArray__common *)r59, i17, (int32_T)sizeof(int32_T));
-        i = r49->size[0];
+        i = r58->size[1];
         for (i17 = 0; i17 < i; i17++) {
-          r59->data[i17] = r49->data[i17];
-        }
-
-        emxFree_int32_T(&r49);
-        i = r57->size[1];
-        for (i17 = 0; i17 < i; i17++) {
-          iy = r57->size[0];
+          iy = r58->size[0];
           for (i18 = 0; i18 < iy; i18++) {
-            P[r59->data[i18] + 20 * r58->data[i17]] = ((r57->data[i18 +
-              r57->size[0] * i17] - C->data[i18 + C->size[0] * i17]) - b_C->
+            P[r60->data[i18] + 20 * r59->data[i17]] = ((r58->data[i18 +
+              r58->size[0] * i17] - C->data[i18 + C->size[0] * i17]) - b_C->
               data[i18 + b_C->size[0] * i17]) + KH->data[i18 + KH->size[0] * i17];
           }
         }
 
+        emxFree_int32_T(&r60);
         emxFree_int32_T(&r59);
-        emxFree_int32_T(&r58);
         emxFree_real32_T(&b_C);
         emxFree_real32_T(&C);
-        emxFree_real32_T(&r57);
+        emxFree_real32_T(&r58);
         emxFree_real32_T(&KH);
         for (i17 = 0; i17 < 20; i17++) {
           delta_x[i17] = 0.0F;
