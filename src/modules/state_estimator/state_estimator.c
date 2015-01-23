@@ -236,7 +236,7 @@ int state_estimator_thread_main(int argc, char *argv[])
 		case 'd':
 			{
 				unsigned s = strtoul(optarg, NULL, 10);
-				if (s > 2){
+				if (s > 3){
 					errx(1, "Error wrong value for the dynamic model (%d), out of range (0..2)...exiting.\n ", s);
 				}
 				else
@@ -339,6 +339,9 @@ int state_estimator_thread_main(int argc, char *argv[])
 			   break;
 		   case 2:
 			   printf("State estimator uses AtlantikSolar airplane dynamic model\n\n");
+			   break;
+		   case 3:
+			   printf("State estimator uses TechPod airplane dynamic model\n\n");
 			   break;
 		   default:
 			   printf("Wrong airplane dynamic model given, State estimator uses SenseSoar airplane dynamic model as default\n\n");
