@@ -58,10 +58,14 @@
 
 #ifdef PX4_I2C_OBDEV_MS5611
 
+#ifdef USE_EXTERNAL_MS5611
+	#define MS5611_BUS		PX4_I2C_BUS_EXPANSION
+#else
 #ifndef PX4_I2C_BUS_ONBOARD
 	#define MS5611_BUS		1
 #else
 	#define MS5611_BUS		PX4_I2C_BUS_ONBOARD
+#endif
 #endif
 
 #define MS5611_ADDRESS_1		0x76	/* address select pins pulled high (PX4FMU series v1.6+) */
