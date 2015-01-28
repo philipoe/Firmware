@@ -330,6 +330,11 @@ private:
 
 		float baro_qnh;
 
+		float dbaro_Dtube;
+		float dbaro_Ltube;
+		float dbaro_offset;
+		float dbaro_dy;
+
 	}		_parameters;			/**< local copies of interesting parameters */
 
 	struct {
@@ -388,18 +393,14 @@ private:
 
 		param_t baro_qnh;
 
+		param_t dbaro_Dtube;
+		param_t dbaro_Ltube;
+		param_t dbaro_offset;
+		param_t dbaro_dy;
+
 	}		_parameter_handles;		/**< handles for interesting parameters */
 
 
-	//Added
-	param_t h_dbaro_Dtube;
-	param_t h_dbaro_Ltube;
-	param_t h_dbaro_offset;
-	param_t h_dbaro_dy;
-	float dbaro_DtubePow4;			//Diameter of tube in [m] to the power of 4
-	float dbaro_Ltube;				//Length of tube in [m]
-	float dbaro_offset;				//dbaro zero offset correction (as sometimes necessary for the HDIM10)
-	float dbaro_dy;					//dbaro/pitot tube lateral position offset [m]
 	/**
 	 * Update our local parameter cache.
 	 */
@@ -763,14 +764,14 @@ Sensors::Sensors() :
 	_parameter_handles.board_offset[1] = param_find("SENS_BOARD_Y_OFF");
 	_parameter_handles.board_offset[2] = param_find("SENS_BOARD_Z_OFF");
 
-	/* ASLUAV parameters - added */
-	h_dbaro_Dtube=param_find("SENSA_DBaro_D");
-	h_dbaro_Ltube=param_find("SENSA_DBaro_L");
-	h_dbaro_offset=param_find("SENSA_DBaro_OFF");
-	h_dbaro_dy=param_find("SENSA_DBaro_dy");
-
 	/* Barometer QNH */
 	_parameter_handles.baro_qnh = param_find("SENS_BARO_QNH");
+
+	/* ASLUAV parameters */
+	_parameter_handles.dbaro_Dtube = param_find("SENSA_DBaro_D");
+	_parameter_handles.dbaro_Ltube = param_find("SENSA_DBaro_L");
+	_parameter_handles.dbaro_offset = param_find("SENSA_DBaro_OFF");
+	_parameter_handles.dbaro_dy = param_find("SENSA_DBaro_dy");
 
 	/* fetch initial parameter values */
 	parameters_update();
@@ -988,14 +989,11 @@ Sensors::parameters_update()
 	param_get(_parameter_handles.board_offset[1], &(_parameters.board_offset[1]));
 	param_get(_parameter_handles.board_offset[2], &(_parameters.board_offset[2]));
 
-	// ASLUAV custom parameters - Added by PhOe
-	float temp=0.0f;
-	param_get(h_dbaro_Dtube,&temp);
-	dbaro_DtubePow4=pow(temp,4.0f);
-	param_get(h_dbaro_Ltube,&dbaro_Ltube);
-	param_get(h_dbaro_offset, &dbaro_offset);
-	param_get(h_dbaro_dy, &dbaro_dy);
-	//printf("new params: DtubePow4[m]:%7.9f Ltube[m]: %7.4f dbaro_offset[Pa]: %7.4f\n",(double)dbaro_DtubePow4, (double)dbaro_Ltube, (double)dbaro_offset);
+	/* ASLUAV custom parameters */
+	param_get(_parameter_handles.dbaro_Dtube, &(_parameters.dbaro_Dtube));
+	param_get(_parameter_handles.dbaro_Ltube, &(_parameters.dbaro_Ltube));
+	param_get(_parameter_handles.dbaro_offset, &(_parameters.dbaro_offset));
+	param_get(_parameter_handles.dbaro_dy, &(_parameters.dbaro_dy));
 
 	/** fine tune board offset on parameter update **/
 	math::Matrix<3, 3> board_rotation_offset;
