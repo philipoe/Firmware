@@ -1897,6 +1897,14 @@ Sensors::parameter_update_poll(bool forced)
 				warn("WARNING: failed to set scale / offsets for airspeed sensor");
 			}
 
+			struct airspeed_tube_compensation tube_compensation = {
+				_parameters.dbaro_Dtube,
+				_parameters.dbaro_Ltube,
+			};
+
+			if (OK != ioctl(fd, AIRSPEEDIOCSCOMPE, (long unsigned int)&tube_compensation)) {
+				warn("WARNING: failed to set tube compensation for airspeed sensor");
+			}
 			close(fd);
 		}
 

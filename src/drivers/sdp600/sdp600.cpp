@@ -134,6 +134,8 @@ private:
 
 	math::LowPassFilter2p	_filter;
 
+	float				_dbaro_Dtube;
+	float 				_dbaro_Ltube;
 
 	/**
 	 * Test whether the device supported by the driver is present at a
@@ -227,6 +229,14 @@ private:
 
 	bool			crc8(uint8_t *n_prom);
 
+	/**
+	 * Compensation for pressure drop in the hose
+	 *
+	 * @return			Correction factor
+	 */
+
+	float dbaro_pressure_corr(float dbaro_pres_pa_raw, float dbaro_temp_celcius);
+
 };
 
 /* helper macro for handling report buffer indices */
@@ -281,8 +291,9 @@ SDP600::SDP600(int bus) :
 	_comms_errors(perf_alloc(PC_COUNT, "sdp600_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "sdp600_buffer_overflows")),
 	_max_differential_pressure_pa(-500.0f),
-	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ)
-
+	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ),
+	_dbaro_Dtube(0),
+	_dbaro_Ltube(0)
 {
 	// enable debug() calls
 	_debug_enabled = true;
@@ -514,6 +525,14 @@ SDP600::ioctl(struct file *filp, int cmd, unsigned long arg)
 		start();
 		return OK;
 		//return -EINVAL;
+
+	case AIRSPEEDIOCSCOMPE:{
+		struct airspeed_tube_compensation *s = (struct airspeed_tube_compensation*)arg;
+		_dbaro_Dtube = s->dbaro_Dtube;
+		_dbaro_Ltube = s->dbaro_Ltube;
+		return OK;
+	}
+
 	default:
 		break;
 	}
@@ -623,7 +642,7 @@ SDP600::measurement()
 	}
 
 	//warnx("calculated effective differential pressure %3.6f Pa", (double) dPressure);   			// remove
-#if 1
+#if 0
 	temperature = -1000.0f;
 #else
 	temp_measurement();																				// get the sensors temperature (option) */
@@ -904,6 +923,37 @@ SDP600::crc8(uint8_t *crc_data)
 	return (crc_read == crc);
 }
 
+float
+SDP600::dbaro_pressure_corr(float dbaro_pres_pa_raw, float dbaro_temp_celcius)
+{
+	/* corrected dbaro pressure due to viscous friction of the tubes */
+		float Nair;
+		float Rair;
+		float Eps;
+
+		if (dbaro_pres_pa_raw < 0.0f)
+			dbaro_pres_pa_raw = -1*dbaro_pres_pa_raw;
+					//TODO: This causes errors at low velocities for the HDIM10, which often has a negative offset! (PhOe)
+					// -> we need to correct for this via calibration
+
+		if (dbaro_pres_pa_raw > 0.0f)
+		{
+			Nair = (float) (18.205f + 0.0484f * (dbaro_temp_celcius - 20.0f)) * 1e-6f;
+			Rair = (float) (1.1885f * baro_pres_mbar *1e-3f *(KELVIN_CONV + 20.0f))/(KELVIN_CONV + dbaro_temp_celcius);
+			float denominator=PI_f/dbaro_DtubePow4/Rair/dbaro_pres_pa_raw;
+			if(fabsf(denominator)>1E-6f)
+				Eps  = (float) -64.0f*dbaro_Ltube*Nair*6.17e-7f*(((float)sqrt((float)(1.0f+8.0f*dbaro_pres_pa_raw/62.0f))-1.0f))/denominator;
+			else
+				Eps  = 0.0f;
+
+			if ((fabsf(Eps) < 1.0f) && (fabsf(Eps) >= 0.0f))
+				return (Eps);
+			else
+				return (0.0f);
+		}
+		else
+			return (0.0f);
+}
 void
 SDP600::print_info()
 {
