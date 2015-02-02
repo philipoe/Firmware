@@ -88,7 +88,6 @@ static const int ERROR = -1;
 # error This requires CONFIG_SCHED_WORKQUEUE.
 #endif
 
-
 class SDP600 : public device::I2C
 {
 public:
@@ -243,7 +242,7 @@ private:
 #define INCREMENT(_x, _lim)	do { _x++; if (_x >= _lim) _x = 0; } while(0)
 
 /* helper macro for arithmetic - returns the square of the argument */
-#define POW2(_x)		((_x) * (_x))
+#define POW4(_x)		((_x) * (_x) * (_x) * (_x))
 
 /*
  * SDP600 internal constants and data structures.
@@ -272,6 +271,11 @@ private:
 #define MEAS_DRIVER_FILTER_FREQ 5.0f
 #define SDP600_CONVERSION_INTERVAL	(1000000 / MEAS_RATE)			/* microseconds */
 
+#define TUBE_LOSS_COMPENSATION 1		   /* Flag for enabling the tube pressure loss compensation (1:enable) */
+#define PI_f 3.141592653f
+#define KELVIN_CONV 273.15f
+#define BAROMETRIC_PRESSURE_MBAR 1013.25f  /* sea level standard atmospheric pressure (default value) */
+
 /*
  * Driver 'main' command.
  */
@@ -292,8 +296,8 @@ SDP600::SDP600(int bus) :
 	_buffer_overflows(perf_alloc(PC_COUNT, "sdp600_buffer_overflows")),
 	_max_differential_pressure_pa(-500.0f),
 	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ),
-	_dbaro_Dtube(0),
-	_dbaro_Ltube(0)
+	_dbaro_Dtube(0.0f),
+	_dbaro_Ltube(0.0f)
 {
 	// enable debug() calls
 	_debug_enabled = true;
@@ -642,11 +646,16 @@ SDP600::measurement()
 	}
 
 	//warnx("calculated effective differential pressure %3.6f Pa", (double) dPressure);   			// remove
-#if 0
+#if !TUBE_LOSS_COMPENSATION
 	temperature = -1000.0f;
 #else
-	temp_measurement();																				// get the sensors temperature (option) */
+	float epsilon = 0.0f;
+	temp_measurement();																	/* get the sensors temperature (option) */
+	epsilon	= dbaro_pressure_corr(dPressure, temperature);
+
+	dPressure	  = dPressure / (1 + epsilon); 											/* Pressure in pa with tube loss compensation */
 #endif
+
 	/* track maximum differential pressure measured (so we can work out top speed). */
 	if (dPressure > _max_differential_pressure_pa) {
 		_max_differential_pressure_pa = dPressure;
@@ -930,19 +939,21 @@ SDP600::dbaro_pressure_corr(float dbaro_pres_pa_raw, float dbaro_temp_celcius)
 		float Nair;
 		float Rair;
 		float Eps;
+		float dbaro_DtubePow4;
 
 		if (dbaro_pres_pa_raw < 0.0f)
 			dbaro_pres_pa_raw = -1*dbaro_pres_pa_raw;
 					//TODO: This causes errors at low velocities for the HDIM10, which often has a negative offset! (PhOe)
 					// -> we need to correct for this via calibration
 
-		if (dbaro_pres_pa_raw > 0.0f)
-		{
+		if ((dbaro_pres_pa_raw > 0.0f) && (_dbaro_Dtube > 0.0f)) {
+			dbaro_DtubePow4 = POW4(_dbaro_Dtube);
 			Nair = (float) (18.205f + 0.0484f * (dbaro_temp_celcius - 20.0f)) * 1e-6f;
-			Rair = (float) (1.1885f * baro_pres_mbar *1e-3f *(KELVIN_CONV + 20.0f))/(KELVIN_CONV + dbaro_temp_celcius);
-			float denominator=PI_f/dbaro_DtubePow4/Rair/dbaro_pres_pa_raw;
-			if(fabsf(denominator)>1E-6f)
-				Eps  = (float) -64.0f*dbaro_Ltube*Nair*6.17e-7f*(((float)sqrt((float)(1.0f+8.0f*dbaro_pres_pa_raw/62.0f))-1.0f))/denominator;
+			Rair = (float) (1.1885f * BAROMETRIC_PRESSURE_MBAR *1e-3f *(KELVIN_CONV + 20.0f))/(KELVIN_CONV + dbaro_temp_celcius);
+			float denominator=PI_f*dbaro_DtubePow4*Rair*dbaro_pres_pa_raw;
+
+			if(fabsf(denominator)>1E-32f)
+				Eps  = (float) -64.0f*_dbaro_Ltube*Nair*6.17e-7f*(((float)sqrt((float)(1.0f+8.0f*dbaro_pres_pa_raw/62.0f))-1.0f))/denominator;
 			else
 				Eps  = 0.0f;
 
