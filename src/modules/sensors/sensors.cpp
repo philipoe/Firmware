@@ -598,7 +598,6 @@ Sensors::Sensors() :
 	_rc_sub(-1),
 	_baro_sub(-1),
 	_vcontrol_mode_sub(-1),
-	////_dbaro_sub(-1),												// added
 	_amb_temp_sub(-1),
 	////_adc121_vspb_sub(-1),										// added
 	////_adc121_cspb_sub(-1),										// added
@@ -2146,7 +2145,6 @@ Sensors::task_main()
 	_baro_sub = orb_subscribe(ORB_ID(sensor_baro0));
 	_diff_pres_sub = orb_subscribe(ORB_ID(differential_pressure));
 	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
-	////_dbaro_sub = orb_subscribe(ORB_ID(sensor_dbaro));							// added
 	_amb_temp_sub = orb_subscribe(ORB_ID(sensor_lm73));
 	////_adc121_vspb_sub = orb_subscribe(ORB_ID(sensor_adc121_vspb));				// added
 	////_adc121_cspb_sub = orb_subscribe(ORB_ID(sensor_adc121_cspb));				// added
@@ -2185,7 +2183,6 @@ Sensors::task_main()
 	mag_poll(raw);
 	baro_poll(raw);
 	diff_pres_poll(raw);
-	////dbaro_poll(raw);									// added
 	amb_temp_poll(raw);
 	////adc121_vspb_poll(raw);								// added
 	////adc121_cspb_poll(raw);								// added
@@ -2233,7 +2230,6 @@ Sensors::task_main()
 		accel_poll(raw);
 		mag_poll(raw);
 		baro_poll(raw);
-		////dbaro_poll(raw);													// added
 		amb_temp_poll(raw);
 		////adc121_vspb_poll(raw);												// added
 		////adc121_cspb_poll(raw);												// added
