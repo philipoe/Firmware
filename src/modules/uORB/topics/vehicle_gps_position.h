@@ -54,23 +54,24 @@
  * GPS position in WGS84 coordinates.
  */
 struct vehicle_gps_position_s {
-	uint64_t timestamp_position;			/**< Timestamp for position information */
+	uint64_t timestamp_position;	/**< Timestamp for position information */
 	int32_t lat;					/**< Latitude in 1E-7 degrees */
 	int32_t lon;					/**< Longitude in 1E-7 degrees */
 	int32_t alt;					/**< Altitude in 1E-3 meters (millimeters) above MSL  */
+	int32_t alt_ellipsoid;			/**< Altitude in 1E3 meters (millimeters) above Ellipsoid  */
 
 	uint64_t timestamp_variance;
-	float s_variance_m_s;				/**< speed accuracy estimate m/s */
-	float c_variance_rad;				/**< course accuracy estimate rad */
+	float s_variance_m_s;			/**< speed accuracy estimate m/s */
+	float c_variance_rad;			/**< course accuracy estimate rad */
 	uint8_t fix_type; 				/**< 0-1: no fix, 2: 2D fix, 3: 3D fix, 4: RTCM code differential, 5: Real-Time Kinematic, float, 6: Real-Time Kinematic, fixed, 8: Extrapolated. Some applications will not use the value of this field unless it is at least two, so always correctly fill in the fix.   */
 
-	float eph;					/**< GPS HDOP horizontal dilution of position in m */
-	float epv;					/**< GPS VDOP horizontal dilution of position in m */
+	float eph;						/**< GPS HDOP horizontal dilution of position in m */
+	float epv;						/**< GPS VDOP horizontal dilution of position in m */
 
-	unsigned noise_per_ms;				/**< */
-	unsigned jamming_indicator;			/**< */
+	unsigned noise_per_ms;			/**< */
+	unsigned jamming_indicator;		/**< */
 
-	uint64_t timestamp_velocity;			/**< Timestamp for velocity informations */
+	uint64_t timestamp_velocity;	/**< Timestamp for velocity informations */
 	float vel_m_s;					/**< GPS ground speed (m/s) */
 	float vel_n_m_s;				/**< GPS ground speed in m/s */
 	float vel_e_m_s;				/**< GPS ground speed in m/s */
@@ -78,10 +79,10 @@ struct vehicle_gps_position_s {
 	float cog_rad;					/**< Course over ground (NOT heading, but direction of movement) in rad, -PI..PI */
 	bool vel_ned_valid;				/**< Flag to indicate if NED speed is valid */
 
-	uint64_t timestamp_time;			/**< Timestamp for time information */
-	uint64_t time_gps_usec;				/**< Timestamp (microseconds in GPS format), this is the timestamp which comes from the gps module   */
+	uint64_t timestamp_time;		/**< Timestamp for time information */
+	uint64_t time_gps_usec;			/**< Timestamp (microseconds in GPS format), this is the timestamp which comes from the gps module   */
 
-	uint8_t satellites_used;			/**< Number of satellites used */
+	uint8_t satellites_used;		/**< Number of satellites used */
 };
 
 /**
