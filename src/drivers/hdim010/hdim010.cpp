@@ -113,6 +113,7 @@ protected:
 	virtual int		collect();
 
 	math::LowPassFilter2p	_filter;
+	bool 					_probe_phase;
 
 };
 
@@ -123,13 +124,24 @@ extern "C" __EXPORT int hdim010_main(int argc, char *argv[]);
 
 HDIM010::HDIM010(int bus, int address, const char* path) : Airspeed(bus, address,
 	CONVERSION_INTERVAL, path),
-	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ)
+	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ),
+	_probe_phase(true)
 {
 }
 
 int
 HDIM010::measure()
 {
+	// Check hdim010 sensor response
+	if (_probe_phase){
+		uint8_t data[2];
+		if (OK != transfer(nullptr, 0, &data[0], 2)) {
+			return -EIO;
+		}
+		else
+			_probe_phase = false;
+	}
+
 	return OK;
 }
 
