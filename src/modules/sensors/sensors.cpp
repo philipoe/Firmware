@@ -62,7 +62,6 @@
 #include <drivers/drv_mag.h>
 #include <drivers/drv_baro.h>
 #include <drivers/drv_rc_input.h>
-////#include <drivers/drv_dbaro.h>					// added
 #include <drivers/drv_amb_temp.h>
 ////#include <drivers/drv_voltage_current.h>		// added
 ////#include <drivers/drv_mppt.h>					// added
@@ -160,14 +159,7 @@
 #endif
 static const int ERROR = -1;
 
-// added - Additional Parameters (Tube Diameter&Length) are defined in sensor_params.c
-#define CALIBRATED_PRESSURE_Pa 96600.0f
-#define DRY_GAS_CONSTANT 287.058f
-#define KELVIN_CONV 273.15f
-#define PI_f 3.141592653f
-
 //uint32_t last_baro_counter = 0;
-//uint32_t last_dbaro_counter = 0;
 ///
 
 /**
@@ -427,11 +419,6 @@ private:
 	void		baro_init();
 
 	/**
-	 * Do dbaro-related initialization.									// added
-	 */
-	void		dbaro_init();
-
-	/**
 	 * Do ambient temperate sensor-related initialization.				// added
 	 */
 	void		amb_temp_init();
@@ -497,28 +484,6 @@ private:
 	 *				data should be returned.
 	 */
 	void		baro_poll(struct sensor_combined_s &raw);
-
-	/**																		// added
-	 * Poll the differential barometer for updated data.
-	 *
-	 * @param raw			Combined sensor data structure into which
-	 *				data should be returned.
-	 */
-	void		dbaro_poll(struct sensor_combined_s &raw);
-
-	/**																		// added
-	 * Calculate the velocity from the differential and the static barometer data.
-	 *
-	 */
-
-	float		dbaro_pressure_corr(struct sensor_combined_s &raw);
-
-	/**																		// added
-	 * Calculate the corrected dbaro pressure due to viscose fraction of the tubes
-	 *
-	 */
-
-	void		dbaro_velocity_calc(struct sensor_combined_s &raw);
 
 	/**
 	 * Poll the ambient temperature for updated data.
@@ -1204,27 +1169,7 @@ Sensors::baro_init()
 
 	close(fd);
 }
-///// added
-#if 0
-void
-Sensors::dbaro_init()
-{
-	int	fd;
 
-	fd = open(DBARO_DEVICE_PATH, 0);
-	if (fd < 0) {
-		warn("%s", DBARO_DEVICE_PATH);
-		warnx("No differential barometer found, ignoring");
-	}
-
-	/* set the driver to poll at 150 Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz
-
-	close(fd);
-}
-/////
-///// added
-#endif
 void
 Sensors::amb_temp_init()
 {
@@ -1533,46 +1478,7 @@ Sensors::baro_poll(struct sensor_combined_s &raw)
 		raw.baro_timestamp = _barometer.timestamp;
 	}
 }
-////// added
-#if 0
-void
-Sensors::dbaro_poll(struct sensor_combined_s &raw)
-{
-	bool dbaro_updated;
-	float Epsilon = 0;
-	orb_check(_dbaro_sub, &dbaro_updated);
 
-	if (dbaro_updated) {
-		struct dbaro_report	dbaro_report;
-
-		orb_copy(ORB_ID(sensor_dbaro), _dbaro_sub, &dbaro_report);
-
-		raw.dbaro_timestamp    = dbaro_report.timestamp;
-		raw.dbaro_pres_pa_raw  = dbaro_report.dpressure;					/* Pressure in pa raw measurement			  */
-
-		if(dbaro_Ltube > 1E-3f) //dbaro_Ltube is in [m]
-		{
-			/* This correction should be applied when when tube length exceeds a certain threshold
-			 * AND only when the SDP600 is used (otherwise set tube length to zero!)*/
-			Epsilon = dbaro_pressure_corr(raw);								/* pressure drop compensation				  */
-			raw.dbaro_pres_pa	= dbaro_report.dpressure / (1 + Epsilon); /* Pressure in pa with tube loss compensation */
-
-			//warnx("Pressure drop correction: eps, raw, corr %3.3f,%3.3f,%3.3f \n", (double) Epsilon, (double) raw.dbaro_pres_pa_raw, (double) raw.dbaro_pres_pa);
-			//warnx("raw and corrected differential pressure %3.6f, %3.6f [pa]", (double) raw.dbaro_pres_pa_raw , (double) raw.dbaro_pres_pa);  // delete
-		}
-		else{
-			raw.dbaro_pres_pa	= dbaro_report.dpressure ;
-		}
-
-		raw.dbaro_pres_pa	= raw.dbaro_pres_pa + dbaro_offset;			/* Pressure in pa with added pressure offset  */
-
-		raw.dbaro_counter++;
-
-		//Calculate airspeed from differential pressure
-		dbaro_velocity_calc(raw);
-	}
-}
-#endif
 /*		 Velocity calculation (exported code to the dbaro_velocity_eval app )  		 */
 void
 Sensors::diff_pres_poll(struct sensor_combined_s &raw)
@@ -1610,73 +1516,7 @@ Sensors::diff_pres_poll(struct sensor_combined_s &raw)
 		}
 	}
 }
-#if 0
-//
-float
-Sensors::dbaro_pressure_corr(struct sensor_combined_s &raw)
-{
-	/* corrected dbaro pressure due to viscous friction of the tubes */						// move to an app!!
-		float Nair;
-		float Rair;
-		float Eps;
 
-		if (raw.dbaro_pres_pa_raw < 0.0f)
-			raw.dbaro_pres_pa_raw = -1*raw.dbaro_pres_pa_raw;
-					//TODO: This causes errors at low velocities for the HDIM10, which often has a negative offset! (PhOe)
-					// -> we need to correct for this via calibration
-
-		if (raw.dbaro_pres_pa_raw > 0.0f)
-		{
-			Nair = (float) (18.205f + 0.0484f * (raw.baro_temp_celcius - 20.0f)) * 1e-6f;
-			Rair = (float) (1.1885f * raw.baro_pres_mbar *1e-3f *(KELVIN_CONV + 20.0f))/(KELVIN_CONV + raw.baro_temp_celcius);
-			float denominator=PI_f/dbaro_DtubePow4/Rair/raw.dbaro_pres_pa_raw;
-			if(fabsf(denominator)>1E-6f)
-				Eps  = (float) -64.0f*dbaro_Ltube*Nair*6.17e-7f*(((float)sqrt((float)(1.0f+8.0f*raw.dbaro_pres_pa_raw/62.0f))-1.0f))/denominator;
-			else
-				Eps  = 0.0f;
-
-			if ((fabsf(Eps) < 1.0f) && (fabsf(Eps) >= 0.0f))
-				return (Eps);
-			else
-				return (0.0f);
-		}
-		else
-			return (0.0f);
-}
-void
-Sensors::dbaro_velocity_calc(struct sensor_combined_s &raw)
-{
-	// Calculate true airspeed from differential pressure
-	if (raw.dbaro_pres_pa < 0.0f)
-		raw.dbaro_pres_pa = -1*raw.dbaro_pres_pa;
-
-	if ((raw.baro_pres_mbar > 0.0f) && (raw.baro_temp_celcius > -1*KELVIN_CONV)){
-		raw.dbaro_velo_ms = (float)(sqrt((float)(2*raw.dbaro_pres_pa*CALIBRATED_PRESSURE_Pa*DRY_GAS_CONSTANT*(raw.baro_temp_celcius + KELVIN_CONV)))) / raw.baro_pres_mbar / 100;
-	}
-	else
-		raw.dbaro_velo_ms = 0.01f;
-
-	//Correct for a possible lateral offset of the pitot tube (this will tamper with the airspeed measurement in turns when the yawrate != zero)
-	if(fabsf(raw.gyro_rad_s[2]) < 4.0f*PI_f) { //limit to reasonable gyro values
-		float dbaro_velo_ms_err = dbaro_dy * raw.gyro_rad_s[2];
-		//printf("dbaro: r/v/err/v_corr %6.3f/%6.3f/%6.3f/%6.3f\n",raw.gyro_rad_s[2],raw.dbaro_velo_ms,dbaro_velo_ms_err,raw.dbaro_velo_ms+dbaro_velo_ms_err);
-		raw.dbaro_velo_ms += dbaro_velo_ms_err;
-	}
-
-	// Publish this to PX4-standard variables, too
-	_airspeed.indicated_airspeed_m_s = raw.dbaro_velo_ms; 	// Not really correct, as this is already TAS
-	_airspeed.true_airspeed_m_s = raw.dbaro_velo_ms;
-	_airspeed.timestamp = hrt_absolute_time();
-
-	// announce the airspeed if needed, just publish else
-	if (_airspeed_pub > 0) orb_publish(ORB_ID(airspeed), _airspeed_pub, &_airspeed);
-	else _airspeed_pub = orb_advertise(ORB_ID(airspeed), &_airspeed);
-
-	//DEBUG
-	//printf("dbaro_vel_calc: (Pres_Pa/dbaro_velo_ms/ias/tas/timestamp) %0.2f %0.2f %0.2f %0.2f %llu\n",raw.dbaro_pres_pa,raw.dbaro_velo_ms,
-	//		_airspeed.indicated_airspeed_m_s,_airspeed.true_airspeed_m_s,_airspeed.timestamp);
-}
-#endif
 void
 Sensors::amb_temp_poll(struct sensor_combined_s &raw)
 {
@@ -1897,6 +1737,14 @@ Sensors::parameter_update_poll(bool forced)
 				warn("WARNING: failed to set scale / offsets for airspeed sensor");
 			}
 
+			struct airspeed_tube_compensation tube_compensation = {
+				_parameters.dbaro_Dtube,
+				_parameters.dbaro_Ltube,
+			};
+
+			if (OK != ioctl(fd, AIRSPEEDIOCSCOMPE, (long unsigned int)&tube_compensation)) {
+				warn("WARNING: failed to set tube compensation for airspeed sensor");
+			}
 			close(fd);
 		}
 
