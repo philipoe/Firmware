@@ -1065,6 +1065,9 @@ MavlinkReceiver::handle_message_hil_sensor(mavlink_message_t *msg)
 		hil_sensors.differential_pressure_pa = imu.diff_pressure * 1e2f; //from hPa to Pa
 		hil_sensors.differential_pressure_timestamp = timestamp;
 
+		hil_sensors.amb_temp_celcius  = hil_sensors.baro_temp_celcius;
+		hil_sensors.amb_temp_timestamp  = timestamp;
+
 		/* publish combined sensor topic */
 		if (_sensors_pub < 0) {
 			_sensors_pub = orb_advertise(ORB_ID(sensor_combined), &hil_sensors);
