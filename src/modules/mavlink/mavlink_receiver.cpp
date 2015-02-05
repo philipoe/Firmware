@@ -121,7 +121,12 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_old_timestamp(0),
 	_hil_local_proj_inited(0),
 	_hil_local_alt0(0.0f),
-	_hil_local_proj_ref{}
+	_hil_local_proj_ref{},
+	_last_hil_magnetometer_timestamp(0),
+	_last_hil_baro_timestamp(0),
+	_last_hil_differential_pressure_timestamp(0),
+	_last_hil_amb_temp_timestamp(0),
+	_last_hil_GPS_update_timestamp(0)
 {
 
 	// make sure the FTP server is started
@@ -1055,22 +1060,27 @@ MavlinkReceiver::handle_message_hil_sensor(mavlink_message_t *msg)
 		hil_sensors.magnetometer_range_ga = 32.7f; // int16
 		hil_sensors.magnetometer_mode = 0; // TODO what is this
 		hil_sensors.magnetometer_cuttoff_freq_hz = 50.0f;
-		if ((hil_sensors.magnetometer_timestamp - timestamp) > 20000)  				/* Make sure that the magnetometer data is available at 50 Hz */
+		//if ((timestamp - _last_hil_magnetometer_timestamp) > 20000){  				/* Make sure that the magnetometer data is available at 50 Hz */
+			_last_hil_magnetometer_timestamp = timestamp;
 			hil_sensors.magnetometer_timestamp = timestamp;
-
+		//}
 		hil_sensors.baro_pres_mbar = imu.abs_pressure;
 		hil_sensors.baro_alt_meter = imu.pressure_alt;
 		hil_sensors.baro_temp_celcius = imu.temperature;
-		if ((hil_sensors.baro_timestamp - timestamp) > 50000)  						/* Make sure that the Baro data is available at 20 Hz */
+		if ((timestamp - _last_hil_baro_timestamp) > 50000){  						/* Make sure that the Baro data is available at 20 Hz */
+			_last_hil_baro_timestamp = timestamp;
 			hil_sensors.baro_timestamp = timestamp;
-
+		}
 		hil_sensors.differential_pressure_pa = imu.diff_pressure * 1e2f; //from hPa to Pa
-		if ((hil_sensors.differential_pressure_timestamp - timestamp) > 50000)  	/* Make sure that the differential Baro data is available at 20 Hz */
+		if ((timestamp - _last_hil_differential_pressure_timestamp) > 50000){  		/* Make sure that the differential Baro data is available at 20 Hz */
+			_last_hil_differential_pressure_timestamp = timestamp;
 			hil_sensors.differential_pressure_timestamp = timestamp;
-
+		}
 		hil_sensors.amb_temp_celcius  = hil_sensors.baro_temp_celcius;
-		if ((hil_sensors.amb_temp_timestamp - timestamp) > 50000)  					/* Make sure that the ambient temperature data is available at 20 Hz */
+		if ((timestamp - _last_hil_amb_temp_timestamp) > 50000){  					/* Make sure that the ambient temperature data is available at 20 Hz */
+			_last_hil_amb_temp_timestamp  = timestamp;
 			hil_sensors.amb_temp_timestamp  = timestamp;
+		}
 
 		/* publish combined sensor topic */
 		if (_sensors_pub < 0) {
@@ -1122,8 +1132,10 @@ MavlinkReceiver::handle_message_hil_gps(mavlink_message_t *msg)
 	struct vehicle_gps_position_s hil_gps;
 	memset(&hil_gps, 0, sizeof(hil_gps));
 
-	if ((hil_gps.timestamp_time - timestamp) > 200000)  					/* Make sure that the GPS data is available at 5 Hz */
+	if ((timestamp - _last_hil_GPS_update_timestamp) > 200000){  					/* Make sure that the GPS data is available at 5 Hz */
 		gps_update = true;
+		_last_hil_GPS_update_timestamp = timestamp;
+	}
 
 	hil_gps.timestamp_time = timestamp;
 	hil_gps.time_gps_usec = gps.time_usec;
