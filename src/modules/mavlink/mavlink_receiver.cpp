@@ -122,7 +122,6 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_hil_local_proj_inited(0),
 	_hil_local_alt0(0.0f),
 	_hil_local_proj_ref{},
-	_last_hil_magnetometer_timestamp(0),
 	_last_hil_baro_timestamp(0),
 	_last_hil_differential_pressure_timestamp(0),
 	_last_hil_amb_temp_timestamp(0),
@@ -917,7 +916,8 @@ MavlinkReceiver::handle_message_hil_sensor(mavlink_message_t *msg)
 	mavlink_hil_sensor_t imu;
 	mavlink_msg_hil_sensor_decode(msg, &imu);
 
-	uint64_t timestamp = hrt_absolute_time();
+	//uint64_t timestamp = hrt_absolute_time();
+	uint64_t timestamp = imu.time_usec;
 
 	/* airspeed */
 	{
@@ -1060,27 +1060,28 @@ MavlinkReceiver::handle_message_hil_sensor(mavlink_message_t *msg)
 		hil_sensors.magnetometer_range_ga = 32.7f; // int16
 		hil_sensors.magnetometer_mode = 0; // TODO what is this
 		hil_sensors.magnetometer_cuttoff_freq_hz = 50.0f;
-		//if ((timestamp - _last_hil_magnetometer_timestamp) > 20000){  				/* Make sure that the magnetometer data is available at 50 Hz */
-			_last_hil_magnetometer_timestamp = timestamp;
-			hil_sensors.magnetometer_timestamp = timestamp;
-		//}
+		hil_sensors.magnetometer_timestamp = timestamp;
+
 		hil_sensors.baro_pres_mbar = imu.abs_pressure;
 		hil_sensors.baro_alt_meter = imu.pressure_alt;
 		hil_sensors.baro_temp_celcius = imu.temperature;
-		if ((timestamp - _last_hil_baro_timestamp) > 50000){  						/* Make sure that the Baro data is available at 20 Hz */
-			_last_hil_baro_timestamp = timestamp;
-			hil_sensors.baro_timestamp = timestamp;
-		}
+
+		if ((timestamp - _last_hil_baro_timestamp) > 50000) 								/* Make sure that the Baro data is available at 20 Hz */
+			_last_hil_baro_timestamp = hil_sensors.baro_timestamp = timestamp;
+		else
+			hil_sensors.baro_timestamp = _last_hil_baro_timestamp;
+
 		hil_sensors.differential_pressure_pa = imu.diff_pressure * 1e2f; //from hPa to Pa
-		if ((timestamp - _last_hil_differential_pressure_timestamp) > 50000){  		/* Make sure that the differential Baro data is available at 20 Hz */
-			_last_hil_differential_pressure_timestamp = timestamp;
-			hil_sensors.differential_pressure_timestamp = timestamp;
-		}
-		hil_sensors.amb_temp_celcius  = hil_sensors.baro_temp_celcius;
-		if ((timestamp - _last_hil_amb_temp_timestamp) > 50000){  					/* Make sure that the ambient temperature data is available at 20 Hz */
-			_last_hil_amb_temp_timestamp  = timestamp;
-			hil_sensors.amb_temp_timestamp  = timestamp;
-		}
+		if ((timestamp - _last_hil_differential_pressure_timestamp) > 50000)  				/* Make sure that the differential Baro data is available at 20 Hz */
+			_last_hil_differential_pressure_timestamp = hil_sensors.differential_pressure_timestamp = timestamp;
+		else
+			hil_sensors.differential_pressure_timestamp = _last_hil_differential_pressure_timestamp;
+
+		hil_sensors.amb_temp_celcius = hil_sensors.baro_temp_celcius;
+		if ((timestamp - _last_hil_amb_temp_timestamp) > 50000)  							/* Make sure that the ambient temperature data is available at 20 Hz */
+			_last_hil_amb_temp_timestamp = hil_sensors.amb_temp_timestamp = timestamp;
+		else
+			hil_sensors.amb_temp_timestamp = _last_hil_amb_temp_timestamp;
 
 		/* publish combined sensor topic */
 		if (_sensors_pub < 0) {
@@ -1132,9 +1133,9 @@ MavlinkReceiver::handle_message_hil_gps(mavlink_message_t *msg)
 	struct vehicle_gps_position_s hil_gps;
 	memset(&hil_gps, 0, sizeof(hil_gps));
 
-	if ((timestamp - _last_hil_GPS_update_timestamp) > 200000){  					/* Make sure that the GPS data is available at 5 Hz */
-		gps_update = true;
+	if ((timestamp - _last_hil_GPS_update_timestamp) > 200000){  								/* Make sure that the GPS data is available at 5 Hz */
 		_last_hil_GPS_update_timestamp = timestamp;
+		gps_update = true;
 	}
 
 	hil_gps.timestamp_time = timestamp;
@@ -1144,6 +1145,7 @@ MavlinkReceiver::handle_message_hil_gps(mavlink_message_t *msg)
 	hil_gps.lat = gps.lat;
 	hil_gps.lon = gps.lon;
 	hil_gps.alt = gps.alt;
+	hil_gps.alt_ellipsoid = gps.alt + 48684;  // hack: introduce altitude above the ellipsoid with constant separation of 48.6836[m] (try to add later the MSL alt to the mavlink messages)
 	hil_gps.eph = (float)gps.eph * 1e-2f; // from cm to m
 	hil_gps.epv = (float)gps.epv * 1e-2f; // from cm to m
 

@@ -164,7 +164,6 @@ private:
 	bool _hil_local_proj_inited;
 	float _hil_local_alt0;
 	struct map_projection_reference_s _hil_local_proj_ref;
-	uint64_t _last_hil_magnetometer_timestamp;
 	uint64_t _last_hil_baro_timestamp;
 	uint64_t _last_hil_differential_pressure_timestamp;
 	uint64_t _last_hil_amb_temp_timestamp;
