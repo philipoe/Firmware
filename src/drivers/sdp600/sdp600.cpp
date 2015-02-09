@@ -645,6 +645,9 @@ SDP600::measurement()
 		return -EIO;
 	}
 
+	/* make sure that the pressure read is positive */
+	dPressure = (dPressure > 0.0f) ? dPressure : (-dPressure);
+
 	//warnx("calculated effective differential pressure %3.6f Pa", (double) dPressure);   			// remove
 #if !TUBE_LOSS_COMPENSATION
 	temperature = -1000.0f;
