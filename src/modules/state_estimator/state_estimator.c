@@ -819,7 +819,9 @@ int state_estimator_thread_main(int argc, char *argv[])
 					//printf("Update rate: %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| , dt = %3.6f |\n",(double) sensor_update_hz[0],(double) sensor_update_hz[1],(double) sensor_update_hz[2],(double) sensor_update_hz[3],(double) sensor_update_hz[4],(double) sensor_update_hz[5],(double) sensor_update_hz[6],(double) sensor_update_hz[7],(double) dt);  /// delete!!!!!!!!!!
 
 					//printf("dt = %3.6f |\n",(double) dt);  /// delete!!!!!!!!!!
-					printf("dt = %3.6f |\n",(double) sensor_update_hz[2]);  /// delete!!!!!!!!!!
+					printf("dt = %3.6f | %3.6f\n",(double) sensor_update_hz[6], (double) update_vect[6]);  /// delete!!!!!!!!!!
+
+					printf("%d %d %d %d %d %d %d %d\n",update_vect[0],update_vect[1],update_vect[2],update_vect[3],update_vect[4],update_vect[5],update_vect[6],update_vect[7]);  /// delete!!!!!!!!!!
 #endif
 					att.rollspeed  = raw.gyro_rad_s[0] - x_state.b_g[0];			/* x angular velocity with gyro bias deduction */
 					att.pitchspeed = raw.gyro_rad_s[1] - x_state.b_g[1];			/* y angular velocity with gyro bias deduction */
