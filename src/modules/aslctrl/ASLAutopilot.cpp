@@ -21,7 +21,7 @@ ASLAutopilot::ASLAutopilot() :
 	CAScontrol(&params,&subs),
 	/*CAS_MPC_control(&params,&subs),*/
 	HLcontrol(&params,&subs),
-	OldTimeStamp(0), initialized(false), counter(0)
+	initialized(false), counter(0)
 {
 	//Open mavlink port for logging
 	mavlink_fd = open(MAVLINK_LOG_DEVICE, 0);
@@ -31,6 +31,7 @@ ASLAutopilot::ASLAutopilot() :
 
 	//Some initialization
 	ctrldata.bEngageSpoilers=false;
+	ctrldata.timestamp=hrt_absolute_time();
 
 	initialized=true;
 }
@@ -78,9 +79,8 @@ void ASLAutopilot::update()
 	//SetReferences();
 
 	// check for sane values of dt to prevent large control responses
+	ctrldata.dt = hrt_elapsed_time(&ctrldata.timestamp);
 	ctrldata.timestamp = hrt_absolute_time();
-	ctrldata.dt = ctrldata.timestamp - OldTimeStamp;
-	OldTimeStamp = ctrldata.timestamp;
 	if (ctrldata.dt > 1.0E6) {
 		printf("[aslctrl] WARNING, time step (dt=%u[us]) not valid. Not executing control loop!\n",ctrldata.dt);
 		return;
@@ -356,8 +356,6 @@ void ASLAutopilot::update()
 
 int ASLAutopilot::SetCtrlData(void)
 {
-	ctrldata.timestamp=0;      /**< in microseconds since system start          */
-
 	//Current values
 	//Longitudinal loop
 	ctrldata.h=subs.global_pos.alt;
