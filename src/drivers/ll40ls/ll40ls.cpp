@@ -235,7 +235,7 @@ LL40LS::~LL40LS()
 	}
 
 	if (_class_instance != -1) {
-		unregister_class_devname(RANGE_FINDER_DEVICE_PATH, _class_instance);
+		unregister_class_devname(RANGE_FINDER_BASE_DEVICE_PATH, _class_instance);
 	}
 
 	// free perf counters
@@ -261,7 +261,7 @@ LL40LS::init()
 		goto out;
 	}
 
-	_class_instance = register_class_devname(RANGE_FINDER_DEVICE_PATH);
+	_class_instance = register_class_devname(RANGE_FINDER_BASE_DEVICE_PATH);
 
 	if (_class_instance == CLASS_DEVICE_PRIMARY) {
 		/* get a publish handle on the range finder topic */
@@ -746,6 +746,9 @@ start(int bus)
 		if (g_dev_ext != nullptr && OK != g_dev_ext->init()) {
 			delete g_dev_ext;
 			g_dev_ext = nullptr;
+			if (bus == PX4_I2C_BUS_EXPANSION) {
+				goto fail;
+			}
 		}
 	}
 
