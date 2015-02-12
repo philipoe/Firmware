@@ -19,12 +19,12 @@
 //*****************************************************************************************
 
 CAS::CAS() :
-	LP_Airspeed(0,0), LP_AccZ(0,0), LP_Yaw(0,0), LP_vZ(0,0), StallStatus(NO_STALL),qmax(10.0f)
+	LP_Airspeed(0,0), LP_AccZ(0,0), LP_Yaw(0,0), LP_vZ(0,0), StallStatus(NO_STALL)
 {
 }
 
 CAS::CAS(parameters *params_arg, subscriptions *subs_arg):
-		LP_Airspeed(0,0), LP_AccZ(0,0), LP_Yaw(0,0), LP_vZ(0,0), qmax(10.0f)
+		LP_Airspeed(0,0), LP_AccZ(0,0), LP_Yaw(0,0), LP_vZ(0,0)
 {
 	params=params_arg;
 	subs=subs_arg;

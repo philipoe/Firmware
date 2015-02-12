@@ -26,8 +26,8 @@ int subscriptions::init(void)
 {
 	memset(&vstatus, 0, sizeof(vstatus));
 	memset(&att, 0, sizeof(att));
-	memset(&att_sp, 0, sizeof(att_sp));
-	memset(&rates_sp, 0, sizeof(rates_sp));
+	//memset(&att_sp, 0, sizeof(att_sp));
+	//memset(&rates_sp, 0, sizeof(rates_sp));
 	memset(&global_pos, 0, sizeof(global_pos));
 	memset(&position_setpoint_triplet, 0, sizeof(position_setpoint_triplet));
 	memset(&manual_sp, 0, sizeof(manual_sp));
@@ -41,12 +41,12 @@ int subscriptions::init(void)
 	//Inputs
 	/* subscribe */
 	att_sub = orb_subscribe(ORB_ID(vehicle_attitude));
-	att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
+	//att_sp_sub = orb_subscribe(ORB_ID(vehicle_attitude_setpoint));
 	global_pos_sub = orb_subscribe(ORB_ID(vehicle_global_position));
 	position_setpoint_triplet_sub = orb_subscribe(ORB_ID(position_setpoint_triplet));
 	manual_sp_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
 	vstatus_sub = orb_subscribe(ORB_ID(vehicle_status));
-	vcontrol_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
+	//vcontrol_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	param_update_sub = orb_subscribe(ORB_ID(parameter_update));
 	sensors_sub = orb_subscribe(ORB_ID(sensor_combined));
 	ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
@@ -59,7 +59,6 @@ int subscriptions::init(void)
 		actuators.control[i] = 0.0f;
 	}
 	actuators_pub = orb_advertise(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, &actuators);
-	rates_pub = orb_advertise(ORB_ID(vehicle_rates_setpoint), &rates_sp);
 	aslctrl_params_pub = orb_advertise(ORB_ID(aslctrl_parameters), &aslctrl_params);
 	ctrl_data_pub = orb_advertise(ORB_ID(aslctrl_data), &ctrl_data);
 
@@ -79,11 +78,11 @@ int subscriptions::get_inputs(void)
 	}
 
 	orb_copy(ORB_ID(vehicle_attitude), att_sub, &att);
-	orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &att_sp);
+	//orb_copy(ORB_ID(vehicle_attitude_setpoint), att_sp_sub, &att_sp);
 	orb_copy(ORB_ID(vehicle_global_position), global_pos_sub, &global_pos);
 	orb_copy(ORB_ID(position_setpoint_triplet), position_setpoint_triplet_sub, &position_setpoint_triplet);
 	orb_copy(ORB_ID(manual_control_setpoint), manual_sp_sub, &manual_sp);
-	orb_copy(ORB_ID(vehicle_control_mode), vcontrol_sub, &vcontrol);
+	//orb_copy(ORB_ID(vehicle_control_mode), vcontrol_sub, &vcontrol);
 	orb_copy(ORB_ID(sensor_combined), sensors_sub, &sensors);
 	orb_copy(ORB_ID(state_estimator_EKF_parameters), ekf_sub, &ekf);
 	orb_copy(ORB_ID(home_position), home_pos_sub, &home_pos);
@@ -95,8 +94,8 @@ int subscriptions::get_inputs(void)
 	{
 		warnx("State and/or Mode changed!");
 		warnx("MainState/NavState: (%d/%d). Before:(%d/%d)",vstatus.main_state, vstatus.nav_state,temp.main_state, temp.nav_state);
-		warnx("Enabled control flags : %d/%d/%d/%d (pos/att/rate/man)\n",vcontrol.flag_control_position_enabled,
-				vcontrol.flag_control_attitude_enabled,vcontrol.flag_control_rates_enabled,vcontrol.flag_control_manual_enabled);
+		//warnx("Enabled control flags : %d/%d/%d/%d (pos/att/rate/man)\n",vcontrol.flag_control_position_enabled,
+		//		vcontrol.flag_control_attitude_enabled,vcontrol.flag_control_rates_enabled,vcontrol.flag_control_manual_enabled);
 	}
 
 	return 0;

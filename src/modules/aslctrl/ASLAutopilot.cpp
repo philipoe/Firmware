@@ -543,10 +543,9 @@ bool ASLAutopilot::OnGround(void)
 {
 	//Check conditions
 	float vgnd=sqrt(pow(subs.global_pos.vel_n,2.0f)+pow(subs.global_pos.vel_e,2.0f)+pow(subs.global_pos.vel_d,2.0f));
-	float h_home=(float)subs.home_pos.alt;
 	bool bCond1=subs.airspeed.true_airspeed_m_s < 4.5f;
 	bool bCond2=sqrt(pow(subs.global_pos.vel_n,2.0f)+pow(subs.global_pos.vel_e,2.0f)+pow(subs.global_pos.vel_d,2.0f))<4.0;
-	bool bCond3=subs.global_pos.alt<h_home+30.0f;
+	bool bCond3=subs.global_pos.alt < subs.home_pos.alt+30.0f;
 
 	//Check validity of the data needed to assess the on-ground conditions
 	if(subs.home_pos.alt<0.1f) {bCond3=true;bCond2=true;}
@@ -555,7 +554,7 @@ bool ASLAutopilot::OnGround(void)
 	// global_pos.valid or even through vehicle_status.XXX.
 
 	if(params.p.ASLC_DEBUG == 30 && counter%20==0) printf("bCond1/2/3: %d/%d/%d. v_air/v_gnd/h/h_home:%.2f/%.2f/%.2f/%.2f\n",
-			bCond1,bCond2,bCond3,(double)subs.airspeed.true_airspeed_m_s,(double)vgnd,(double)subs.global_pos.alt,(double)h_home);
+			bCond1,bCond2,bCond3,(double)subs.airspeed.true_airspeed_m_s,(double)vgnd,(double)subs.global_pos.alt,(double)subs.home_pos.alt);
 
 	if(bCond1 && bCond2 && bCond3){
 		return true;

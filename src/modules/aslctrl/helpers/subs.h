@@ -44,13 +44,13 @@ public:
 public:
 	//Input
 	struct vehicle_attitude_s att;
-	struct vehicle_attitude_setpoint_s att_sp;
-	struct vehicle_rates_setpoint_s rates_sp;
+//	struct vehicle_attitude_setpoint_s att_sp;
+//	struct vehicle_rates_setpoint_s rates_sp;
 	struct vehicle_global_position_s global_pos;
 	struct position_setpoint_triplet_s position_setpoint_triplet;
 	struct manual_control_setpoint_s manual_sp;
 	struct vehicle_status_s vstatus;
-	struct vehicle_control_mode_s vcontrol;
+//	struct vehicle_control_mode_s vcontrol;
 	struct parameter_update_s param_update;
 	struct sensor_combined_s sensors;
 	struct state_estimator_EKF_parameters_s ekf;
@@ -65,13 +65,13 @@ public:
 private:
 	//Input
 	int att_sub;
-	int att_sp_sub;
-	int rates_sp_sub;
+//	int att_sp_sub;
+//	int rates_sp_sub;
 	int global_pos_sub;
 	int position_setpoint_triplet_sub;
 	int manual_sp_sub;
 	int vstatus_sub;
-	int vcontrol_sub;
+//	int vcontrol_sub;
 	int param_update_sub;
 	int sensors_sub;
 	int ekf_sub;
@@ -79,7 +79,7 @@ private:
 	int airspeed_sub;
 
 	//Output
-	orb_advert_t actuators_pub, rates_pub, aslctrl_params_pub, ctrl_data_pub;
+	orb_advert_t actuators_pub, aslctrl_params_pub, ctrl_data_pub;
 
 	struct pollfd fds;
 };

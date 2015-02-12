@@ -137,10 +137,9 @@ void SAS::CoordinatedTurn_RollYawDecoupling(float const &uAilCmd,float &uRudCmd,
 	// deflected, enough rudder is mixed in in order to eliminate the resulting yaw motion.
 	// Note: uAilCmd is already airspeed-gain-scheduled, so we don't need to do that again here.
 
-	float temp=limit1(params->p.SAS_RollYawDecoupleKari*uAilCmd,params->p.SAS_YCtrlLim);
-	uRudCmd += temp;
+	uRudCmd += limit1(params->p.SAS_RollYawDecoupleKari*uAilCmd,params->p.SAS_YCtrlLim);
 
-	if(params->p.ASLC_DEBUG == 20)  printf("uRudCmd_New: %7.5f, temp: %7.5f\n", (double)uRudCmd, (double)temp);
+	if(params->p.ASLC_DEBUG == 20)  printf("uRudCmd_New: %7.5f\n", (double)uRudCmd);
 }
 
 int SAS::StabilityAugmentation(float &uAilCmd, float &uElevCmd, float &uRudCmd,float &fGainSchedQ,float const &p, float const &q, float const &r, bool bModeChanged)

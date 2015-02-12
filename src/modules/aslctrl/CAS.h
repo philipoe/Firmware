@@ -53,7 +53,6 @@ private:
 	LowPass LP_vZ;
 
 	StallStatusDescriptor StallStatus;	//Stall Prevention System
-	float qmax;
 };
 
 
