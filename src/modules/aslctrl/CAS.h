@@ -31,12 +31,12 @@ public:
 	//int update(float &uAilCmd, float &uElevCmd, float &uRudCmd, const float &p, const float &q, const float &r);
 
 public: //TODO: Change this to private, put all function calls to here in the update function
-	int CASRollPitchControl(float &pref, float &qref, float& rref, float const &RollAngleRef, float const &Roll, float const &PitchAngleRef, float const &Pitch, float const &accZ, aslctrl_data_s &ctrldata, bool bModeChanged);
+	int CASRollPitchControl(float &pref, float &qref, float& rref, float const &RollAngleRef, float const &Roll, float const &PitchAngleRef, float const &Pitch, float const &accZ, aslctrl_data_s* ctrldata, bool bModeChanged);
 
 	float PitchControl(float const& pitchRef, float& pitchRefCT, float const& pitch, float const& rollRef, float const& roll, float& PGain, float& uThrot, const int aslctrl_mode);
 	float BankControl(float const &bankRef, float const &roll, float &PGain);
-	float SideslipControl(float const& rollRef, float const& roll, float const& pitch, aslctrl_data_s& ctrldata);
-	int CoordinatedTurnControl(const float& roll, const float& pitch, float& qRef, float& rRef, aslctrl_data_s &ctrldata);
+	float SideslipControl(float const& rollRef, float const& roll, float const& pitch, aslctrl_data_s* ctrldata);
+	int CoordinatedTurnControl(const float& roll, const float& pitch, float& qRef, float& rRef, aslctrl_data_s* ctrldata);
 
 	//Safety Functions
 

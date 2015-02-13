@@ -67,7 +67,7 @@ private:
 	parameters params;	//parameters from PX4
 	subscriptions subs; //UORB subscriptions from PX4
 
-	aslctrl_data_s ctrldata; //The current control variables / state
+	aslctrl_data_s * ctrldata; // Pointer to the current control variables
 
 	int counter;
 	int mavlink_fd;		//A mavlink file descriptor for debugging/user notification

@@ -135,7 +135,7 @@ float CAS::BankControl(float const &bankRef, float const &roll, float & PGain)
 	return pRef;
 }
 
-float CAS::SideslipControl(float const& rollRef, float const& roll, float const& pitch, aslctrl_data_s &ctrldata)
+float CAS::SideslipControl(float const& rollRef, float const& roll, float const& pitch, aslctrl_data_s *ctrldata)
 {
 	// Very basic sideslip controller. Using rudder to control the error in the achieved yaw-rate.
 	float rRef=0.0f;
@@ -143,12 +143,12 @@ float CAS::SideslipControl(float const& rollRef, float const& roll, float const&
 	if(LP_Airspeed.Get()>1.0f /*bAirspeedValid*/) {
 
 		// Yawrate reference. Calculated from coordinated turn constraint, assuming constant pitch (theta_dot=0)
-		ctrldata.Yawdot_ref = g* tanf(roll)/ LP_Airspeed.Get();
+		ctrldata->Yawdot_ref = g* tanf(roll)/ LP_Airspeed.Get();
 		// Yawrate. Calculated from body velocities
-		ctrldata.Yawdot = sinf(roll)/cosf(pitch)*subs->att.pitchspeed + cosf(roll)/cosf(pitch)*subs->att.yawspeed;
+		ctrldata->Yawdot = sinf(roll)/cosf(pitch)*subs->att.pitchspeed + cosf(roll)/cosf(pitch)*subs->att.yawspeed;
 
-		rRef = ctrldata.uRud*params->p.SAS_YawPDir; //Allow feed through from manual input for now
-		rRef += params->p.SAS_YawCTkP * (ctrldata.Yawdot_ref-ctrldata.Yawdot);
+		rRef = ctrldata->uRud*params->p.SAS_YawPDir; //Allow feed through from manual input for now
+		rRef += params->p.SAS_YawCTkP * (ctrldata->Yawdot_ref-ctrldata->Yawdot);
 		rRef = limit1(rRef,params->p.CAS_YawRateLim);
 
 		return rRef;
@@ -158,7 +158,7 @@ float CAS::SideslipControl(float const& rollRef, float const& roll, float const&
 	return 0;
 }
 
-int CAS::CoordinatedTurnControl(const float& roll, const float& pitch, float& qRef, float& rRef, aslctrl_data_s &ctrldata)
+int CAS::CoordinatedTurnControl(const float& roll, const float& pitch, float& qRef, float& rRef, aslctrl_data_s *ctrldata)
 {
 	// Basic coordinated-turn controller. Uses two "additional" p-gains on the errors between the actual
 	// q&r-rates and the desired q&r-rates, as defined through the desired yaw-rate in a coordinated
@@ -167,24 +167,24 @@ int CAS::CoordinatedTurnControl(const float& roll, const float& pitch, float& qR
 	if(LP_Airspeed.Get()>1.0f /*bAirspeedValid*/) {
 
 		// Yawrate reference. Calculated from coordinated turn constraint, assuming constant pitch (theta_dot=0)
-		ctrldata.Yawdot_ref = g * tanf(roll)/ LP_Airspeed.Get();
+		ctrldata->Yawdot_ref = g * tanf(roll)/ LP_Airspeed.Get();
 		// Yawrate. NOT USED AS A CONTROL INPUT HERE, JUST FOR COMPLETENESS. Calculated from body velocities.
-		ctrldata.Yawdot = sinf(roll)/cosf(pitch)*subs->att.pitchspeed + cosf(roll)/cosf(pitch)*subs->att.yawspeed;
+		ctrldata->Yawdot = sinf(roll)/cosf(pitch)*subs->att.pitchspeed + cosf(roll)/cosf(pitch)*subs->att.yawspeed;
 
-		float q_coordturn_ref = sinf(roll)*ctrldata.Yawdot_ref;
-		float r_coordturn_ref = cosf(roll)*ctrldata.Yawdot_ref;
+		float q_coordturn_ref = sinf(roll)*ctrldata->Yawdot_ref;
+		float r_coordturn_ref = cosf(roll)*ctrldata->Yawdot_ref;
 
 		//Elevator compensation
 		qRef += params->p.CAS_uElevTurnFF * (q_coordturn_ref-subs->att.pitchspeed);
 		qRef = limit1(qRef,params->p.CAS_PitchRateLim);
 
 		//Rudder compensation
-		rRef = -ctrldata.uRud*params->p.SAS_YawPDir; //TODO: REMOVE LATER, but allow feed through from manual input for now
+		rRef = -ctrldata->uRud*params->p.SAS_YawPDir; //TODO: REMOVE LATER, but allow feed through from manual input for now
 		rRef += params->p.SAS_YawCTkP * (r_coordturn_ref-subs->att.yawspeed);
 		rRef = limit1(rRef,params->p.CAS_YawRateLim);
 
 		if(params->p.ASLC_DEBUG==21) printf("roll[°]: %.3f Yawd_r/Yawd: (%.3f/%.3f) qRef/q/uE: (%.3f/%.3f/%.3f) rRef/r: (%.3f/%.3f%.3f)\n",
-				(double)roll, (double)ctrldata.Yawdot_ref,(double)ctrldata.Yawdot,(double)q_coordturn_ref,(double)subs->att.pitchspeed,
+				(double)roll, (double)ctrldata->Yawdot_ref,(double)ctrldata->Yawdot,(double)q_coordturn_ref,(double)subs->att.pitchspeed,
 				(double)qRef,(double)r_coordturn_ref, (double)subs->att.yawspeed, (double)rRef);
 
 		return 0;
@@ -199,7 +199,7 @@ int CAS::CoordinatedTurnControl(const float& roll, const float& pitch, float& qR
 //*** HIGHER LEVEL CAS CONTROL (HEADING)
 //*****************************************************************************************
 
-int CAS::CASRollPitchControl(float &pref, float &qref, float& rref, float const &RollAngleRef, float const &Roll, float const &PitchAngleRef, float const &Pitch, float const &accZ, aslctrl_data_s &ctrldata, bool bModeChanged)
+int CAS::CASRollPitchControl(float &pref, float &qref, float& rref, float const &RollAngleRef, float const &Roll, float const &PitchAngleRef, float const &Pitch, float const &accZ, aslctrl_data_s *ctrldata, bool bModeChanged)
 {
 	//Only control Roll and Pitch Angles to reference values. Leave rest untouched.
 
@@ -213,19 +213,19 @@ int CAS::CASRollPitchControl(float &pref, float &qref, float& rref, float const 
 
 	// Gain Scheduling w.r.t angle error - if activated
 	if(params->p.ASLC_GainSch_E == 0) {
-		ctrldata.P_kP_GainSch_E=params->p.CAS_PitchPGain;
-		ctrldata.R_kP_GainSch_E=params->p.CAS_RollPGain;
+		ctrldata->P_kP_GainSch_E=params->p.CAS_PitchPGain;
+		ctrldata->R_kP_GainSch_E=params->p.CAS_RollPGain;
 	}
 	else if(params->p.ASLC_GainSch_E == 1) {
-		ctrldata.P_kP_GainSch_E = GainScheduler_linear(PitchAngleRef-Pitch, 0.75f*params->p.CAS_PitchAngleLim,params->p.CAS_PitchPGain,params->p.CAS_PitchPGainM);
-		ctrldata.R_kP_GainSch_E = GainScheduler_linear(RollAngleRef-Roll, 0.75f*params->p.CAS_RollAngleLim,params->p.CAS_RollPGain,params->p.CAS_RollPGainM);
+		ctrldata->P_kP_GainSch_E = GainScheduler_linear(PitchAngleRef-Pitch, 0.75f*params->p.CAS_PitchAngleLim,params->p.CAS_PitchPGain,params->p.CAS_PitchPGainM);
+		ctrldata->R_kP_GainSch_E = GainScheduler_linear(RollAngleRef-Roll, 0.75f*params->p.CAS_RollAngleLim,params->p.CAS_RollPGain,params->p.CAS_RollPGainM);
 		if(params->p.ASLC_DEBUG==3) printf("Pitch: PGain, error (%7.4f, %7.4f). Roll: PGain, error (%7.4f, %7.4f). \n",
 				(double)params->p.CAS_PitchPGain, double(PitchAngleRef-Pitch), (double)params->p.CAS_RollPGain, double(RollAngleRef-Roll));
 	}
 
 	//Controllers
-	pref = BankControl(RollAngleRef,Roll, ctrldata.R_kP_GainSch_E);
-	qref = PitchControl(PitchAngleRef,ctrldata.PitchAngleRefCT,Pitch,RollAngleRef,Roll,ctrldata.P_kP_GainSch_E,ctrldata.uThrot,ctrldata.aslctrl_mode);
+	pref = BankControl(RollAngleRef,Roll, ctrldata->R_kP_GainSch_E);
+	qref = PitchControl(PitchAngleRef,ctrldata->PitchAngleRefCT,Pitch,RollAngleRef,Roll,ctrldata->P_kP_GainSch_E,ctrldata->uThrot,ctrldata->aslctrl_mode);
 	if(params->p.ASLC_CoordTurn == 1 || params->p.ASLC_CoordTurn == 5) {
 		//Option 1: Do coordinated turn control in SAS
 	}
@@ -247,8 +247,8 @@ int CAS::CASRollPitchControl(float &pref, float &qref, float& rref, float const 
 	}
 
 	if(params->p.ASLC_DEBUG==8) {
-		printf(" Pitch_ref: %7.4f: Pitch%7.4f qref: %7.5f gain:%7.4f\n",(double)PitchAngleRef,(double)Pitch,(double)qref,(double)ctrldata.P_kP_GainSch_E);
-		printf(" Roll_ref: %7.4f: Roll%7.4f pref: %7.5f gain:%7.4f\n",(double)RollAngleRef,(double)Roll,(double)pref,(double)ctrldata.R_kP_GainSch_E);
+		printf(" Pitch_ref: %7.4f: Pitch%7.4f qref: %7.5f gain:%7.4f\n",(double)PitchAngleRef,(double)Pitch,(double)qref,(double)ctrldata->P_kP_GainSch_E);
+		printf(" Roll_ref: %7.4f: Roll%7.4f pref: %7.5f gain:%7.4f\n",(double)RollAngleRef,(double)Roll,(double)pref,(double)ctrldata->R_kP_GainSch_E);
 	}
 	if(params->p.ASLC_DEBUG==15) {
 		printf("PI-Ctrl: P-Gain:%7.4f I-Gain:%7.4f tS:%7.4f m_int:%7.5f \n",(double)PI_PitchAngle.m_PGain,(double)PI_PitchAngle.m_IGain,(double)PI_PitchAngle.m_tSample,(double)PI_PitchAngle.m_int);

@@ -60,7 +60,7 @@ int subscriptions::init(void)
 	}
 	actuators_pub = orb_advertise(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, &actuators);
 	aslctrl_params_pub = orb_advertise(ORB_ID(aslctrl_parameters), &aslctrl_params);
-	ctrl_data_pub = orb_advertise(ORB_ID(aslctrl_data), &ctrl_data);
+	aslctrl_data_pub = orb_advertise(ORB_ID(aslctrl_data), &aslctrl_data);
 
 	//Set some default values
 	fds.fd=att_sub;
@@ -144,15 +144,9 @@ int subscriptions::publish_aslctrl_params(aslctrl_parameters_s * params)
 	return 0;
 }
 
-int subscriptions::publish_aslctrl_data(aslctrl_data_s * data)
+int subscriptions::publish_aslctrl_data()
 {
-	if(data==NULL) return -1;
-
-	//TODO: Change this, we don't need to store the data twice.
-	data->timestamp=hrt_absolute_time();
-	ctrl_data = *data;
-
-	orb_publish(ORB_ID(aslctrl_data), ctrl_data_pub, &ctrl_data);
+	orb_publish(ORB_ID(aslctrl_data), aslctrl_data_pub, &aslctrl_data);
 	return 0;
 }
 

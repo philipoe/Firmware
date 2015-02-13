@@ -39,7 +39,7 @@ public:
 	int publish_actuator_outputs(void);																// publish actuator outputs
 	bool check_aslctrl_params_updated(void);														// check (&get) updated parameters
 	int publish_aslctrl_params(aslctrl_parameters_s * params);		// publish aslctrl parameters
-	int publish_aslctrl_data(aslctrl_data_s * data);			//
+	int publish_aslctrl_data();
 
 public:
 	//Input
@@ -60,7 +60,7 @@ public:
 	//Output
 	struct actuator_controls_s actuators;
 	struct aslctrl_parameters_s aslctrl_params;
-	struct aslctrl_data_s ctrl_data;
+	struct aslctrl_data_s aslctrl_data;
 
 private:
 	//Input
@@ -79,7 +79,7 @@ private:
 	int airspeed_sub;
 
 	//Output
-	orb_advert_t actuators_pub, aslctrl_params_pub, ctrl_data_pub;
+	orb_advert_t actuators_pub, aslctrl_params_pub, aslctrl_data_pub;
 
 	struct pollfd fds;
 };
