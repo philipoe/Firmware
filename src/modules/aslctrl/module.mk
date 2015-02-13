@@ -44,7 +44,6 @@ SRCS		= aslctrl.cpp\
 			  HL.cpp\
 			  helpers/Filters.cpp\
 			  helpers/params_define.c \
-			  helpers/params.cpp \
 			  helpers/subs.cpp \
 			  helpers/PI.cpp 
 			  

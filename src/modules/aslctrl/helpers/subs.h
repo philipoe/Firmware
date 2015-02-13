@@ -12,17 +12,16 @@
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_global_position.h>
-#include "params.h"
 #include <uORB/topics/aslctrl_data.h>
+#include "uORB/topics/aslctrl_parameters.h"
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/sensor_combined.h>
 #include <uORB/topics/state_estimator_EKF_parameters.h>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/airspeed.h>
 
-
+#include <systemlib/param/param.h>
 #include <poll.h>
-#include "params.h"
 
 //**********************************************************************
 //*** Class definition for subscriptions
@@ -34,12 +33,18 @@ public:
 	subscriptions(void);
 	~subscriptions(void);
 
+	//Data
 	int init(void);
-	int get_inputs(void);																			// get subscriptions
-	int publish_actuator_outputs(void);																// publish actuator outputs
-	bool check_aslctrl_params_updated(void);														// check (&get) updated parameters
-	int publish_aslctrl_params(aslctrl_parameters_s * params);		// publish aslctrl parameters
+	int get_inputs(void);																// get subscriptions
+	int publish_actuator_outputs(void);													// publish actuator outputs
 	int publish_aslctrl_data();
+
+	//Parameters
+	bool check_aslctrl_params_changed(void);											// check whether parameters were changed.
+	int update_aslctrl_params(void);
+	int publish_aslctrl_params(void);													// publish aslctrl parameters
+	int Sanitize_param(param_t & parameter_handle, float minval, float maxval);
+
 
 public:
 	//Input
@@ -82,6 +87,9 @@ private:
 	orb_advert_t actuators_pub, aslctrl_params_pub, aslctrl_data_pub;
 
 	struct pollfd fds;
+
+	bool bParamSanityChecksEnabled;
+	bool bInitialized;
 };
 
 #endif /*SUBS_H*/

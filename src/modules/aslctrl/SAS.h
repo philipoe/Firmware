@@ -5,7 +5,6 @@
  *      Author: philipoe
  */
 
-#include "helpers/params.h"
 #include "helpers/subs.h"
 #include "helpers/Filters.h"
 
@@ -13,8 +12,7 @@ class SAS
 {
 public:
 	SAS();
-	SAS(parameters *params_arg, subscriptions *subs_arg);
-	void init(parameters *params_arg, subscriptions *subs_arg);
+	SAS(subscriptions *subs_arg);
 
 	//Pure Stability Augmentation
 	int StabilityAugmentation(float &uAilCmd, float &uElevCmd, float &uRudCmd, float &fGainSchedQ, const float &p, const float &q, const float &r, bool bModeChanged);
@@ -43,8 +41,8 @@ public: //TODO Really just a temporary solution
 	MovingAverage MA_Airspeed; 	// Airspeed Moving Average Filter
 
 private:
-	parameters *params;	//parameters from PX4
-	subscriptions *subs; //UORB subscriptions from PX4
+	subscriptions *subs; 			// UORB subscriptions from PX4
+	aslctrl_parameters_s *params;	// Pointer to aslctrl parameters in the UORB subscriptions
 
 	//Debug
 	float uAilCtrlCmd; // The actual commands from the autopilot (i.e. not including manual-piloting-commands)

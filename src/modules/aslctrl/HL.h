@@ -5,7 +5,6 @@
  *      Author: philipoe
  */
 
-#include "helpers/params.h"
 #include "helpers/subs.h"
 #include "helpers/Filters.h"
 #include "helpers/PI.h"
@@ -21,7 +20,7 @@ class HL
 {
 public:
 	HL();
-	HL(parameters *params_arg, subscriptions *subs_arg);
+	HL(subscriptions *subs_arg);
 
 	//WaypointControllers
 	int WaypointControl_L1(float &RollAngleRef);
@@ -47,10 +46,10 @@ private:
 	LowPass LP_h;				// Altitude Low Pass Filter
 
 	hrt_abstime t_old;
-	math::Matrix<3,3> R_nb;				//TECS attitude rotation matrix
+	math::Matrix<3,3> R_nb;			//TECS attitude rotation matrix
 
-	parameters *params;			//parameters from PX4
-	subscriptions *subs; 		//UORB subscriptions from PX4
+	subscriptions *subs; 			//UORB subscriptions from PX4
+	aslctrl_parameters_s *params;	// Pointer to aslctrl parameters in the UORB subscriptions
 
 	bool bSpoilerAltExceeded;
 	bool bhMinExceeded;

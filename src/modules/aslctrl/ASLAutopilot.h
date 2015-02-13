@@ -20,7 +20,6 @@
 #include <drivers/drv_hrt.h>
 #include <poll.h>
 
-#include "helpers/params.h"
 #include "helpers/subs.h"
 #include "SAS.h"
 #include "CAS.h"
@@ -40,7 +39,7 @@ public:
 
 	int SetCtrlData(void);
 
-	int ReloadParameters(void);
+	void ReloadParameters(void);
 	//int UpdateFilters(const int & counter);
 
 	int HandleRCLoss();
@@ -64,9 +63,8 @@ private:
 
 	bool initialized;
 
-	parameters params;	//parameters from PX4
 	subscriptions subs; //UORB subscriptions from PX4
-
+	aslctrl_parameters_s *params;	// Pointer to aslctrl parameters in the UORB subscriptions
 	aslctrl_data_s * ctrldata; // Pointer to the current control variables
 
 	int counter;

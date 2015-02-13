@@ -5,7 +5,6 @@
  *      Author: philipoe
  */
 
-#include "helpers/params.h"
 #include "helpers/subs.h"
 #include "helpers/Filters.h"
 #include "helpers/helpfuncs.h"
@@ -23,7 +22,7 @@ class CAS
 {
 public:
 	CAS();
-	CAS(parameters *params_arg, subscriptions *subs_arg);
+	CAS(subscriptions *subs_arg);
 
 	void UpdateFilters(float &h);
 	void CopyUpdatedParams(void);
@@ -41,8 +40,8 @@ public: //TODO: Change this to private, put all function calls to here in the up
 	//Safety Functions
 
 private:
-	parameters *params;	//parameters from PX4
 	subscriptions *subs; //UORB subscriptions from PX4
+	aslctrl_parameters_s *params;	// Pointer to aslctrl parameters in the UORB subscriptions
 
 	PI_Ctrl PI_PitchAngle;
 	PI_Ctrl PI_PitchTC;		//Pitch Angle turn compensation
