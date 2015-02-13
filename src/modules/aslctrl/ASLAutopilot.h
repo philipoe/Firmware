@@ -62,6 +62,7 @@ private:
 	enum {CH_AIL_R, CH_ELV, CH_RDR, CH_THR_1, UNUSED1, CH_AIL_L, CH_AUX, UNUSED2}; //as per standard on PX4IO, correct ordering to
 
 	bool initialized;
+	bool bRunOnce;
 
 	subscriptions subs; //UORB subscriptions from PX4
 	aslctrl_parameters_s *params;	// Pointer to aslctrl parameters in the UORB subscriptions

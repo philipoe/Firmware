@@ -35,6 +35,7 @@ ASLAutopilot::ASLAutopilot() :
 	ctrldata->timestamp=hrt_absolute_time();
 	params=&subs.aslctrl_params;
 
+	bRunOnce=false;
 	initialized=true;
 }
 ASLAutopilot::~ASLAutopilot()
@@ -61,7 +62,7 @@ void ASLAutopilot::update()
 
 	// Get new subscription data if available
 	if(subs.get_inputs() < RET_OK) {
-		printf("[aslctrl] Error retrieving input subscriptions. Not executing control loop!\n");
+		if(bRunOnce) printf("[aslctrl] Error retrieving input subscriptions. Not executing control loop!\n");
 		return;
 	}
 
@@ -82,9 +83,11 @@ void ASLAutopilot::update()
 	ctrldata->dt = hrt_elapsed_time(&ctrldata->timestamp);
 	ctrldata->timestamp = hrt_absolute_time();
 	if (ctrldata->dt > 1.0E6) {
-		printf("[aslctrl] WARNING, time step (dt=%u[us]) not valid. Not executing control loop!\n",ctrldata->dt);
+		if(bRunOnce) printf("[aslctrl] WARNING, time step (dt=%u[us]) not valid. Not executing control loop!\n",ctrldata->dt);
 		return;
 	}
+
+	bRunOnce=true;
 
 	//******************************************************************************************************************
 	//*** RC LOSS HANDLING
