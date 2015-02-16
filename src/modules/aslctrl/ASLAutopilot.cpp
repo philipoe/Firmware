@@ -5,6 +5,7 @@
 #include "helpers/consts.h"
 #include <mathlib/mathlib.h>
 
+
 const int RET_OK = 0;
 
 uint64_t t1_old, t2_old, t3_old; //DEBUG
@@ -37,7 +38,7 @@ ASLAutopilot::ASLAutopilot() :
 ASLAutopilot::~ASLAutopilot()
 {
 	// send one last publication when destroyed, setting all output to zero
-	for (unsigned i = 0; i < NUM_ACTUATOR_CONTROLS; i++)
+	for (unsigned i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROLS; i++)
 		subs.actuators.control[i] = 0.0f;
 
 	subs.publish_actuator_outputs();
@@ -140,7 +141,7 @@ void ASLAutopilot::update()
 	// Run TECS update every time (should be called at >50Hz)
 	HLcontrol.TECS_Update50Hz();
 
-	if(subs.vstatus.main_state==MAIN_STATE_AUTO_MISSION && (counter % params.p.HL_fMult == 0))
+	if(subs.vstatus.main_state==vehicle_status_s::MAIN_STATE_AUTO_MISSION && (counter % params.p.HL_fMult == 0))
 	{
 		if((counter %20==0) && (params.p.ASLC_DEBUG==1)) printf("dt_wp:%8.6f\n", double(hrt_absolute_time()-t3_old)/1.0e6);
 		t3_old=hrt_absolute_time();
@@ -149,7 +150,7 @@ void ASLAutopilot::update()
 		//*** LOOP 1a: LATERAL AUTOPILOT
 		//******************************************************************************************************************
 		//LOOP 1a, CASE 1: Waypoint-following (WP-following AUTO via GCS, Altitude AUTO via GCS)
-		if(subs.manual_sp.posctl_switch==SWITCH_POS_ON)	{
+		if(subs.manual_sp.posctl_switch==manual_control_setpoint_s::SWITCH_POS_ON)	{
 			if(!subs.vstatus.rc_signal_lost) ctrldata.aslctrl_mode = MODE_AUTO;
 
 			RET = HLcontrol.WaypointControl_L1(ctrldata.RollAngleRef);
@@ -158,7 +159,7 @@ void ASLAutopilot::update()
 			}
 		}
 		//LOOP 1a, CASE 2: Roll Angle feed-through (only Altitude hold)
-		else if(subs.manual_sp.posctl_switch==SWITCH_POS_OFF) {
+		else if(subs.manual_sp.posctl_switch==manual_control_setpoint_s::SWITCH_POS_OFF) {
 			//Roll angle CAS, altitude AUTO via GCS
 			ctrldata.aslctrl_mode = MODE_ALT;
 			ctrldata.RollAngleRef=-params.p.SAS_RollPDir*subs.manual_sp.y * params.p.CAS_RollAngleLim;;	//Scaling to reference angles
@@ -272,7 +273,7 @@ void ASLAutopilot::update()
 	//******************************************************************************************************************
 	//*** MANUAL MODE
 	//******************************************************************************************************************
-	if(subs.vstatus.main_state==MAIN_STATE_MANUAL) {
+	if(subs.vstatus.main_state==vehicle_status_s::MAIN_STATE_MANUAL) {
 		// Full manual (MANUAL) control
 
 		// Note: In MANUAL mode, the actuator outputs are SOLELY driven through PX4IO, i.e. the RC commands follow the
@@ -295,7 +296,7 @@ void ASLAutopilot::update()
 
 	// Step1: Safety precaution: Check whether we need to disable the throttle commands.
 	// This is either when still on-ground&rc lost or on-ground&any-auto-mode.
-	if(OnGround() && subs.vstatus.arming_state>=ARMING_STATE_ARMED &&
+	if(OnGround() && subs.vstatus.arming_state>=vehicle_status_s::ARMING_STATE_ARMED &&
 			(subs.vstatus.rc_signal_lost || ctrldata.aslctrl_mode>=MODE_ALT)) {
 		ctrldata.uThrot=0.0f;
 		ctrldata.uThrot2=0.0f;
@@ -487,11 +488,11 @@ int ASLAutopilot::HandleRCLoss(void)
 
 		if(ctrldata.aslctrl_mode == MODE_RCLOSS_RTHFAILSAFE) {
 			// Overwrite switch positions locally here, in order to enter AUTO mode in control loop
-			subs.vstatus.main_state = MAIN_STATE_AUTO_MISSION;
-			subs.manual_sp.posctl_switch = SWITCH_POS_ON;
+			subs.vstatus.main_state = vehicle_status_s::MAIN_STATE_AUTO_MISSION;
+			subs.manual_sp.posctl_switch = manual_control_setpoint_s::SWITCH_POS_ON;
 			//Set RTL references
 			//subs.position_setpoint_triplet.nav_state = NAV_CMD_RETURN_TO_LAUNCH; //TODO check whether this works
-			subs.position_setpoint_triplet.current.type = SETPOINT_TYPE_POSITION;
+			subs.position_setpoint_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
 			subs.position_setpoint_triplet.current.alt = subs.home_pos.alt + 100.0f;
 			subs.position_setpoint_triplet.current.lat = subs.home_pos.lat;
 			subs.position_setpoint_triplet.current.lon = subs.home_pos.lon;
@@ -508,8 +509,8 @@ int ASLAutopilot::HandleRCLoss(void)
 
 		if(ctrldata.aslctrl_mode == MODE_RCLOSS_AUTOFAILSAFE) {
 			// Overwrite switch positions locally here, in order to enter AUTO mode in control loop
-			subs.vstatus.main_state = MAIN_STATE_AUTO_MISSION;
-			subs.manual_sp.posctl_switch = SWITCH_POS_ON;
+			subs.vstatus.main_state = vehicle_status_s::MAIN_STATE_AUTO_MISSION;
+			subs.manual_sp.posctl_switch = manual_control_setpoint_s::SWITCH_POS_ON;
 		}
 		return 0;
 	}
@@ -524,7 +525,7 @@ int ASLAutopilot::HandleRCLoss(void)
 		if((ctrldata.aslctrl_mode == MODE_RCLOSS_CASFAILSAFE) || (ctrldata.aslctrl_mode == MODE_RCLOSS_ERR)) {
 			//Overwrite switch positions locally here, in order to enter CAS mode in control loop
 			subs.vstatus.main_state = (main_state_t)MODE_CAS;
-			subs.manual_sp.posctl_switch = SWITCH_POS_ON;
+			subs.manual_sp.posctl_switch = manual_control_setpoint_s::SWITCH_POS_ON;
 
 			//Set RTL references
 			ctrldata.RollAngleRef = 12.0f*DEG2RAD;		// Loiter in right-turn circle

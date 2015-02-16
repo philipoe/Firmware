@@ -55,7 +55,7 @@ int subscriptions::init(void)
 
 	//Outputs
 	/* publish actuator controls */
-	for (unsigned i = 0; i < NUM_ACTUATOR_CONTROLS; i++) {
+	for (unsigned i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROLS; i++) {
 		actuators.control[i] = 0.0f;
 	}
 	actuators_pub = orb_advertise(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, &actuators);

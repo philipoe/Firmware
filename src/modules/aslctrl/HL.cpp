@@ -93,7 +93,7 @@ int HL::WaypointControl_L1(float &RollAngleRef)
 	// *********************************************************************
 	// *** STD-WAYPOINT CONTROL
 	// *********************************************************************
-	if (subs->position_setpoint_triplet.current.type == SETPOINT_TYPE_POSITION) {
+	if (subs->position_setpoint_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_POSITION) {
 		/* waypoint is a plain navigation waypoint */
 		if(params->p.ASLC_DEBUG==10) printf("M5.1: ");
 
@@ -108,7 +108,7 @@ int HL::WaypointControl_L1(float &RollAngleRef)
 
 		if(params->p.ASLC_DEBUG==10) printf("Previous WP: (%7.5f,%7.5f) Next WP (x/y): (%7.5f,%7.5f) | ", (double)prev_wp(0), (double)prev_wp(1), (double)next_wp(0), (double)next_wp(1));
 	}
-	else if (subs->position_setpoint_triplet.current.type == SETPOINT_TYPE_LOITER) {
+	else if (subs->position_setpoint_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LOITER) {
 		/* waypoint is a loiter waypoint */
 		math::Vector<2> next_wp = {float(subs->position_setpoint_triplet.current.lat),float(subs->position_setpoint_triplet.current.lon)};
 		if(params->p.ASLC_DEBUG==10) printf("M5.2: Next WP (x/y): (%7.5f,%7.5f) | ", (double)next_wp(0), (double)next_wp(1));
@@ -216,7 +216,7 @@ int HL::TECS_Update50Hz(void)
 {
 	//This function updates the TECS data fields. It should be run at >50Hz.
 	for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++)
-		R_nb(i, j) = subs->att.R[i][j];
+		R_nb(i, j) = subs->att.R[3*i+j];  // TODO::PX4Merge: Check correctness of indexes!!!!!
 	math::Vector<3> accel_body(subs->sensors.accelerometer_m_s2);
 	math::Vector<3> accel_earth = R_nb * accel_body;
 
