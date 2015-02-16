@@ -325,7 +325,6 @@ private:
 
 		float dbaro_Dtube;
 		float dbaro_Ltube;
-		//float dbaro_offset;
 		float dbaro_dy;
 
 	}		_parameters;			/**< local copies of interesting parameters */
@@ -389,7 +388,6 @@ private:
 
 		param_t dbaro_Dtube;
 		param_t dbaro_Ltube;
-		//param_t dbaro_offset;
 		param_t dbaro_dy;
 
 	}		_parameter_handles;		/**< handles for interesting parameters */
@@ -738,7 +736,6 @@ Sensors::Sensors() :
 	/* ASLUAV parameters */
 	_parameter_handles.dbaro_Dtube = param_find("SENSA_DBaro_D");
 	_parameter_handles.dbaro_Ltube = param_find("SENSA_DBaro_L");
-	//_parameter_handles.dbaro_offset = param_find("SENSA_DBaro_OFF");
 	_parameter_handles.dbaro_dy = param_find("SENSA_DBaro_dy");
 
 	/* fetch initial parameter values */
@@ -961,7 +958,6 @@ Sensors::parameters_update()
 	/* ASLUAV custom parameters */
 	param_get(_parameter_handles.dbaro_Dtube, &(_parameters.dbaro_Dtube));
 	param_get(_parameter_handles.dbaro_Ltube, &(_parameters.dbaro_Ltube));
-	//param_get(_parameter_handles.dbaro_offset, &(_parameters.dbaro_offset));
 	param_get(_parameter_handles.dbaro_dy, &(_parameters.dbaro_dy));
 
 	/** fine tune board offset on parameter update **/

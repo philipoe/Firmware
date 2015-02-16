@@ -178,9 +178,6 @@ HDIM010::collect()
 	/* convert mbar to pa					*/
 	dPressure *= 100.0f;
 
-	/* reduce measurement offset 			*/
-	//dPressure -= _diff_pres_offset;
-
 	/* Correct measurement offset and SF 	*/
 	dPressure = (dPressure - _diff_pres_offset)*_diff_pres_scale;
 
