@@ -1272,9 +1272,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 		}
 
 		/* --- VTOL VEHICLE STATUS --- */
-		if(copy_if_updated(ORB_ID(vtol_vehicle_status), subs.vtol_status_sub, &buf.vtol_status)) {
+		if(copy_if_updated(ORB_ID(vtol_vehicle_status), subs.vtol_status_sub, &(buf->vtol_status))) {
 			log_msg.msg_type = LOG_VTOL_MSG;
-			log_msg.body.log_VTOL.airspeed_tot = buf.vtol_status.airspeed_tot;
+			log_msg.body.log_VTOL.airspeed_tot = buf->vtol_status.airspeed_tot;
 			LOGBUFFER_WRITE_AND_COUNT(VTOL);
 		}
 
@@ -1579,12 +1579,12 @@ int sdlog2_thread_main(int argc, char *argv[])
 			log_msg.body.log_LPSP.y = buf->local_pos_sp.y;
 			log_msg.body.log_LPSP.z = buf->local_pos_sp.z;
 			log_msg.body.log_LPSP.yaw = buf->local_pos_sp.yaw;
-			log_msg.body.log_LPSP.vx = buf.local_pos_sp.vx;
-			log_msg.body.log_LPSP.vy = buf.local_pos_sp.vy;
-			log_msg.body.log_LPSP.vz = buf.local_pos_sp.vz;
-			log_msg.body.log_LPSP.acc_x = buf.local_pos_sp.acc_x;
-			log_msg.body.log_LPSP.acc_y = buf.local_pos_sp.acc_y;
-			log_msg.body.log_LPSP.acc_z = buf.local_pos_sp.acc_z;
+			log_msg.body.log_LPSP.vx = buf->local_pos_sp.vx;
+			log_msg.body.log_LPSP.vy = buf->local_pos_sp.vy;
+			log_msg.body.log_LPSP.vz = buf->local_pos_sp.vz;
+			log_msg.body.log_LPSP.acc_x = buf->local_pos_sp.acc_x;
+			log_msg.body.log_LPSP.acc_y = buf->local_pos_sp.acc_y;
+			log_msg.body.log_LPSP.acc_z = buf->local_pos_sp.acc_z;
 			LOGBUFFER_WRITE_AND_COUNT(LPSP);
 		}
 
