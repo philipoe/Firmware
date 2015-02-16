@@ -201,6 +201,15 @@ PARAM_DEFINE_FLOAT(SENS_ACC_ZSCALE, 1.0f);
 PARAM_DEFINE_FLOAT(SENS_DPRES_OFF, 0.0f);
 
 /**
+ * Differential pressure sensor scale factor
+ *
+ * The scale factor scales the differential pressure measurement
+ *
+ * @group Sensor Calibration
+ */
+PARAM_DEFINE_FLOAT(SENS_DPRES_SF, 1.0f);
+
+/**
  * Differential pressure sensor analog scaling
  *
  * Pick the appropriate scaling from the datasheet.
@@ -882,7 +891,8 @@ PARAM_DEFINE_FLOAT(SENSA_MPPT3_fI, -267.0f);
 /* DBaro Correction */
 PARAM_DEFINE_FLOAT(SENSA_DBaro_D, 0.004f);			// Dbaro tube diameter [m]
 PARAM_DEFINE_FLOAT(SENSA_DBaro_L, 0.25f);			// Dbaro tube length [m]
-PARAM_DEFINE_FLOAT(SENSA_DBaro_OFF, 0.00f);			// DBaro constant offset correction (if necessary, as often the case for e.g. the HDIM10)
+//PARAM_DEFINE_FLOAT(SENSA_DBaro_OFF, 0.00f);			// DBaro constant offset correction (if necessary, as often the case for e.g. the HDIM10)
+//PARAM_DEFINE_FLOAT(SENSA_DBaro_SF, 1.00f);			// DBaro constant scale factor correction
 PARAM_DEFINE_FLOAT(SENSA_DBaro_dy, 0.00f);			// DBaro/Pitot tube lateral position offset [m]
 
 /* Current & Voltage Sensors (default values are set for AtlantikSolar) */

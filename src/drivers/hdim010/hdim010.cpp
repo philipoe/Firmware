@@ -179,7 +179,10 @@ HDIM010::collect()
 	dPressure *= 100.0f;
 
 	/* reduce measurement offset 			*/
-	dPressure -= _diff_pres_offset;
+	//dPressure -= _diff_pres_offset;
+
+	/* Correct measurement offset and SF 	*/
+	dPressure = (dPressure - _diff_pres_offset)*_diff_pres_scale;
 
 	/* Range check /failure accordingly */
 	if ( (dPressure > 1000.0f) | (dPressure < -1000.0f) ) {

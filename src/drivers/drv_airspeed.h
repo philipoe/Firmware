@@ -65,10 +65,11 @@
 #define AIRSPEEDIOCSCOMPE		__AIRSPEEDIOC(2)
 
 
-/** airspeed scaling factors; out = (in * Vscale) + offset */
+/** airspeed scaling factors; out = ((in * Vscale) + offset)*scale_factor */
 struct airspeed_scale {
 	float	offset_pa;
 	float	scale;
+	float	scale_factor;
 };
 
 /** compensation for the pressure drop in the tube */

@@ -136,6 +136,9 @@ private:
 	float				_dbaro_Dtube;
 	float 				_dbaro_Ltube;
 
+	float				_diff_pres_offset;
+	float				_diff_pres_scale;
+
 	/**
 	 * Test whether the device supported by the driver is present at a
 	 * specific address.
@@ -297,7 +300,9 @@ SDP600::SDP600(int bus) :
 	_max_differential_pressure_pa(-500.0f),
 	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ),
 	_dbaro_Dtube(0.0f),
-	_dbaro_Ltube(0.0f)
+	_dbaro_Ltube(0.0f),
+	_diff_pres_offset(0.0f),
+	_diff_pres_scale(1.0f)
 {
 	// enable debug() calls
 	_debug_enabled = true;
@@ -537,6 +542,13 @@ SDP600::ioctl(struct file *filp, int cmd, unsigned long arg)
 		return OK;
 	}
 
+	case AIRSPEEDIOCSSCALE: {
+		struct airspeed_scale *s = (struct airspeed_scale*)arg;
+		_diff_pres_offset = s->offset_pa;
+		_diff_pres_scale  = s->scale_factor;
+		return OK;
+	}
+
 	default:
 		break;
 	}
@@ -638,8 +650,10 @@ SDP600::measurement()
 	/* pressure calculation, result in Pa */
 	dPressure = (float)((int16_t)(cvt.w & 0xffff)) / SDP600_SCALEFACTOR;
 
-	/* Range check /failure accordingly */
+	/* Correct measurement offset and SF 	*/
+	dPressure = (dPressure - _diff_pres_offset)*_diff_pres_scale;
 
+	/* Range check /failure accordingly */
 	if ( (dPressure > 500) | (dPressure < -500) ) {
 		warnx("SDP600: Differential pressure is out of range: %3.6f Pa", (double) dPressure);
 		return -EIO;
