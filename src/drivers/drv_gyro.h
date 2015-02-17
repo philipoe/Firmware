@@ -122,4 +122,7 @@ ORB_DECLARE(sensor_gyro);
 /** check the status of the sensor */
 #define GYROIOCSELFTEST		_GYROIOC(8)
 
+/** get the current gyro type */
+#define GYROIOCTYPE			_GYROIOC(9)
+
 #endif /* _DRV_GYRO_H */

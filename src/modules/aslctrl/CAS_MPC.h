@@ -5,7 +5,6 @@
  *      Author: philipoe
  */
 
-#include "helpers/params.h"
 #include "helpers/subs.h"
 #include "helpers/Filters.h"
 #include "helpers/helpfuncs.h"
@@ -22,7 +21,7 @@ class CAS_MPC
 {
 public:
 	CAS_MPC();
-	CAS_MPC(parameters *params_arg, subscriptions *subs_arg);
+	CAS_MPC(subscriptions *subs_arg);
 	~CAS_MPC();
 	void init(void);
 
@@ -40,8 +39,8 @@ public: //TODO: Change this to private, put all function calls to here in the up
 	int CalculateTrimOutputs(void);
 
 private:
-	parameters *params;	//parameters from PX4
 	subscriptions *subs; //UORB subscriptions from PX4
+	aslctrl_parameters_s *params;	// Pointer to aslctrl parameters in the UORB subscriptions
 
 	MovingAverage 	MA_Airspeed; 	// Airspeed Moving Average Filter
 	LowPass 		LP_Airspeed;

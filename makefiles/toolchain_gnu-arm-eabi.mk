@@ -109,6 +109,10 @@ $(error Board config does not define CONFIG_BOARD)
 endif
 ARCHDEFINES		+= -DCONFIG_ARCH_BOARD_$(CONFIG_BOARD)
 
+# Set the IMU flags
+#
+IMUDEFINES		+= -DPX4_IMU_CONF_$(CONFIG_IMU)
+
 # optimisation flags
 #
 ARCHOPTIMIZATION	 = $(MAXOPTIMIZATION) \
@@ -190,7 +194,8 @@ CFLAGS			 = $(ARCHCFLAGS) \
 			   $(EXTRADEFINES) \
 			   $(EXTRACFLAGS) \
 			   -fno-common \
-			   $(addprefix -I,$(INCLUDE_DIRS))
+			   $(addprefix -I,$(INCLUDE_DIRS)) \
+			   $(IMUDEFINES)
 
 # Flags we pass to the C++ compiler
 #
@@ -204,7 +209,8 @@ CXXFLAGS		 = $(ARCHCXXFLAGS) \
 			   -DCONFIG_WCHAR_BUILTIN \
 			   $(EXTRADEFINES) \
 			   $(EXTRACXXFLAGS) \
-			   $(addprefix -I,$(INCLUDE_DIRS))
+			   $(addprefix -I,$(INCLUDE_DIRS)) \
+			   $(IMUDEFINES)
 
 # Flags we pass to the assembler
 #

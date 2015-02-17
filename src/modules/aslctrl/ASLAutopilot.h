@@ -20,7 +20,6 @@
 #include <drivers/drv_hrt.h>
 #include <poll.h>
 
-#include "helpers/params.h"
 #include "helpers/subs.h"
 #include "SAS.h"
 #include "CAS.h"
@@ -40,7 +39,7 @@ public:
 
 	int SetCtrlData(void);
 
-	int ReloadParameters(void);
+	void ReloadParameters(void);
 	//int UpdateFilters(const int & counter);
 
 	int HandleRCLoss();
@@ -62,14 +61,12 @@ private:
 	//as per standard on PX4IO, correct ordering to spektrum standard is done in mixer.
 	enum {CH_AIL_R, CH_ELV, CH_RDR, CH_THR_1, UNUSED1, CH_AIL_L, CH_AUX, UNUSED2}; //as per standard on PX4IO, correct ordering to
 
-	uint64_t OldTimeStamp;
-
 	bool initialized;
+	bool bRunOnce;
 
-	parameters params;	//parameters from PX4
 	subscriptions subs; //UORB subscriptions from PX4
-
-	aslctrl_data_s ctrldata; //The current control variables / state
+	aslctrl_parameters_s *params;	// Pointer to aslctrl parameters in the UORB subscriptions
+	aslctrl_data_s * ctrldata; // Pointer to the current control variables
 
 	int counter;
 	int mavlink_fd;		//A mavlink file descriptor for debugging/user notification

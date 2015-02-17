@@ -1,42 +1,24 @@
-## PX4 Aerial Middleware and Flight Control Stack (ASL-version) ##
-## Note: This is the most up-to-date (Jan. 2015) px4-firmware stable merged with ASL-components##
+# ASL-version of the Pixhawk/PX4 Firmware #
 
-[![Build Status](https://travis-ci.org/PX4/Firmware.svg?branch=master)](https://travis-ci.org/PX4/Firmware) [![Coverity Scan](https://scan.coverity.com/projects/3966/badge.svg?flat=1)](https://scan.coverity.com/projects/3966?tab=overview)
+##Guidelines##
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/PX4/Firmware?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+###General###
+ - Keep code (structure, formatting, variables) as close to PX4 as possible. Be ready to push our stuff back to PX4 using Pull Requests.
 
-*   Official Website: http://px4.io
-*   License: BSD 3-clause (see LICENSE.md)
-*   Supported airframes (more experimental are supported):
-  * [Multicopters](http://px4.io/platforms/multicopters/start)
-  * [Fixed wing](http://px4.io/platforms/planes/start)
-  * [VTOL](http://px4.io/platforms/vtol/start)
-*   Binaries (always up-to-date from master):
-  * [Downloads](http://px4.io/downloads)
-*   Mailing list: [Google Groups](http://groups.google.com/group/px4users)
+###Branches###
+ - stable: Current stable release, flight tested
+ - master: Current main release, i.e. under development but bench-tested and thus operational.
+ - features/MYFEATURENAME: A new feature branch. All new features shall be added like this.
+ - fix/MYFIX: A new fix. All new fixes shall be added like this.
 
-### Users ###
-
-Please refer to the [user documentation](https://pixhawk.org/users/start) for flying drones with the PX4 flight stack.
-
-### Developers ###
-
-Contributing guide:
-  * [CONTRIBUTING.md](https://github.com/PX4/Firmware/blob/master/CONTRIBUTING.md)
-  * [PX4 Contribution Guide](http://px4.io/dev/contributing)
-
-Developer guide:
-http://px4.io/dev/
-
-Testing guide:
-http://px4.io/dev/unit_tests
-
-This repository contains code supporting these boards:
-  * FMUv1.x
-  * FMUv2.x
-  * AeroCore (v1 and v2)
-
-## NuttShell (NSH) ##
-
-NSH usage documentation:
-http://px4.io/users/serial_connection
+###Commits###
+ - Commit Message: Please use the "Module: Message" format, where Module is the approximate location or scope of your change (e.g. Mavlink, aslctrl, sensors) and Message is your ordinary message.
+ 
+###Other:###
+ - TAGGING: Use tags (done via "git tag") to name specific releases and milestones, e.g. those used for a specific flight test ("AS-1 TF#7", "Techpod TF#XX").
+ - ISSUES: Use the github issue tracking & bug reporting system
+ 
+###Resources###
+ - Pixhawk Wiki: https://pixhawk.org
+ - Pixhawk Developer Tour : https://pixhawk.org/dev/start
+ - Pixhawk Forum: http://groups.google.com/group/px4users

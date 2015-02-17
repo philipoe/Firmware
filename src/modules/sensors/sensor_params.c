@@ -1278,3 +1278,33 @@ PARAM_DEFINE_FLOAT(RC_ACRO_TH, 0.5f);
  *
  */
 PARAM_DEFINE_FLOAT(RC_OFFB_TH, 0.5f);
+
+
+//**************************************************************************************
+//	Parameters for ASLUAVs
+
+/* MPPTs */
+PARAM_DEFINE_FLOAT(SENSA_MPPT1_fI, -267.0f);
+PARAM_DEFINE_FLOAT(SENSA_MPPT2_fI, -267.0f);
+PARAM_DEFINE_FLOAT(SENSA_MPPT3_fI, -267.0f);
+
+/* DBaro Correction */
+PARAM_DEFINE_FLOAT(SENSA_DBaro_D, 0.004f);			// Dbaro tube diameter [m]
+PARAM_DEFINE_FLOAT(SENSA_DBaro_L, 0.25f);			// Dbaro tube length [m]
+PARAM_DEFINE_FLOAT(SENSA_DBaro_OFF, 0.00f);			// DBaro constant offset correction (if necessary, as often the case for e.g. the HDIM10)
+PARAM_DEFINE_FLOAT(SENSA_DBaro_dy, 0.00f);			// DBaro/Pitot tube lateral position offset [m]
+
+/* Current & Voltage Sensors (default values are set for AtlantikSolar) */
+PARAM_DEFINE_FLOAT(SENSA_CSPB_Vfs, 3324.0f);		// Full-scale voltage [V], measured
+PARAM_DEFINE_FLOAT(SENSA_CSPB_fI, 35.00f);			// Current conversion factor [mV/A], measured. Datasheet says 36.96mV/A at V_CC=3.3V
+PARAM_DEFINE_INT32(SENSA_CSPB_cI, 2059);			// Current offset, [ticks]. Measured.
+PARAM_DEFINE_FLOAT(SENSA_VSPB_off, 0.0f);			// Voltage offset, [V]. Measured.
+PARAM_DEFINE_FLOAT(SENSA_CS1_Vfs, 3301.0f);			// Full-scale voltage [V], measured
+PARAM_DEFINE_FLOAT(SENSA_CS1_fI, 36.00f);			// Current conversion factor [mV/A], measured. Datasheet says 36.96mV/A at V_CC=3.3V
+PARAM_DEFINE_INT32(SENSA_CS1_cI, 2065);				// Current offset, [ticks]. Measured.
+PARAM_DEFINE_FLOAT(SENSA_CS2_Vfs, 3301.0f);			// Full-scale voltage [V], measured
+PARAM_DEFINE_FLOAT(SENSA_CS2_fI, 36.00f);			// Current conversion factor [mV/A], measured. Datasheet says 36.96mV/A at V_CC=3.3V
+PARAM_DEFINE_INT32(SENSA_CS2_cI, 2065);				// Current offset, [ticks]. Measured.
+													// CSPB values AtlantikSolar: Vfs 3324.0, conv=35.00, ticks offset=2059
+													// CSPB values EasyGlider: Vfs 3290.0, conv=35, ticks offset=2047
+

@@ -74,6 +74,8 @@
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
 #include <lib/conversion/rotation.h>
 
+//#define LOW_DYNAMIC											/* Flag for low dynamic system configuration */
+
 #define DIR_READ			0x80
 #define DIR_WRITE			0x00
 
@@ -171,7 +173,12 @@
 #define MPU6000_GYRO_DEFAULT_RATE			1000
 #define MPU6000_GYRO_DEFAULT_DRIVER_FILTER_FREQ		30
 
+#ifdef LOW_DYNAMIC
+#define MPU6000_DEFAULT_ONCHIP_FILTER_FREQ		20			/* Set MPU600 int filter to 20Hz */
+#define IMU_average_count_limit					9			/* Averaging filter max count number */
+#else
 #define MPU6000_DEFAULT_ONCHIP_FILTER_FREQ		42
+#endif
 
 #define MPU6000_ONE_G					9.80665f
 
@@ -272,6 +279,12 @@ private:
 
 	enum Rotation		_rotation;
 
+#ifdef LOW_DYNAMIC
+	/* averaging variables */
+	float gyro_average[3];
+	float accel_average[3];
+	unsigned IMU_average_count;
+#endif
 	// this is used to support runtime checking of key
 	// configuration registers to detect SPI bus errors and sensor
 	// reset
@@ -546,6 +559,17 @@ MPU6000::MPU6000(int bus, const char *path_accel, const char *path_gyro, spi_dev
 	_gyro_scale.z_scale  = 1.0f;
 
 	memset(&_call, 0, sizeof(_call));
+
+#ifdef LOW_DYNAMIC
+	/*averaging init */
+	gyro_average[0] = 0.0f;
+	gyro_average[1] = 0.0f;
+	gyro_average[2] = 0.0f;
+	accel_average[0] = 0.0f;
+	accel_average[1] = 0.0f;
+	accel_average[2] = 0.0f;
+	IMU_average_count = 0;
+#endif
 }
 
 MPU6000::~MPU6000()
@@ -701,8 +725,11 @@ int MPU6000::reset()
 	// system response
 	_set_dlpf_filter(MPU6000_DEFAULT_ONCHIP_FILTER_FREQ);
 	usleep(1000);
-	// Gyro scale 2000 deg/s ()
-	write_checked_reg(MPUREG_GYRO_CONFIG, BITS_FS_2000DPS);
+#ifdef LOW_DYNAMIC
+	write_checked_reg(MPUREG_GYRO_CONFIG, BITS_FS_250DPS);					/* Gyro scale 250 deg/s  */
+#else
+	write_checked_reg(MPUREG_GYRO_CONFIG, BITS_FS_2000DPS);					/* Gyro scale 2000 deg/s */
+#endif
 	usleep(1000);
 
 	// correct gyro scale factors
@@ -710,8 +737,13 @@ int MPU6000::reset()
 	// 2000 deg/s = (2000/180)*PI = 34.906585 rad/s
 	// scaling factor:
 	// 1/(2^15)*(2000/180)*PI
+#ifdef LOW_DYNAMIC
+	_gyro_range_scale = (0.0174532f / 131.0f);
+	_gyro_range_rad_s = (250.0f / 180.0f) * M_PI_F;
+#else
 	_gyro_range_scale = (0.0174532 / 16.4);//1.0f / (32768.0f * (2000.0f / 180.0f) * M_PI_F);
 	_gyro_range_rad_s = (2000.0f / 180.0f) * M_PI_F;
+#endif
 
 	// product-specific scaling
 	switch (_product) {
@@ -1751,7 +1783,52 @@ MPU6000::measure()
 
 	_accel_reports->force(&arb);
 	_gyro_reports->force(&grb);
+#ifdef LOW_DYNAMIC
+	/* Apply averaging on the IMU raw data: */
+	gyro_average[0]  += grb.x;
+	gyro_average[1]  += grb.y;
+	gyro_average[2]  += grb.z;
+	accel_average[0] += arb.x;
+	accel_average[1] += arb.y;
+	accel_average[2] += arb.z;
+	IMU_average_count++;
 
+	if (IMU_average_count > IMU_average_count_limit){
+		grb.x = (gyro_average[0] / IMU_average_count);
+		grb.y = (gyro_average[1] / IMU_average_count);
+		grb.z = (gyro_average[2] / IMU_average_count);
+		arb.x = (accel_average[0] / IMU_average_count);
+		arb.y = (accel_average[1] / IMU_average_count);
+		arb.z = (accel_average[2] / IMU_average_count);
+
+		gyro_average[0]  = 0.0f;
+		gyro_average[1]  = 0.0f;
+		gyro_average[2]  = 0.0f;
+		accel_average[0] = 0.0f;
+		accel_average[1] = 0.0f;
+		accel_average[2] = 0.0f;
+
+		IMU_average_count = 0;
+
+		/* notify anyone waiting for data */
+		poll_notify(POLLIN);
+		_gyro->parent_poll_notify();
+
+		if (!(_pub_blocked)) {
+			/* publish it */
+			orb_publish(_accel_orb_id, _accel_topic, &arb);
+		}
+
+		if (!(_pub_blocked)) {
+			/* publish it */
+			orb_publish(_gyro->_gyro_orb_id, _gyro->_gyro_topic, &grb);
+		}
+
+		/* stop measuring */
+		perf_end(_sample_perf);
+	}
+
+#else
 	/* notify anyone waiting for data */
 	poll_notify(POLLIN);
 	_gyro->parent_poll_notify();
@@ -1771,6 +1848,7 @@ MPU6000::measure()
 
 	/* stop measuring */
 	perf_end(_sample_perf);
+#endif
 }
 
 void

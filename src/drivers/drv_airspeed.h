@@ -63,12 +63,19 @@
 
 #define AIRSPEEDIOCSSCALE		__AIRSPEEDIOC(0)
 #define AIRSPEEDIOCGSCALE		__AIRSPEEDIOC(1)
+#define AIRSPEEDIOCSCOMPE		__AIRSPEEDIOC(2)
 
 
 /** airspeed scaling factors; out = (in * Vscale) + offset */
 struct airspeed_scale {
 	float	offset_pa;
 	float	scale;
+};
+
+/** compensation for the pressure drop in the tube */
+struct airspeed_tube_compensation {
+	float dbaro_Dtube;
+	float dbaro_Ltube;
 };
 
 #endif /* _DRV_AIRSPEED_H */

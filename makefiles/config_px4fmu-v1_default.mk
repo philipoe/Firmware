@@ -5,11 +5,11 @@
 #
 # Use the configuration's ROMFS.
 #
-ROMFS_ROOT	 = $(PX4_BASE)/ROMFS/px4fmu_common
+ROMFS_ROOT	 		 = $(PX4_BASE)/ROMFS/px4fmu_common
 ROMFS_OPTIONAL_FILES = $(PX4_BASE)/Images/px4io-v1_default.bin
 
 #
-# Board support modules
+# Board support drivers
 #
 MODULES		+= drivers/device
 MODULES		+= drivers/stm32
@@ -29,14 +29,31 @@ MODULES		+= drivers/trone
 MODULES		+= drivers/mb12xx
 MODULES		+= drivers/gps
 MODULES		+= drivers/hil
-MODULES		+= drivers/blinkm
+MODULES		+= drivers/adis16448
+####MODULES		+= drivers/adc121/adc121_cs1
+####MODULES		+= drivers/adc121/adc121_cs2
+####MODULES		+= drivers/adc121/adc121_cspb
+####MODULES		+= drivers/adc121/adc121_vspb
+####MODULES		+= drivers/spv1020
+MODULES		+= drivers/sdp600
+MODULES		+= drivers/lm73
+MODULES		+= drivers/hdim010
+####MODULES		+= drivers/ledcnt
+####MODULES		+= modules/aslctrl
+
+#MODULES		+= drivers/blinkm
 #MODULES		+= drivers/rgbled
 #MODULES		+= drivers/mkblctrl
-#MODULES		+= drivers/airspeed
+MODULES			+= drivers/airspeed
 #MODULES		+= drivers/ets_airspeed
 #MODULES		+= drivers/meas_airspeed
 MODULES		+= drivers/frsky_telemetry
+
+#
+# Board support modules
+#
 MODULES		+= modules/sensors
+MODULES		+= modules/i2c_wd
 
 #
 # System commands
@@ -68,8 +85,9 @@ MODULES 	+= modules/land_detector
 # Estimation modules (EKF / other filters)
 #
 #MODULES		+= modules/attitude_estimator_ekf
-MODULES		+= modules/ekf_att_pos_estimator
+#MODULES		+= modules/ekf_att_pos_estimator
 #MODULES		+= modules/position_estimator_inav
+MODULES		+= modules/state_estimator
 
 #
 # Vehicle Control

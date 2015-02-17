@@ -131,19 +131,19 @@ protected:
 	float			_max_differential_pressure_pa;
 	bool			_sensor_ok;
 	bool			_last_published_sensor_ok;
-	int			_measure_ticks;
+	int				_measure_ticks;
 	bool			_collect_phase;
 	float			_diff_pres_offset;
 
-	orb_advert_t		_airspeed_pub;
-	orb_advert_t		_subsys_pub;
+	orb_advert_t	_airspeed_pub;
+	orb_advert_t	_subsys_pub;
 
-	int			_class_instance;
+	int				_class_instance;
 
 	unsigned		_conversion_interval;
 
-	perf_counter_t		_sample_perf;
-	perf_counter_t		_comms_errors;
+	perf_counter_t	_sample_perf;
+	perf_counter_t	_comms_errors;
 
 
 	/**

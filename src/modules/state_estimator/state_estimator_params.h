@@ -1,7 +1,8 @@
 /****************************************************************************
  *
  *   Copyright (C) 2012 PX4 Development Team. All rights reserved.
- *   Author: @author Lorenz Meier <lm@inf.ethz.ch>
+ *   Author: Lorenz Meier <lm@inf.ethz.ch>
+ *           Amir Melzer <amir.melzer@mavt.ethz.ch>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,28 +33,35 @@
  *
  ****************************************************************************/
 
-/**
- * @file hdim010_i2c_wd.h
- * WD for the hdim010 I2C communication hub
+/*
+ * @file state_estimator_params.h
+ * 
+ * Parameters for EKF filter
  */
 
-#ifndef TOPIC_HDIM010_I2C_WD_H_
-#define TOPIC_HDIM010_I2C_WD_H_
 
-#include <stdint.h>
-#include "../uORB.h"
+#include <systemlib/param/param.h>
 
-/**
- * @addtogroup topics
- * @{
- */
+struct state_estimator_params {
 
-struct hdim010_i2c_wd_s{
-	bool hdim010_i2c_error;		/**< true if there is an error detected on the I2C communication line of the hdim010  */
+	int mag_date_year;
+	int mag_date_month;
 };
 
+struct state_estimator_param_handles {
 
-/* register this as object request broker structure */
-ORB_DECLARE(hdim010_i2c_wd);
+	param_t mag_date_year;
+	param_t mag_date_month;
+};
 
-#endif
+/**
+ * Initialize all parameter handles and values
+ *
+ */
+int parameters_init(struct state_estimator_param_handles *h);
+
+/**
+ * Update all parameters
+ *
+ */
+int parameters_update(const struct state_estimator_param_handles *h, struct state_estimator_params *p);

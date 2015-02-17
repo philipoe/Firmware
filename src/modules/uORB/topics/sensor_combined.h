@@ -78,30 +78,30 @@ struct sensor_combined_s {
 
 	/* NOTE: Ordering of fields optimized to align to 32 bit / 4 bytes Change with consideration only   */
 
-	uint64_t timestamp;			/**< Timestamp in microseconds since boot, from gyro         */
+	uint64_t timestamp;					/**< Timestamp in microseconds since boot, from gyro         */
 
-	int16_t	gyro_raw[3];			/**< Raw sensor values of angular velocity        */
-	float gyro_rad_s[3];			/**< Angular velocity in radian per seconds       */
+	int16_t	gyro_raw[3];				/**< Raw sensor values of angular velocity        */
+	float gyro_rad_s[3];				/**< Angular velocity in radian per seconds       */
 	unsigned gyro_errcount;			/**< Error counter for gyro 0 */
 
 	int16_t accelerometer_raw[3];		/**< Raw acceleration in NED body frame           */
 	float accelerometer_m_s2[3];		/**< Acceleration in NED body frame, in m/s^2     */
-	int accelerometer_mode;			/**< Accelerometer measurement mode */
+	int accelerometer_mode;				/**< Accelerometer measurement mode */
 	float accelerometer_range_m_s2;		/**< Accelerometer measurement range in m/s^2 */
 	uint64_t accelerometer_timestamp;	/**< Accelerometer timestamp        */
 	unsigned accelerometer_errcount;	/**< Error counter for accel 0 */
 
 	int16_t	magnetometer_raw[3];		/**< Raw magnetic field in NED body frame         */
-	float magnetometer_ga[3];		/**< Magnetic field in NED body frame, in Gauss   */
-	int magnetometer_mode;			/**< Magnetometer measurement mode */
+	float magnetometer_ga[3];			/**< Magnetic field in NED body frame, in Gauss   */
+	int magnetometer_mode;				/**< Magnetometer measurement mode */
 	float magnetometer_range_ga;		/**< ± measurement range in Gauss */
 	float magnetometer_cuttoff_freq_hz;	/**< Internal analog low pass frequency of sensor */
 	uint64_t magnetometer_timestamp;	/**< Magnetometer timestamp         */
 	unsigned magnetometer_errcount;		/**< Error counter for mag 0 */
 
-	int16_t	gyro1_raw[3];			/**< Raw sensor values of angular velocity        */
-	float gyro1_rad_s[3];			/**< Angular velocity in radian per seconds       */
-	uint64_t gyro1_timestamp;		/**< Gyro timestamp */
+	int16_t	gyro1_raw[3];				/**< Raw sensor values of angular velocity        */
+	float gyro1_rad_s[3];				/**< Angular velocity in radian per seconds       */
+	uint64_t gyro1_timestamp;			/**< Gyro timestamp */
 	unsigned gyro1_errcount;		/**< Error counter for gyro 1 */
 
 	int16_t accelerometer1_raw[3];		/**< Raw acceleration in NED body frame           */
@@ -110,13 +110,13 @@ struct sensor_combined_s {
 	unsigned accelerometer1_errcount;	/**< Error counter for accel 1 */
 
 	int16_t	magnetometer1_raw[3];		/**< Raw magnetic field in NED body frame         */
-	float magnetometer1_ga[3];		/**< Magnetic field in NED body frame, in Gauss   */
+	float magnetometer1_ga[3];			/**< Magnetic field in NED body frame, in Gauss   */
 	uint64_t magnetometer1_timestamp;	/**< Magnetometer timestamp         */
 	unsigned magnetometer1_errcount;		/**< Error counter for mag 0 */
 
-	int16_t	gyro2_raw[3];			/**< Raw sensor values of angular velocity        */
-	float gyro2_rad_s[3];			/**< Angular velocity in radian per seconds       */
-	uint64_t gyro2_timestamp;		/**< Gyro timestamp */
+	int16_t	gyro2_raw[3];				/**< Raw sensor values of angular velocity        */
+	float gyro2_rad_s[3];				/**< Angular velocity in radian per seconds       */
+	uint64_t gyro2_timestamp;			/**< Gyro timestamp */
 	unsigned gyro2_errcount;		/**< Error counter for gyro 1 */
 
 	int16_t accelerometer2_raw[3];		/**< Raw acceleration in NED body frame           */
@@ -125,7 +125,7 @@ struct sensor_combined_s {
 	unsigned accelerometer2_errcount;	/**< Error counter for accel 2 */
 
 	int16_t	magnetometer2_raw[3];		/**< Raw magnetic field in NED body frame         */
-	float magnetometer2_ga[3];		/**< Magnetic field in NED body frame, in Gauss   */
+	float magnetometer2_ga[3];			/**< Magnetic field in NED body frame, in Gauss   */
 	uint64_t magnetometer2_timestamp;	/**< Magnetometer timestamp         */
 	unsigned magnetometer2_errcount;	/**< Error counter for mag 2 */
 
@@ -142,6 +142,7 @@ struct sensor_combined_s {
 	float adc_voltage_v[10];		/**< ADC voltages of ADC Chan 10/11/12/13 or -1   */
 	unsigned adc_mapping[10];		/**< Channel indices of each of these values */
 	float mcu_temp_celcius;			/**< Internal temperature measurement of MCU */
+	uint64_t baro_timestamp;			/**< Barometer timestamp        */
 
 	float differential_pressure_pa;			/**< Airspeed sensor differential pressure */
 	uint64_t differential_pressure_timestamp;	/**< Last measurement timestamp */
@@ -151,6 +152,8 @@ struct sensor_combined_s {
 	uint64_t differential_pressure1_timestamp;	/**< Last measurement timestamp */
 	float differential_pressure1_filtered_pa;	/**< Low pass filtered airspeed sensor differential pressure reading */
 
+	uint64_t amb_temp_timestamp;		/**< diff amb temp timestamp in microseconds since boot*/
+	float amb_temp_celcius;				/**< Ambient temperature in degrees celsius	    		*/
 };
 
 /**

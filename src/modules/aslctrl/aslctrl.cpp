@@ -104,7 +104,7 @@ int aslctrl_main(int argc, char *argv[])
 		deamon_task = task_spawn_cmd("aslctrl",
 					 SCHED_DEFAULT,
 					 SCHED_PRIORITY_MAX - 10,
-					 6144,
+					 4800,
 					 aslctrl_thread_main,
 					 (argv) ? (char * const *)&argv[2] : (char * const *)NULL);
 		exit(0);
@@ -141,18 +141,14 @@ int aslctrl_thread_main(int argc, char *argv[])
 
 	ASLAutopilot *autopilot(new ASLAutopilot());
 
-	//Sleep for 5 seconds. Then reload&republish parameters, as necessary for proper logging in sdlog2
-	usleep(5000000);
+	//Sleep. Then reload&republish parameters, as necessary for proper logging in sdlog2
+	usleep(3000000);
 	autopilot->ReloadParameters();
 
 	warnx("ready.");
 
 	thread_running = true;
 	while (!thread_should_exit) {
-
-		// update uorb subscriptions
-		// update parameters
-		// perform control
 		autopilot->update();
 	}
 
