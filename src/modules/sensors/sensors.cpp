@@ -152,8 +152,8 @@
  * subtract 5 degrees in an attempt to account for the electrical upheating of the PCB
  */
 #define PCB_TEMP_ESTIMATE_DEG 5.0f
-
 #define STICK_ON_OFF_LIMIT 0.75f
+#define MAG_ROT_VAL_INTERNAL		-1
 
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
@@ -617,6 +617,8 @@ Sensors::Sensors() :
 	_rc_sub(-1),
 	_baro_sub(-1),
 	_baro1_sub(-1),
+	_airspeed_sub(-1),
+	_diff_pres_sub(-1),
 	_vcontrol_mode_sub(-1),
 	_amb_temp_sub(-1),
 	////_adc121_vspb_sub(-1),										// added
@@ -639,6 +641,8 @@ Sensors::Sensors() :
 
 	/* performance counters */
 	_loop_perf(perf_alloc(PC_ELAPSED, "sensor task update")),
+	_rc{},
+	_battery_status{},
 
 	_mag_is_external(false),
 	_battery_discharged(0),
@@ -647,6 +651,7 @@ Sensors::Sensors() :
 	memset(&_rc, 0, sizeof(_rc));
 	memset(&_diff_pres, 0, sizeof(_diff_pres));
 	memset(&_rc_parameter_map, 0, sizeof(_rc_parameter_map));
+	memset(&_battery_status, 0, sizeof(_battery_status));
 
 	/* basic r/c parameters */
 	for (unsigned i = 0; i < _rc_max_chan_count; i++) {
@@ -1010,12 +1015,6 @@ Sensors::accel_init()
 
 	} else {
 
-		/* set the accel internal sampling rate to default rate */
-		ioctl(fd, ACCELIOCSSAMPLERATE, ACCEL_SAMPLERATE_DEFAULT);
-
-		/* set the driver to poll at default rate */
-		ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT);
-
 		if (ioctl(fd, ACCELIOCTYPE, 0) == ADIS16448_Product){
 
 			/* Set the ADIS16448 IMU's */
@@ -1031,27 +1030,15 @@ Sensors::accel_init()
 		else{
 			/* Set the normal PX4 IMU's */
 
-			/* set the accel internal sampling rate up to at leat 1000Hz */
-			ioctl(fd, ACCELIOCSSAMPLERATE, 1000);
+			/* set the accel internal sampling rate to default rate */
+			ioctl(fd, ACCELIOCSSAMPLERATE, ACCEL_SAMPLERATE_DEFAULT);
 
-			/* set the driver to poll at 1000Hz */
-			ioctl(fd, SENSORIOCSPOLLRATE, 1000);
+			/* set the driver to poll at default rate */
+			ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT);
 
 			warnx("using system accel");
 		}
 
-		#elif CONFIG_ARCH_BOARD_PX4FMU_V2
-
-		/* set the accel internal sampling rate up to at leat 800Hz */
-		ioctl(fd, ACCELIOCSSAMPLERATE, 800);
-
-		/* set the driver to poll at 800Hz */
-		ioctl(fd, SENSORIOCSPOLLRATE, 800);
-
-#else
-#error Need a board configuration, either CONFIG_ARCH_BOARD_PX4FMU_V1, CONFIG_ARCH_BOARD_PX4FMU_V2 or CONFIG_ARCH_BOARD_AEROCORE
-
-#endif
 
 		close(fd);
 	}
@@ -1072,12 +1059,6 @@ Sensors::gyro_init()
 
 	} else {
 
-		/* set the gyro internal sampling rate to default rate */
-		ioctl(fd, GYROIOCSSAMPLERATE, GYRO_SAMPLERATE_DEFAULT);
-
-		/* set the driver to poll at default rate */
-		ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT);
-
 		if (ioctl(fd, GYROIOCTYPE, 0) == ADIS16448_Product){
 				/* Set the ADIS16448 IMU's */
 				if (ioctl(fd, SENSORIOCSPOLLRATE, 100) != OK)
@@ -1088,25 +1069,14 @@ Sensors::gyro_init()
 		else{
 
 			/* Set the normal PX4 IMU's */
-			/* set the gyro internal sampling rate up to at least 1000Hz */
-			if (ioctl(fd, GYROIOCSSAMPLERATE, 1000) != OK)
-				ioctl(fd, GYROIOCSSAMPLERATE, 800);
+			/* set the gyro internal sampling rate to default rate */
+					ioctl(fd, GYROIOCSSAMPLERATE, GYRO_SAMPLERATE_DEFAULT);
 
-			/* set the driver to poll at 1000Hz */
-			if (ioctl(fd, SENSORIOCSPOLLRATE, 1000) != OK)
-				ioctl(fd, SENSORIOCSPOLLRATE, 800);
+					/* set the driver to poll at default rate */
+					ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT);
+
 			warnx("using system gyro");
 		}
-
-#else
-
-		/* set the gyro internal sampling rate up to at least 760Hz */
-		ioctl(fd, GYROIOCSSAMPLERATE, 760);
-
-		/* set the driver to poll at 760Hz */
-		ioctl(fd, SENSORIOCSPOLLRATE, 760);
-
-#endif
 
 		close(fd);
 	}
@@ -1117,7 +1087,7 @@ int
 Sensors::mag_init()
 {
 	int	fd;
-	int	ret;
+	int	ret(OK);
 
 	fd = open(MAG0_DEVICE_PATH, 0);
 
@@ -1164,26 +1134,10 @@ Sensors::mag_init()
 	}
 
 	close(fd);
-}
-
-		} else {
-			warnx("FATAL: mag sampling rate could not be set");
-			return ERROR;
-		}
-	}
-	ret = ioctl(fd, MAGIOCGEXTERNAL, 0);
-	if (ret < 0) {
-		warnx("FATAL: unknown if magnetometer is external or onboard");
-		return ERROR;
-	} else if (ret == 1) {
-		_mag_is_external = true;
-	} else {
-		_mag_is_external = false;
-	}
-	close(fd);
 
 	return OK;
 }
+
 int
 Sensors::baro_init()
 {
@@ -1203,7 +1157,7 @@ Sensors::baro_init()
 	return OK;
 }
 
-void
+int
 Sensors::amb_temp_init()
 {
 	int	fd;
@@ -1212,17 +1166,25 @@ Sensors::amb_temp_init()
 	if (fd < 0) {
 		warn("%s", LM73_DEVICE_PATH);
 		warnx("No ambient temperature sensor found, ignoring");
+		return ERROR;
 	}
 
 	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 10);			// Reduced to 10Hz
+	int ret=ioctl(fd, SENSORIOCSPOLLRATE, 10);			// Reduced to 10Hz
 
 	close(fd);
+
+	if(ret<0){
+		warnx("Could not set ambient temperature pollrate");
+	}
+
+	return ret;
 }
+
 #if 0
 /////
 ///// added
-void
+int
 Sensors::adc121_vspb_init()
 {
 	int	fd;
@@ -1231,6 +1193,7 @@ Sensors::adc121_vspb_init()
 	if (fd < 0) {
 		warn("%s", ADC121_VSPB_DEVICE_PATH);
 		warnx("No power board voltage sensor found, ignoring");
+		return ERROR;
 	}
 
 	/* set the driver to poll at 150Hz */
@@ -1242,7 +1205,7 @@ Sensors::adc121_vspb_init()
 }
 /////
 ///// added
-void
+int
 Sensors::adc121_cspb_init()
 {
 	int	fd;
@@ -1251,16 +1214,19 @@ Sensors::adc121_cspb_init()
 	if (fd < 0) {
 		warn("%s", ADC121_CSPB_DEVICE_PATH);
 		warnx("No power board current sensor found, ignoring");
+		return ERROR;
 	}
 
 	/* set the driver to poll at 150Hz */
 	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz  (set poll rate to 20 Hz (and then average 10 samples))
 
 	close(fd);
+
+	return OK;
 }
 /////
 ///// added
-void
+int
 Sensors::adc121_cs1_init()
 {
 	int	fd;
@@ -1269,16 +1235,19 @@ Sensors::adc121_cs1_init()
 	if (fd < 0) {
 		warn("%s", ADC121_CS1_DEVICE_PATH);
 		warnx("No board current sensor 1 found, ignoring");
+		return ERROR;
 	}
 
 	/* set the driver to poll at 150Hz */
 	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz  (set poll rate to 10 Hz (and then average 10 samples))
 
 	close(fd);
+
+	return OK;
 }
 /////
 ///// added
-void
+int
 Sensors::adc121_cs2_init()
 {
 	int	fd;
@@ -1287,6 +1256,7 @@ Sensors::adc121_cs2_init()
 	if (fd < 0) {
 		warn("%s", ADC121_CS2_DEVICE_PATH);
 		warnx("No board current sensor 2 found, ignoring");
+		return ERROR;
 	}
 
 	/* set the driver to poll at 150Hz */
@@ -1294,10 +1264,11 @@ Sensors::adc121_cs2_init()
 
 	close(fd);
 
+	return OK;
 }
 /////
 ///// added
-void
+int
 Sensors::mppt_init()
 {
 	int	fd;
@@ -1306,12 +1277,15 @@ Sensors::mppt_init()
 	if (fd < 0) {
 		warn("%s", SPV1020_DEVICE_PATH);
 		warnx("No board MPPT found, ignoring");
+		return ERROR;
 	}
 
 	/* set the driver to poll at 150Hz */
 	ioctl(fd, SENSORIOCSPOLLRATE, 10);		// Reduced to 10Hz
 
 	close(fd);
+
+	return OK;
 }
 /////
 #endif

@@ -78,4 +78,5 @@ SRCS		 = state_estimator.c 													\
 # XXX this is *horribly* broken
 INCLUDE_DIRS		+= $(TOPDIR)/../mavlink/include/mavlink
 
+EXTRACFLAGS = -Wno-float-equal -Wframe-larger-than=3700
 #include $(APPDIR)/mk/app.mk

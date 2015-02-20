@@ -142,7 +142,6 @@ struct sensor_combined_s {
 	float adc_voltage_v[10];		/**< ADC voltages of ADC Chan 10/11/12/13 or -1   */
 	unsigned adc_mapping[10];		/**< Channel indices of each of these values */
 	float mcu_temp_celcius;			/**< Internal temperature measurement of MCU */
-	uint64_t baro_timestamp;			/**< Barometer timestamp        */
 
 	float differential_pressure_pa;			/**< Airspeed sensor differential pressure */
 	uint64_t differential_pressure_timestamp;	/**< Last measurement timestamp */

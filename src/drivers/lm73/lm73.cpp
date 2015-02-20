@@ -43,6 +43,7 @@
 
 #include <drivers/device/i2c.h>
 
+
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -68,7 +69,7 @@
 #include <systemlib/err.h>
 
 #include <drivers/drv_amb_temp.h>
-
+#include <drivers/device/ringbuffer.h>
 
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
@@ -85,7 +86,7 @@ class LM73 : public device::I2C
 {
 public:
 	LM73(int bus);
-	~LM73();
+	virtual ~LM73();
 
 	virtual int		init();
 
@@ -101,14 +102,16 @@ protected:
 	virtual int		probe();
 
 private:
-
-	struct work_s		_work;
+	LM73 operator=(const LM73);
+	LM73(const LM73&);
+	work_s				_work;
 	unsigned			_measure_ticks;
 
-	unsigned			_num_reports;
-	volatile unsigned	_next_report;
-	volatile unsigned	_oldest_report;
-	struct lm73_report	*_reports;
+	//unsigned			_num_reports;
+	//volatile unsigned	_next_report;
+	//volatile unsigned	_oldest_report;
+	//struct lm73_report	*_reports;
+	RingBuffer			*_reports;
 
 	bool				_measurement_phase;
 
@@ -142,6 +145,7 @@ private:
 	 */
 	void			stop();
 
+	void 			reset();
 	/**
 	 * Perform a poll cycle; collect from the previous measurement
 	 * and start a new one.
@@ -183,7 +187,7 @@ private:
 };
 
 /* helper macro for handling report buffer indices */
-#define INCREMENT(_x, _lim)	do { _x++; if (_x >= _lim) _x = 0; } while(0)
+//#define INCREMENT(_x, _lim)	do { _x++; if (_x >= _lim) _x = 0; } while(0)
 
 /* helper macro for arithmetic - returns the square of the argument */
 #define POW2(_x)		((_x) * (_x))
@@ -221,12 +225,14 @@ extern "C" __EXPORT int lm73_main(int argc, char *argv[]);
 
 LM73::LM73(int bus) :
 	I2C("LM73", LM73_DEVICE_PATH, bus, 0, 400000),
+	_work{},
 	_measure_ticks(0),
-	_num_reports(0),
-	_next_report(0),
-	_oldest_report(0),
+	//_num_reports(0),
+	//_next_report(0),
+	//_oldest_report(0),
 	_reports(nullptr),
 	_measurement_phase(false),
+	temperature(-273.15),
 	_ambient_temperature_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "LM73_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "LM73_comms_errors")),
@@ -246,35 +252,42 @@ LM73::~LM73()
 
 	/* free any existing reports */
 	if (_reports != nullptr)
-		delete[] _reports;
+	{
+		//delete[] _reports;
+		delete _reports;
+	}
 }
 
 int
 LM73::init()
 {
-	int ret = ERROR;
+	int ret = I2C::init();
 
 	/* do I2C init (and probe) first */
-	if (I2C::init() != OK)
+	if (ret != OK)
 		goto out;
 
 	/* allocate basic report buffers */
-	_num_reports = 2;
-	_reports = new struct lm73_report[_num_reports];
-
+	//_num_reports = 2;
+	//_reports = new struct lm73_report[_num_reports];
+	_reports = new RingBuffer(2,sizeof(lm73_report));
 	if (_reports == nullptr)
 		goto out;
 
-	_oldest_report = _next_report = 0;
+	//_oldest_report = _next_report = 0;
 
 	/* get a publish handle on the lm73 topic */
-	memset(&_reports[0], 0, sizeof(_reports[0]));
-	_ambient_temperature_topic = orb_advertise(ORB_ID(sensor_lm73), &_reports[0]);
+	//memset(&_reports[0], 0, sizeof(_reports[0]));
+	//_ambient_temperature_topic = orb_advertise(ORB_ID(sensor_lm73), &_reports[0]);
+	struct lm73_report trp;
+	temp_measurement();
+	_reports->get(&trp);
+	_ambient_temperature_topic = orb_advertise(ORB_ID(sensor_lm73), &trp);
 
 	if (_ambient_temperature_topic < 0)
 		debug("failed to create sensor_lm73 object");
 
-	ret = OK;
+	//ret = OK;
 out:
 	return ret;
 }
@@ -312,6 +325,7 @@ ssize_t
 LM73::read(struct file *filp, char *buffer, size_t buflen)
 {
 	unsigned count = buflen / sizeof(struct lm73_report);
+	struct lm73_report *rbuf = reinterpret_cast<struct lm73_report *>(buffer);
 	int ret = 0;
 
 	/* buffer must be large enough */
@@ -327,10 +341,9 @@ LM73::read(struct file *filp, char *buffer, size_t buflen)
 		 * we are careful to avoid racing with them.
 		 */
 		while (count--) {
-			if (_oldest_report != _next_report) {
-				memcpy(buffer, _reports + _oldest_report, sizeof(*_reports));
-				ret += sizeof(_reports[0]);
-				INCREMENT(_oldest_report, _num_reports);
+			if (_reports->get(rbuf)) {
+				ret += sizeof(*rbuf);
+				rbuf++;
 			}
 		}
 
@@ -340,8 +353,9 @@ LM73::read(struct file *filp, char *buffer, size_t buflen)
 
 	/* manual measurement - run one conversion */
 	do {
-		_measurement_phase = 0;
-		_oldest_report = _next_report = 0;
+		_reports->flush();
+		//_measurement_phase = 0;
+		//_oldest_report = _next_report = 0;
 
 		/* Take a temperature measurement */
 
@@ -351,8 +365,9 @@ LM73::read(struct file *filp, char *buffer, size_t buflen)
 		}
 
 		/* state machine will have generated a report, copy it out */
-		memcpy(buffer, _reports, sizeof(*_reports));
-		ret = sizeof(*_reports);
+		if (_reports->get(rbuf)) {
+			ret = sizeof(*rbuf);
+		}
 
 	} while (0);
 
@@ -382,40 +397,44 @@ LM73::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 				/* set default/max polling rate */
 			case SENSOR_POLLRATE_MAX:
-			case SENSOR_POLLRATE_DEFAULT: {
-					/* do we need to start internal polling? */
-					bool want_start = (_measure_ticks == 0);
+			case SENSOR_POLLRATE_DEFAULT:{
+				/* do we need to start internal polling? */
+				bool want_start = (_measure_ticks == 0);
 
-					/* set interval for next measurement to minimum legal value */
-					_measure_ticks = USEC2TICK(LM73_CONVERSION_INTERVAL);
+				/* set interval for next measurement to minimum legal value */
+				_measure_ticks = USEC2TICK(LM73_CONVERSION_INTERVAL);
 
-					/* if we need to start the poll state machine, do it */
-					if (want_start)
-						start();
-
-					return OK;
+				/* if we need to start the poll state machine, do it */
+				if (want_start) {
+					start();
 				}
+
+				return OK;
+			}
+
 
 				/* adjust to a legal polling interval in Hz */
 			default: {
-					/* do we need to start internal polling? */
-					bool want_start = (_measure_ticks == 0);
+				/* do we need to start internal polling? */
+				bool want_start = (_measure_ticks == 0);
 
-					/* convert hz to tick interval via microseconds */
-					unsigned ticks = USEC2TICK(1000000 / arg);
+				/* convert hz to tick interval via microseconds */
+				unsigned ticks = USEC2TICK(1000000 / arg);
 
-					/* check against maximum rate */
-					if (ticks < USEC2TICK(LM73_CONVERSION_INTERVAL))
-						return -EINVAL;
+				/* check against maximum rate */
+				if (ticks < USEC2TICK(LM73_CONVERSION_INTERVAL)) {
+					return -EINVAL;
+				}
 
-					/* update interval for next measurement */
-					_measure_ticks = ticks;
+				/* update interval for next measurement */
+				_measure_ticks = ticks;
 
-					/* if we need to start the poll state machine, do it */
-					if (want_start)
-						start();
+				/* if we need to start the poll state machine, do it */
+				if (want_start) {
+					start();
+				}
 
-					return OK;
+				return OK;
 				}
 			}
 		}
@@ -428,48 +447,47 @@ LM73::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 	case SENSORIOCSQUEUEDEPTH: {
 			/* add one to account for the sentinel in the ring */
-			arg++;
+			//arg++;
 
 			/* lower bound is mandatory, upper bound is a sanity check */
-			if ((arg < 2) || (arg > 100))
+			if ((arg < 1) || (arg > 100))
 				return -EINVAL;
 
 			/* allocate new buffer */
-			struct lm73_report *buf = new struct lm73_report[arg];
+			//struct lm73_report *buf = new struct lm73_report[arg];
 
-			if (nullptr == buf)
-				return -ENOMEM;
+			//if (nullptr == buf)
+			//	return -ENOMEM;
 
 			/* reset the measurement state machine with the new buffer, free the old */
-			stop();
-			delete[] _reports;
-			_num_reports = arg;
-			_reports = buf;
-			start();
+			//stop();
+			//delete[] _reports;
+			//_num_reports = arg;
+			//_reports = buf;
+			//start();
+			irqstate_t flags = irqsave();
+			if (!_reports->resize(arg)) {
+				irqrestore(flags);
+				return -ENOMEM;
+			}
+			irqrestore(flags);
 
 			return OK;
 		}
 
 	case SENSORIOCGQUEUEDEPTH:
-		return _num_reports - 1;
+		return _reports->size();
 
 	case SENSORIOCRESET:
 		/* reset the measurement state machine */
-		stop();
-
-		/* free any existing reports */
-		if (_reports != nullptr)
-			delete[] _reports;
-
-		start();
+		reset();
 		return OK;
 		//return -EINVAL;
 	default:
-		break;
+		/* give it to the superclass */
+		return I2C::ioctl(filp, cmd, arg);
 	}
 
-	/* give it to the superclass */
-	return I2C::ioctl(filp, cmd, arg);
 }
 
 void
@@ -477,7 +495,7 @@ LM73::start()
 {
 	/* reset the report ring and state machine */
 	_measurement_phase = true;
-	_oldest_report = _next_report = 0;
+	_reports->flush();
 
 	/* schedule a cycle to start things */
 	work_queue(HPWORK, &_work, (worker_t)&LM73::cycle_trampoline, this, 1);
@@ -487,6 +505,14 @@ void
 LM73::stop()
 {
 	work_cancel(HPWORK, &_work);
+}
+
+void
+LM73::reset()
+{
+	stop();
+	_reports->flush();
+	start();
 }
 
 void
@@ -542,12 +568,13 @@ LM73::temp_measurement()
 		uint8_t	b[2];
 		uint32_t w;
 	} cvt;
+	struct lm73_report trp;
 
 	/* read the most recent measurement */
 	perf_begin(_sample_perf);
 
 	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
-	_reports[_next_report].timestamp = hrt_absolute_time();
+	trp.timestamp = hrt_absolute_time();
 
 	/* fetch the raw value */
 
@@ -571,24 +598,19 @@ LM73::temp_measurement()
 	//warnx("measured ambient temperature by the LM73 sensor %3.2f C", (double) temperature);  				// remove display!!!!!!!!
 
 	/* generate a new report */
-		_reports[_next_report].ambient_temperature = temperature;					/* report in °C */
+	trp.ambient_temperature = temperature;					/* report in °C */
 
-		/* publish it */
-		orb_publish(ORB_ID(sensor_lm73), _ambient_temperature_topic, &_reports[_next_report]);
+	/* publish it */
+	orb_publish(ORB_ID(sensor_lm73), _ambient_temperature_topic, &trp);
 
-		/* post a report to the ring - note, not locked */
-		INCREMENT(_next_report, _num_reports);
+	if (_reports->force(&trp)) {
+		perf_count(_buffer_overflows);
+	}
 
-		/* if we are running up against the oldest report, toss it */
-		if (_next_report == _oldest_report) {
-			perf_count(_buffer_overflows);
-			INCREMENT(_oldest_report, _num_reports);
-		}
+	/* notify anyone waiting for data */
+	poll_notify(POLLIN);
 
-		/* notify anyone waiting for data */
-		poll_notify(POLLIN);
-
-		perf_end(_sample_perf);
+	perf_end(_sample_perf);
 
 	return OK;
 
@@ -606,7 +628,6 @@ LM73::res_change(uint8_t res)
 	*/
 
 	uint8_t ptr = CONT_STAT_REG_ADD;
-	int		result;
 	uint8_t data[2];
 
 
@@ -622,7 +643,7 @@ LM73::res_change(uint8_t res)
 				perf_count(_comms_errors);
 				return -EIO;
 			}
-	return result;
+	return OK;
 }
 
 void
@@ -632,8 +653,7 @@ LM73::print_info()
 	perf_print_counter(_comms_errors);
 	perf_print_counter(_buffer_overflows);
 	printf("poll interval:  %u ticks\n", _measure_ticks);
-	printf("report queue:   %u (%u/%u @ %p)\n",
-	       _num_reports, _oldest_report, _next_report, _reports);
+	_reports->print_info("report queue");
 	printf("ambient temperature:   %10.4f\n", (double)(temperature));
 }
 

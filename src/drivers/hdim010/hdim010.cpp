@@ -323,7 +323,7 @@ start(int i2c_bus)
 		goto fail;
 
 	/* set the poll rate to default, starts automatic data collection */
-	fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
+	fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		goto fail;
@@ -372,10 +372,10 @@ test()
 	ssize_t sz;
 	int ret;
 
-	int fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
+	int fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
-		err(1, "%s open failed (try 'hdim010 start' if the driver is not running", AIRSPEED_DEVICE_PATH);
+		err(1, "%s open failed (try 'hdim010 start' if the driver is not running", AIRSPEED_BASE_DEVICE_PATH);
 
 	/* do a simple demand read */
 	sz = read(fd, &report, sizeof(report));
@@ -426,7 +426,7 @@ test()
 void
 reset()
 {
-	int fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
+	int fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		err(1, "failed ");

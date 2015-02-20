@@ -195,7 +195,7 @@ SPI::_transfer(uint8_t *send, uint8_t *recv, unsigned len)
 int
 SPI::transferword(uint16_t *send, uint16_t *recv, unsigned len)
 {
-	irqstate_t	state;
+	irqstate_t	state(0);
 
 	if ((send == nullptr) && (recv == nullptr))
 		return -EINVAL;

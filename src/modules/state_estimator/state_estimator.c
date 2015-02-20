@@ -197,7 +197,7 @@ int state_estimator_main(int argc, char *argv[])
 												SCHED_PRIORITY_MAX - 5,
 												8192,
 												state_estimator_thread_main,
-												(argv) ? (const char **)&argv[2] : (const char **)NULL);
+												(argv) ? (char *const * )&argv[2] : (char *const * )NULL);
 		exit(0);
 	}
 
@@ -261,16 +261,21 @@ int state_estimator_thread_main(int argc, char *argv[])
 	/* store start time to guard against too slow update rates */
 	uint64_t last_run = hrt_absolute_time();
 
-	struct sensor_combined_s raw;
-	memset(&raw, 0, sizeof(raw));
-	struct vehicle_attitude_s att;
-	memset(&att, 0, sizeof(att));
-	struct vehicle_control_mode_s control_mode;
-	memset(&control_mode, 0, sizeof(control_mode));
-	struct vehicle_global_position_s vehicle_global_pos;
-	memset(&vehicle_global_pos, 0, sizeof(vehicle_global_pos));
-	struct state_estimator_EKF_parameters_s ekf_param;
-	memset(&ekf_param, 0, sizeof(ekf_param));
+	struct sensor_combined_s *raw;
+	raw = (struct sensor_combined_s *) calloc(1,sizeof(struct sensor_combined_s));
+	//memset(&raw, 0, sizeof(raw));
+	struct vehicle_attitude_s *att;
+	att = (struct vehicle_attitude_s *) calloc(1,sizeof(struct vehicle_attitude_s));
+	//memset(&att, 0, sizeof(att));
+	struct vehicle_control_mode_s *control_mode;
+	control_mode = (struct vehicle_control_mode_s *) calloc(1,sizeof(struct vehicle_control_mode_s));
+	//memset(&control_mode, 0, sizeof(control_mode));
+	struct vehicle_global_position_s *vehicle_global_pos;
+	vehicle_global_pos = (struct vehicle_global_position_s *) calloc(1,sizeof(struct vehicle_global_position_s));
+	//memset(&vehicle_global_pos, 0, sizeof(vehicle_global_pos));
+	struct state_estimator_EKF_parameters_s *ekf_param;
+	ekf_param = (struct state_estimator_EKF_parameters_s *) calloc(1,sizeof(struct state_estimator_EKF_parameters_s));
+	//memset(&ekf_param, 0, sizeof(ekf_param));
 
 	/* initialize parameter handles */
 	struct state_estimator_params ekf_params;
@@ -301,29 +306,30 @@ int state_estimator_thread_main(int argc, char *argv[])
 	int sub_control_mode = orb_subscribe(ORB_ID(vehicle_control_mode));
 
 	/* subscribe state space */
-	states_T x_state;
+	states_T *x_state;
+	x_state = (states_T *) malloc(sizeof(states_T));
 
-	x_state.p[0] 	= 0.0l;
-	x_state.p[1] 	= 0.0l;
-	x_state.p[2] 	= 0.0l;
-	x_state.q_NS[0] = 0.0f;
-	x_state.q_NS[1] = 0.0f;
-	x_state.q_NS[2] = 0.0f;
-	x_state.q_NS[3] = 0.0f;
-	x_state.v_N[0] 	= 0.0f;
-	x_state.v_N[1]	= 0.0f;
-	x_state.v_N[2]	= 0.0f;
-	x_state.b_g[0] 	= 0.0f;
-	x_state.b_g[1] 	= 0.0f;
-	x_state.b_g[2]  = 0.0f;
-	x_state.b_a[0] 	= 0.0f;
-	x_state.b_a[1] 	= 0.0f;
-	x_state.b_a[2]	= 0.0f;
-	x_state.QFF 	= 0.0f;
-	x_state.w[0] 	= 0.0f;
-	x_state.w[1] 	= 0.0f;
-	x_state.w[2] 	= 0.0f;
-	x_state.K 		= 0.0f;
+	x_state->p[0] 	= 0.0l;
+	x_state->p[1] 	= 0.0l;
+	x_state->p[2] 	= 0.0l;
+	x_state->q_NS[0] = 0.0f;
+	x_state->q_NS[1] = 0.0f;
+	x_state->q_NS[2] = 0.0f;
+	x_state->q_NS[3] = 0.0f;
+	x_state->v_N[0] 	= 0.0f;
+	x_state->v_N[1]	= 0.0f;
+	x_state->v_N[2]	= 0.0f;
+	x_state->b_g[0] 	= 0.0f;
+	x_state->b_g[1] 	= 0.0f;
+	x_state->b_g[2]  = 0.0f;
+	x_state->b_a[0] 	= 0.0f;
+	x_state->b_a[1] 	= 0.0f;
+	x_state->b_a[2]	= 0.0f;
+	x_state->QFF 	= 0.0f;
+	x_state->w[0] 	= 0.0f;
+	x_state->w[1] 	= 0.0f;
+	x_state->w[2] 	= 0.0f;
+	x_state->K 		= 0.0f;
 
 	/* subscribe plane type */
 	airplane_T airplaneUsed;
@@ -418,13 +424,13 @@ int state_estimator_thread_main(int argc, char *argv[])
 	}
 
 	/* advertise attitude */
-	orb_advert_t pub_att = orb_advertise(ORB_ID(vehicle_attitude), &att);
+	orb_advert_t pub_att = orb_advertise(ORB_ID(vehicle_attitude), att);
 
 	/* advertise vehicle global position */
-	orb_advert_t pub_vehicle_global_pos = orb_advertise(ORB_ID(vehicle_global_position), &vehicle_global_pos);
+	orb_advert_t pub_vehicle_global_pos = orb_advertise(ORB_ID(vehicle_global_position), vehicle_global_pos);
 
 	/* advertise EKF parameters */
-	orb_advert_t pub_ekf_param = orb_advertise(ORB_ID(state_estimator_EKF_parameters), &ekf_param);
+	orb_advert_t pub_ekf_param = orb_advertise(ORB_ID(state_estimator_EKF_parameters), ekf_param);
 
 	int loopcounter = 0;
 
@@ -461,8 +467,8 @@ int state_estimator_thread_main(int argc, char *argv[])
 	uint8_t update_vect[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	/* Checking HIL mode: */
-	orb_copy(ORB_ID(vehicle_control_mode), sub_control_mode, &control_mode);
-	if (control_mode.flag_system_hil_enabled)
+	orb_copy(ORB_ID(vehicle_control_mode), sub_control_mode, control_mode);
+	if (control_mode->flag_system_hil_enabled)
 		printf("[state estimator] Info: State Estimator works in HIL mode\n");
 
 	/* Main loop*/
@@ -480,8 +486,8 @@ int state_estimator_thread_main(int argc, char *argv[])
 			/* seriously bad - an emergency case*/
 		} else if (ret == 0) {
 			/* check if we're in HIL - not getting sensor data is fine then */
-			orb_copy(ORB_ID(vehicle_control_mode), sub_control_mode, &control_mode);
-			if (!control_mode.flag_system_hil_enabled) {
+			orb_copy(ORB_ID(vehicle_control_mode), sub_control_mode, control_mode);
+			if (!control_mode->flag_system_hil_enabled) {
 				fprintf(stderr, "[state estimator] WARNING: Not getting sensors data - is sensors application running?\n");
 			}
 		} else {
@@ -552,27 +558,27 @@ int state_estimator_thread_main(int argc, char *argv[])
 			if ((fds[0].revents & POLLIN)) {
 
 				/* get latest measurements */
-				orb_copy(ORB_ID(sensor_combined), sub_raw, &raw);
+				orb_copy(ORB_ID(sensor_combined), sub_raw, raw);
 
 				/* Initialization of the state estimator */
 				if (!initialized) {
-					gyro_offsets[0] += raw.gyro_rad_s[0];
-					gyro_offsets[1] += raw.gyro_rad_s[1];
-					gyro_offsets[2] += raw.gyro_rad_s[2];
+					gyro_offsets[0] += raw->gyro_rad_s[0];
+					gyro_offsets[1] += raw->gyro_rad_s[1];
+					gyro_offsets[2] += raw->gyro_rad_s[2];
 
 					/* average magnetometer measurements */
-					if (raw.magnetometer_timestamp > magnetometer_timestamp_last){
-						mag_initial[0] += (raw.magnetometer_ga[0])*100.0f;			/*convert magnetometer measurements from [gauss] -> [uT] */
-						mag_initial[1] += (raw.magnetometer_ga[1])*100.0f;			/*convert magnetometer measurements from [gauss] -> [uT] */
-						mag_initial[2] += (raw.magnetometer_ga[2])*100.0f;			/*convert magnetometer measurements from [gauss] -> [uT] */
-						magnetometer_timestamp_last = raw.magnetometer_timestamp;
+					if (raw->magnetometer_timestamp > magnetometer_timestamp_last){
+						mag_initial[0] += (raw->magnetometer_ga[0])*100.0f;			/*convert magnetometer measurements from [gauss] -> [uT] */
+						mag_initial[1] += (raw->magnetometer_ga[1])*100.0f;			/*convert magnetometer measurements from [gauss] -> [uT] */
+						mag_initial[2] += (raw->magnetometer_ga[2])*100.0f;			/*convert magnetometer measurements from [gauss] -> [uT] */
+						magnetometer_timestamp_last = raw->magnetometer_timestamp;
 						mag_initial_count ++;
 					}
 
 					/* average dbaro measurements */
-					if (raw.differential_pressure_timestamp > dbaro_timestamp_last){
-						dbaro_initial += (raw.differential_pressure_pa);
-						dbaro_timestamp_last = raw.differential_pressure_timestamp;
+					if (raw->differential_pressure_timestamp > dbaro_timestamp_last){
+						dbaro_initial += (raw->differential_pressure_pa);
+						dbaro_timestamp_last = raw->differential_pressure_timestamp;
 						dbaro_initial_count ++;
 					}
 
@@ -599,43 +605,43 @@ int state_estimator_thread_main(int argc, char *argv[])
 					perf_begin(ekf_loop_perf);
 
 					/* Protect against large dt after initialization */
-					(last_measurement == 0) ? (last_measurement = raw.timestamp - 10000) : 0;
+					(last_measurement == 0) ? (last_measurement = raw->timestamp - 10000) : 0;
 
 					/* Calculate data time difference in seconds */
-					dt = (float) (raw.timestamp - last_measurement) / 1000000.0f;
-					last_measurement = raw.timestamp;
+					dt = (float) (raw->timestamp - last_measurement) / 1000000.0f;
+					last_measurement = raw->timestamp;
 
 					/* check for new gyroscope measurements */
-					if (sensor_last_timestamp[0] != raw.timestamp) {
+					if (sensor_last_timestamp[0] != raw->timestamp) {
 						update_vect[0] = 1;
-						sensor_update_hz[0] = (raw.timestamp > 0) ? (1e6f / (float) (raw.timestamp - sensor_last_timestamp[0])) : 0.0f;
-						sensor_last_timestamp[0] = raw.timestamp;
+						sensor_update_hz[0] = (raw->timestamp > 0) ? (1e6f / (float) (raw->timestamp - sensor_last_timestamp[0])) : 0.0f;
+						sensor_last_timestamp[0] = raw->timestamp;
 					}
-					gyro_b[0] =  raw.gyro_rad_s[0];
-					gyro_b[1] =  raw.gyro_rad_s[1];
-					gyro_b[2] =  raw.gyro_rad_s[2];
+					gyro_b[0] =  raw->gyro_rad_s[0];
+					gyro_b[1] =  raw->gyro_rad_s[1];
+					gyro_b[2] =  raw->gyro_rad_s[2];
 
 					/* check for new accelerometer measurements */
-					if (sensor_last_timestamp[1] != raw.accelerometer_timestamp) {
+					if (sensor_last_timestamp[1] != raw->accelerometer_timestamp) {
 						update_vect[1] = 1;
-						sensor_update_hz[1] = (raw.accelerometer_timestamp > 0) ? (1e6f / (float) (raw.accelerometer_timestamp - sensor_last_timestamp[1])) : 0.0f;
-						sensor_last_timestamp[1] = raw.accelerometer_timestamp;
+						sensor_update_hz[1] = (raw->accelerometer_timestamp > 0) ? (1e6f / (float) (raw->accelerometer_timestamp - sensor_last_timestamp[1])) : 0.0f;
+						sensor_last_timestamp[1] = raw->accelerometer_timestamp;
 					}
-					accel_b[0] = raw.accelerometer_m_s2[0];
-					accel_b[1] = raw.accelerometer_m_s2[1];
-					accel_b[2] = raw.accelerometer_m_s2[2];
+					accel_b[0] = raw->accelerometer_m_s2[0];
+					accel_b[1] = raw->accelerometer_m_s2[1];
+					accel_b[2] = raw->accelerometer_m_s2[2];
 
 					/* check for new magnetometer measurements */
-					if (sensor_last_timestamp[2] != raw.magnetometer_timestamp) {
+					if (sensor_last_timestamp[2] != raw->magnetometer_timestamp) {
 						/* average magnetometer measurements */
-						mag_average[0] += (raw.magnetometer_ga[0]);
-						mag_average[1] += (raw.magnetometer_ga[1]);
-						mag_average[2] += (raw.magnetometer_ga[2]);
+						mag_average[0] += (raw->magnetometer_ga[0]);
+						mag_average[1] += (raw->magnetometer_ga[1]);
+						mag_average[2] += (raw->magnetometer_ga[2]);
 						mag_average_count ++;
 
 						if (mag_average_count > mag_average_count_limit){
 							update_vect[2] = 1;
-							sensor_update_hz[2] = (raw.magnetometer_timestamp > 0) ? (1e6f / (float) (raw.magnetometer_timestamp - sensor_last_timestamp[2]) / (float) mag_average_count) : 0.0f;
+							sensor_update_hz[2] = (raw->magnetometer_timestamp > 0) ? (1e6f / (float) (raw->magnetometer_timestamp - sensor_last_timestamp[2]) / (float) mag_average_count) : 0.0f;
 
 							mag_b[0] = (mag_average[0] / mag_average_count)*100.0f;        /*convert magnetometer measurements from [gauss] -> [uT] */
 							mag_b[1] = (mag_average[1] / mag_average_count)*100.0f;        /*convert magnetometer measurements from [gauss] -> [uT] */
@@ -646,41 +652,41 @@ int state_estimator_thread_main(int argc, char *argv[])
 							mag_average[2] = 0.0f;
 							mag_average_count = 0;
 						}
-						sensor_last_timestamp[2] = raw.magnetometer_timestamp;
+						sensor_last_timestamp[2] = raw->magnetometer_timestamp;
 
 					}
 
 					/* check for new baro measurements */
-					if (sensor_last_timestamp[3] != raw.baro_timestamp) {
+					if (sensor_last_timestamp[3] != raw->baro_timestamp) {
 						update_vect[3] = 1;
-						sensor_update_hz[3] = (raw.baro_timestamp > 0) ? (1e6f / (float) (raw.baro_timestamp - sensor_last_timestamp[3])) : 0.0f;
-						sensor_last_timestamp[3] = raw.baro_timestamp;
+						sensor_update_hz[3] = (raw->baro_timestamp > 0) ? (1e6f / (float) (raw->baro_timestamp - sensor_last_timestamp[3])) : 0.0f;
+						sensor_last_timestamp[3] = raw->baro_timestamp;
 					}
-					baro_b = raw.baro_pres_mbar;
+					baro_b = raw->baro_pres_mbar;
 
 					/* check for new dbaro measurements */
-					if (sensor_last_timestamp[4] != raw.differential_pressure_timestamp) {
+					if (sensor_last_timestamp[4] != raw->differential_pressure_timestamp) {
 						update_vect[4] = 1;
-						sensor_update_hz[4] = (raw.differential_pressure_timestamp > 0) ? (1e6f / (float) (raw.differential_pressure_timestamp - sensor_last_timestamp[4])) : 0.0f;
-						sensor_last_timestamp[4] = raw.differential_pressure_timestamp;
+						sensor_update_hz[4] = (raw->differential_pressure_timestamp > 0) ? (1e6f / (float) (raw->differential_pressure_timestamp - sensor_last_timestamp[4])) : 0.0f;
+						sensor_last_timestamp[4] = raw->differential_pressure_timestamp;
 					}
-					dbaro_b = (raw.differential_pressure_pa>0) ? raw.differential_pressure_pa : 0.0f;				/* take only the positive values of the dbaro 			 */
-					//dbaro_b = raw.differential_pressure_pa - dbaro_initial;										/* removed! (remove dbaro constant measurement bias) 	 */
+					dbaro_b = (raw->differential_pressure_pa>0) ? raw->differential_pressure_pa : 0.0f;				/* take only the positive values of the dbaro 			 */
+					//dbaro_b = raw->differential_pressure_pa - dbaro_initial;										/* removed! (remove dbaro constant measurement bias) 	 */
 					//dbaro_b = (dbaro_b>0) ? dbaro_b : 0.0f;														/* removed! (take only the positive values of the dbaro) */
 
 					/* check for new amb_temp measurements */
-					if (sensor_last_timestamp[5] != raw.amb_temp_timestamp) {
+					if (sensor_last_timestamp[5] != raw->amb_temp_timestamp) {
 						update_vect[5] = 1;
-						sensor_update_hz[5] = (raw.amb_temp_timestamp > 0) ? (1e6f / (float) (raw.amb_temp_timestamp - sensor_last_timestamp[5])) : 0.0f;
-						sensor_last_timestamp[5] = raw.amb_temp_timestamp;
+						sensor_update_hz[5] = (raw->amb_temp_timestamp > 0) ? (1e6f / (float) (raw->amb_temp_timestamp - sensor_last_timestamp[5])) : 0.0f;
+						sensor_last_timestamp[5] = raw->amb_temp_timestamp;
 					}
-					amb_temp_b = raw.amb_temp_celcius + CONV_CELSIUS_KELVIN;
+					amb_temp_b = raw->amb_temp_celcius + CONV_CELSIUS_KELVIN;
 
 					uint64_t now = hrt_absolute_time();
 					unsigned int time_elapsed = now - last_run;
 					last_run = now;
 
-					if (time_elapsed > loop_interval_alarm && !control_mode.flag_system_hil_enabled) {
+					if (time_elapsed > loop_interval_alarm && !control_mode->flag_system_hil_enabled) {
 						//TODO: add warning, cpu overload here
 						 if (overloadcounter > 50) {
 						 	warnx("CPU OVERLOAD DETECTED IN STATE ESTIMATOR (%u > %u)", time_elapsed, loop_interval_alarm);
@@ -712,16 +718,16 @@ int state_estimator_thread_main(int argc, char *argv[])
 						B_N[1] = 0.70266867f;						// B_N of Zurich
 						B_N[2] = 42.614651f;						// B_N of Zurich
 #endif
-						initStates(pos_vector, accel_b, gyro_b,TAS, mag_initial, B_N, &x_state, P_apost); 			/* Init states and variances*/
-						x_state.K  = airplaneUsed.K;
+						initStates(pos_vector, accel_b, gyro_b,TAS, mag_initial, B_N, x_state, P_apost); 			/* Init states and variances*/
+						x_state->K  = airplaneUsed.K;
 
 						/* initialization of gyro offset states (if initialization is made in the air the initial state should be zero - fix it!!!!!!!) */
-						x_state.b_g[0]  = gyro_offsets[0];
-						x_state.b_g[1]  = gyro_offsets[1];
-						x_state.b_g[2]  = gyro_offsets[2];
+						x_state->b_g[0]  = gyro_offsets[0];
+						x_state->b_g[1]  = gyro_offsets[1];
+						x_state->b_g[2]  = gyro_offsets[2];
 
 						/* Display initial quaternion (in Euler angle representation ) */
-						quat2rpy(x_state.q_NS,euler);
+						quat2rpy(x_state->q_NS,euler);
 						printf("Initial Euler rotation angles (r,p,y): %3.6f, %3.6f, %3.6f \n", (double) euler[0], (double) euler[1], (double) euler[2]);
 
 						const_initialized = true;
@@ -741,38 +747,38 @@ int state_estimator_thread_main(int argc, char *argv[])
 						propagate_vector[3] = accel_b[0];
 						propagate_vector[4] = accel_b[1];
 						propagate_vector[5] = accel_b[2];
-						propagate(&x_state, P_apost, propagate_vector, dt, GPS_outage, wind_NE);
+						propagate(x_state, P_apost, propagate_vector, dt, GPS_outage, wind_NE);
 					}
 
 					/* Kalman filter updates:  */
 
 					/* pressure sensors update*/
 					if (update_vect[4] == 1) {
-						updatePressures_all(&x_state, P_apost, baro_b/10.0f, dbaro_b/1000.0f, amb_temp_b, geoid_separation, accel_b, airplaneUsed, GPS_outage, GPS_outage, true, &p_stat_valid, &on_ground, &aero_valid);
+						updatePressures_all(x_state, P_apost, baro_b/10.0f, dbaro_b/1000.0f, amb_temp_b, geoid_separation, accel_b, airplaneUsed, GPS_outage, GPS_outage, true, &p_stat_valid, &on_ground, &aero_valid);
 					}
 
 					/* Compass update*/
 					if (update_vect[2] == 1) {
-						updateCompass2(&x_state, P_apost, mag_b, B_N, accel_b, GPS_outage, GPS_outage, true);
+						updateCompass2(x_state, P_apost, mag_b, B_N, accel_b, GPS_outage, GPS_outage, true);
 					}
 
 					/* GPS position update*/
 					if (update_vect[6] == 1) {
 						gps_pos[0]*=1e-7l*DEG2RAD;														/*Convert to GPS LAT position to rad */
 						gps_pos[1]*=1e-7l*DEG2RAD;														/*Convert to GPS LON position to rad */
-						wind_NE[0] = 0.99f*wind_NE[0] + 0.01f*x_state.w[0];								/*Correction for the wind propagation*/
-						wind_NE[1] = 0.99f*wind_NE[1] + 0.01f*x_state.w[1];								/*Correction for the wind propagation*/
-						updatePosition(&x_state, P_apost, gps_pos, R_m, GPS_outage, GPS_outage, true);
+						wind_NE[0] = 0.99f*wind_NE[0] + 0.01f*x_state->w[0];								/*Correction for the wind propagation*/
+						wind_NE[1] = 0.99f*wind_NE[1] + 0.01f*x_state->w[1];								/*Correction for the wind propagation*/
+						updatePosition(x_state, P_apost, gps_pos, R_m, GPS_outage, GPS_outage, true);
 					}
 
 					/* GPS velocity update*/
 					if (update_vect[7] == 1) {
-						updateVelNed(&x_state, P_apost, gps_vel, R_mvel, GPS_outage, GPS_outage, true);
+						updateVelNed(x_state, P_apost, gps_vel, R_mvel, GPS_outage, GPS_outage, true);
 					}
 
 
 					/* converts quaternion to euler angles representation*/
-					quat2rpy(x_state.q_NS,euler);
+					quat2rpy(x_state->q_NS,euler);
 
 					/* swap values for next iteration, check for fatal inputs */
 					if (isfinite(euler[0]) && isfinite(euler[1]) && isfinite(euler[2])) {
@@ -782,17 +788,17 @@ int state_estimator_thread_main(int argc, char *argv[])
 						continue;
 					}
 
-					//if (last_data > 0 && raw.timestamp - last_data > 12000) printf("[state estimator] sensor data missed! (%llu)\n", raw.timestamp - last_data);    // temporary comment
-					//last_data = raw.timestamp;
+					//if (last_data > 0 && raw->timestamp - last_data > 12000) printf("[state estimator] sensor data missed! (%llu)\n", raw->timestamp - last_data);    // temporary comment
+					//last_data = raw->timestamp;
 
 					/* send estimator data data out */
-					att.timestamp = raw.timestamp;
-					att.roll  = euler[0];
-					att.pitch = euler[1];
-					att.yaw   = euler[2];
+					att->timestamp = raw->timestamp;
+					att->roll  = euler[0];
+					att->pitch = euler[1];
+					att->yaw   = euler[2];
 
 #if 0
-					printf("State estimator Euler angles (dt,r,p,y):%llu, %3.6f, %3.6f, %3.6f  |", att.timestamp, (double) att.roll, (double) att.pitch, (double) att.yaw );
+					printf("State estimator Euler angles (dt,r,p,y):%llu, %3.6f, %3.6f, %3.6f  |", att->timestamp, (double) att->roll, (double) att->pitch, (double) att->yaw );
 					printf("Update: ");
 					(update_vect[2]== 1)? (printf("M")):(printf("_")) ;
 					(update_vect[4]== 1)? (printf("D")):(printf("_")) ;
@@ -800,14 +806,14 @@ int state_estimator_thread_main(int argc, char *argv[])
 					(update_vect[7]== 1)? (printf("V")):(printf("_")) ;
 
 					printf("|States:[ %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f  ]|",
-								(double)x_state.p[0],(double)x_state.p[1],(double)x_state.p[2],
-								(double)x_state.q_NS[0],(double)x_state.q_NS[1],(double)x_state.q_NS[2],(double)x_state.q_NS[3],
-								(double)x_state.v_N[0],(double)x_state.v_N[1],(double)x_state.v_N[2],
-								(double)x_state.b_a[0],(double)x_state.b_a[1],(double)x_state.b_a[2],
-								(double)x_state.b_g[0],(double)x_state.b_g[1],(double)x_state.b_g[2],
-								(double)x_state.QFF,
-								(double)x_state.w[0],(double)x_state.w[1],(double)x_state.w[2],
-								(double)x_state.K
+								(double)x_state->p[0],(double)x_state->p[1],(double)x_state->p[2],
+								(double)x_state->q_NS[0],(double)x_state->q_NS[1],(double)x_state->q_NS[2],(double)x_state->q_NS[3],
+								(double)x_state->v_N[0],(double)x_state->v_N[1],(double)x_state->v_N[2],
+								(double)x_state->b_a[0],(double)x_state->b_a[1],(double)x_state->b_a[2],
+								(double)x_state->b_g[0],(double)x_state->b_g[1],(double)x_state->b_g[2],
+								(double)x_state->QFF,
+								(double)x_state->w[0],(double)x_state->w[1],(double)x_state->w[2],
+								(double)x_state->K
 							);
 
 					//printf("|Variance:[ %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f ]|",
@@ -823,23 +829,23 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 					printf("%d %d %d %d %d %d %d %d\n",update_vect[0],update_vect[1],update_vect[2],update_vect[3],update_vect[4],update_vect[5],update_vect[6],update_vect[7]);  /// delete!!!!!!!!!!
 #endif
-					att.rollspeed  = raw.gyro_rad_s[0] - x_state.b_g[0];			/* x angular velocity with gyro bias deduction */
-					att.pitchspeed = raw.gyro_rad_s[1] - x_state.b_g[1];			/* y angular velocity with gyro bias deduction */
-					att.yawspeed   = raw.gyro_rad_s[2] - x_state.b_g[2];			/* z angular velocity with gyro bias deduction */
+					att->rollspeed  = raw->gyro_rad_s[0] - x_state->b_g[0];			/* x angular velocity with gyro bias deduction */
+					att->pitchspeed = raw->gyro_rad_s[1] - x_state->b_g[1];			/* y angular velocity with gyro bias deduction */
+					att->yawspeed   = raw->gyro_rad_s[2] - x_state->b_g[2];			/* z angular velocity with gyro bias deduction */
 
-					att.rollacc    = raw.accelerometer_m_s2[0] - x_state.b_a[0];	/* x acceleration with bias deduction */    // <<-- check it - not an angular acceleration!
-					att.pitchacc   = raw.accelerometer_m_s2[1] - x_state.b_a[1];	/* y acceleration with bias deduction */    // <<-- check it - not an angular acceleration!
-					att.yawacc     = raw.accelerometer_m_s2[2] - x_state.b_a[2];	/* z acceleration with bias deduction */    // <<-- check it - not an angular acceleration!
+					att->rollacc    = raw->accelerometer_m_s2[0] - x_state->b_a[0];	/* x acceleration with bias deduction */    // <<-- check it - not an angular acceleration!
+					att->pitchacc   = raw->accelerometer_m_s2[1] - x_state->b_a[1];	/* y acceleration with bias deduction */    // <<-- check it - not an angular acceleration!
+					att->yawacc     = raw->accelerometer_m_s2[2] - x_state->b_a[2];	/* z acceleration with bias deduction */    // <<-- check it - not an angular acceleration!
 
 					/* copy offsets */
-					memcpy(&att.rate_offsets, &(x_state.b_g[3]), sizeof(att.rate_offsets));
+					memcpy(&(att->rate_offsets), &(x_state->b_g[3]), sizeof(att->rate_offsets));
 
 					/* copy rotation matrix */
-					memcpy(&att.R, Rot_matrix, sizeof(Rot_matrix));
-					att.R_valid = true;
+					memcpy(&(att->R), Rot_matrix, sizeof(Rot_matrix));
+					att->R_valid = true;
 
-					if (isfinite(att.roll) && isfinite(att.pitch) && isfinite(att.yaw)) {
-						orb_publish(ORB_ID(vehicle_attitude), pub_att, &att);
+					if (isfinite(att->roll) && isfinite(att->pitch) && isfinite(att->yaw)) {
+						orb_publish(ORB_ID(vehicle_attitude), pub_att, att);
 					} else {
 						warnx("NaN in roll/pitch/yaw estimate!");
 					}
@@ -847,59 +853,59 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 					/* publish EKF parameters */
 
-					ekf_param.timestamp =  raw.timestamp;
+					ekf_param->timestamp =  raw->timestamp;
 
-					if (isfinite(x_state.p[0]) && isfinite(x_state.p[1]) && isfinite(x_state.p[2])) {
-						memcpy(&ekf_param.x_p, x_state.p, sizeof(x_state.p));
+					if (isfinite(x_state->p[0]) && isfinite(x_state->p[1]) && isfinite(x_state->p[2])) {
+						memcpy(&(ekf_param->x_p), x_state->p, sizeof(x_state->p));
 					} else {
 						warnx("NaN in position estimate!");
 						continue;
 					}
 
-					if (isfinite(x_state.q_NS[0]) && isfinite(x_state.q_NS[1]) && isfinite(x_state.q_NS[2]) && isfinite(x_state.q_NS[3])) {
-						memcpy(&ekf_param.x_q_NS, x_state.q_NS, sizeof(x_state.q_NS));
+					if (isfinite(x_state->q_NS[0]) && isfinite(x_state->q_NS[1]) && isfinite(x_state->q_NS[2]) && isfinite(x_state->q_NS[3])) {
+						memcpy(&(ekf_param->x_q_NS), x_state->q_NS, sizeof(x_state->q_NS));
 					} else {
 						warnx("NaN in angular estimate!");
 						continue;
 					}
 
-					if (isfinite(x_state.v_N[0]) && isfinite(x_state.v_N[1]) && isfinite(x_state.v_N[2])) {
-						memcpy(&ekf_param.x_v_N, x_state.v_N, sizeof(x_state.v_N));
+					if (isfinite(x_state->v_N[0]) && isfinite(x_state->v_N[1]) && isfinite(x_state->v_N[2])) {
+						memcpy(&(ekf_param->x_v_N), x_state->v_N, sizeof(x_state->v_N));
 					} else {
 						warnx("NaN in velocity estimate!");
 						continue;
 					}
 
-					if (isfinite(x_state.b_g[0]) && isfinite(x_state.b_g[1]) && isfinite(x_state.b_g[2])) {
-						memcpy(&ekf_param.x_b_g, x_state.b_g, sizeof(x_state.b_g));
+					if (isfinite(x_state->b_g[0]) && isfinite(x_state->b_g[1]) && isfinite(x_state->b_g[2])) {
+						memcpy(&(ekf_param->x_b_g), x_state->b_g, sizeof(x_state->b_g));
 					} else {
 						warnx("NaN in gyroscope bias estimate!");
 						continue;
 					}
 
-					if (isfinite(x_state.b_a[0]) && isfinite(x_state.b_a[1]) && isfinite(x_state.b_a[2])) {
-						memcpy(&ekf_param.x_b_a, x_state.b_a, sizeof(x_state.b_a));
+					if (isfinite(x_state->b_a[0]) && isfinite(x_state->b_a[1]) && isfinite(x_state->b_a[2])) {
+						memcpy(&(ekf_param->x_b_a), x_state->b_a, sizeof(x_state->b_a));
 					} else {
 						warnx("NaN in accelerometer bias estimate!");
 						continue;
 					}
 
-					if (isfinite(x_state.w[0]) && isfinite(x_state.w[1]) && isfinite(x_state.w[2])) {
-						memcpy(&ekf_param.x_w, x_state.w, sizeof(x_state.w));
+					if (isfinite(x_state->w[0]) && isfinite(x_state->w[1]) && isfinite(x_state->w[2])) {
+						memcpy(&(ekf_param->x_w), x_state->w, sizeof(x_state->w));
 					} else {
 						warnx("NaN in wind estimate!");
 						continue;
 					}
 
-					if (isfinite(x_state.QFF)) {
-						ekf_param.x_QFF = x_state.QFF;
+					if (isfinite(x_state->QFF)) {
+						ekf_param->x_QFF = x_state->QFF;
 					} else {
 						warnx("NaN in QFF estimate!");
 						continue;
 					}
 
-					if (isfinite(x_state.K)) {
-						ekf_param.x_K = x_state.K;
+					if (isfinite(x_state->K)) {
+						ekf_param->x_K = x_state->K;
 					} else {
 						warnx("NaN in K estimate!");
 						continue;
@@ -907,16 +913,16 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 					for (uint8_t i=0; i<20;i++){
 						if (isfinite(P_apost[i+20*i])) {
-							ekf_param.P_var_vect[i] = P_apost[i+20*i];
+							ekf_param->P_var_vect[i] = P_apost[i+20*i];
 						} else {
 							warnx("NaN in variance estimate!");
 							continue;
 						}
 					}
 
-					memcpy(&ekf_param.update_vect, update_vect, sizeof(update_vect));
+					memcpy(&(ekf_param->update_vect), update_vect, sizeof(update_vect));
 
-					orb_publish(ORB_ID(state_estimator_EKF_parameters), pub_ekf_param, &ekf_param);
+					orb_publish(ORB_ID(state_estimator_EKF_parameters), pub_ekf_param, ekf_param);
 
 					/* Get home position report */
 					bool home_pos_updated;
@@ -931,22 +937,22 @@ int state_estimator_thread_main(int argc, char *argv[])
 					}
 
 					/* vehicle global position publication */
-					vehicle_global_pos.timestamp = hrt_absolute_time();
-					vehicle_global_pos.time_gps_usec = gps.timestamp_position;
+					vehicle_global_pos->timestamp = hrt_absolute_time();
+					vehicle_global_pos->time_utc_usec = gps.timestamp_position;
 
-					vehicle_global_pos.lat = x_state.p[0]*1e-7l*RAD2DEG;
-					vehicle_global_pos.lon = x_state.p[1]*1e-7l*RAD2DEG;
+					vehicle_global_pos->lat = x_state->p[0]*1e-7l*RAD2DEG;
+					vehicle_global_pos->lon = x_state->p[1]*1e-7l*RAD2DEG;
 
-					vehicle_global_pos.alt = (float) x_state.p[2];
+					vehicle_global_pos->alt = (float) x_state->p[2];
 
-					vehicle_global_pos.vel_n = x_state.v_N[0];
-					vehicle_global_pos.vel_e = x_state.v_N[1];
-					vehicle_global_pos.vel_d = x_state.v_N[2];
+					vehicle_global_pos->vel_n = x_state->v_N[0];
+					vehicle_global_pos->vel_e = x_state->v_N[1];
+					vehicle_global_pos->vel_d = x_state->v_N[2];
 
-					vehicle_global_pos.yaw = att.yaw;
+					vehicle_global_pos->yaw = att->yaw;
 
-					if (isfinite(x_state.p[0]) && isfinite(x_state.p[1]) && isfinite(x_state.p[2]) && isfinite(x_state.v_N[0]) && isfinite(x_state.v_N[1]) && isfinite(x_state.v_N[2]) && isfinite(att.yaw)) {
-						orb_publish(ORB_ID(vehicle_global_position), pub_vehicle_global_pos, &vehicle_global_pos);
+					if (isfinite(x_state->p[0]) && isfinite(x_state->p[1]) && isfinite(x_state->p[2]) && isfinite(x_state->v_N[0]) && isfinite(x_state->v_N[1]) && isfinite(x_state->v_N[2]) && isfinite(att->yaw)) {
+						orb_publish(ORB_ID(vehicle_global_position), pub_vehicle_global_pos, vehicle_global_pos);
 					} else {
 						warnx("NaN in vehicle global position estimate!");
 					}
@@ -964,6 +970,13 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 		loopcounter++;
 	}
+
+	free(raw);
+	free(att);
+	free(control_mode);
+	free(vehicle_global_pos);
+	free(ekf_param);
+	free(x_state);
 
 	thread_running = false;
 

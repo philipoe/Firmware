@@ -92,7 +92,7 @@ class SDP600 : public device::I2C
 {
 public:
 	SDP600(int bus);
-	~SDP600();
+	virtual ~SDP600();
 
 	virtual int		init();
 
@@ -108,14 +108,12 @@ protected:
 	virtual int		probe();
 
 private:
-
+	SDP600 operator=(const SDP600);
+	SDP600(const SDP600&);
 	struct work_s		_work;
 	unsigned			_measure_ticks;
 
-	unsigned			_num_reports;
-	volatile unsigned	_next_report;
-	volatile unsigned	_oldest_report;
-	struct differential_pressure_s	*_reports;
+	RingBuffer			*_reports;
 
 	bool				_measurement_phase;
 
@@ -283,17 +281,18 @@ extern "C" __EXPORT int sdp600_main(int argc, char *argv[]);
 
 
 SDP600::SDP600(int bus) :
-	I2C("SDP600", AIRSPEED_DEVICE_PATH, bus, 0, 400000),
+	I2C("SDP600", AIRSPEED_BASE_DEVICE_PATH, bus, 0, 400000),
+	_work{},
 	_measure_ticks(0),
-	_num_reports(0),
-	_next_report(0),
-	_oldest_report(0),
 	_reports(nullptr),
 	_measurement_phase(false),
 	_dbaro_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "sdp600_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "sdp600_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "sdp600_buffer_overflows")),
+	dPressure(0.0),
+	temperature(-273.15),
+	vddSupply(0.0),
 	_max_differential_pressure_pa(-500.0f),
 	_filter(MEAS_RATE, MEAS_DRIVER_FILTER_FREQ),
 	_dbaro_Dtube(0.0f),
@@ -313,30 +312,30 @@ SDP600::~SDP600()
 
 	/* free any existing reports */
 	if (_reports != nullptr)
-		delete[] _reports;
+		delete _reports;
 }
 
 int
 SDP600::init()
 {
-	int ret = ERROR;
+	int ret = I2C::init();
 
 	/* do I2C init (and probe) first */
-	if (I2C::init() != OK)
+	if (ret != OK)
 		goto out;
 
 	/* allocate basic report buffers */
-	_num_reports = 2;
-	_reports = new struct differential_pressure_s[_num_reports];
+	_reports = new RingBuffer(2,sizeof(differential_pressure_s));
 
 	if (_reports == nullptr)
 		goto out;
 
-	_oldest_report = _next_report = 0;
-
 	/* get a publish handle on the dbaro topic */
-	memset(&_reports[0], 0, sizeof(_reports[0]));
-	_dbaro_topic = orb_advertise(ORB_ID(differential_pressure), &_reports[0]);
+	struct differential_pressure_s drp;
+	measurement();
+	_reports->get(&drp);
+	_dbaro_topic = orb_advertise(ORB_ID(differential_pressure), &drp);
+
 
 	if (_dbaro_topic < 0)
 		debug("failed to create sensor_dbaro object");
@@ -377,6 +376,7 @@ ssize_t
 SDP600::read(struct file *filp, char *buffer, size_t buflen)
 {
 	unsigned count = buflen / sizeof(struct differential_pressure_s);
+	struct differential_pressure_s *rbuf = reinterpret_cast<struct differential_pressure_s *>(buffer);
 	int ret = 0;
 
 	/* buffer must be large enough */
@@ -392,10 +392,9 @@ SDP600::read(struct file *filp, char *buffer, size_t buflen)
 		 * we are careful to avoid racing with them.
 		 */
 		while (count--) {
-			if (_oldest_report != _next_report) {
-				memcpy(buffer, _reports + _oldest_report, sizeof(*_reports));
-				ret += sizeof(_reports[0]);
-				INCREMENT(_oldest_report, _num_reports);
+			if (_reports->get(rbuf)) {
+				ret += sizeof(*rbuf);
+				rbuf++;
 			}
 		}
 
@@ -405,10 +404,9 @@ SDP600::read(struct file *filp, char *buffer, size_t buflen)
 
 	/* manual measurement - run one conversion */
 	do {
-		_measurement_phase = 0;
-		_oldest_report = _next_report = 0;
+		_reports->flush();
 
-		/* Take a pressure measurement */
+		/* Take a temperature measurement */
 
 		if (OK != measurement()) {
 			ret = -EIO;
@@ -416,8 +414,9 @@ SDP600::read(struct file *filp, char *buffer, size_t buflen)
 		}
 
 		/* state machine will have generated a report, copy it out */
-		memcpy(buffer, _reports, sizeof(*_reports));
-		ret = sizeof(*_reports);
+		if (_reports->get(rbuf)) {
+			ret = sizeof(*rbuf);
+		}
 
 	} while (0);
 
@@ -492,39 +491,32 @@ SDP600::ioctl(struct file *filp, int cmd, unsigned long arg)
 		return (1000 / _measure_ticks);
 
 	case SENSORIOCSQUEUEDEPTH: {
-			/* add one to account for the sentinel in the ring */
-			arg++;
 
 			/* lower bound is mandatory, upper bound is a sanity check */
-			if ((arg < 2) || (arg > 100))
+			if ((arg < 1) || (arg > 100))
 				return -EINVAL;
 
-			/* allocate new buffer */
-			struct differential_pressure_s *buf = new struct differential_pressure_s[arg];
-
-			if (nullptr == buf)
-				return -ENOMEM;
 
 			/* reset the measurement state machine with the new buffer, free the old */
-			stop();
-			delete[] _reports;
-			_num_reports = arg;
-			_reports = buf;
-			start();
+			irqstate_t flags = irqsave();
+			if (!_reports->resize(arg)) {
+				irqrestore(flags);
+				return -ENOMEM;
+			}
+			irqrestore(flags);
 
 			return OK;
 		}
 
 	case SENSORIOCGQUEUEDEPTH:
-		return _num_reports - 1;
+		return _reports->size();
 
 	case SENSORIOCRESET:
 		/* reset the measurement state machine */
 		stop();
 
 		/* free any existing reports */
-		if (_reports != nullptr)
-			delete[] _reports;
+		_reports->flush();
 
 		start();
 		return OK;
@@ -538,11 +530,10 @@ SDP600::ioctl(struct file *filp, int cmd, unsigned long arg)
 	}
 
 	default:
-		break;
+		/* give it to the superclass */
+		return I2C::ioctl(filp, cmd, arg);
 	}
 
-	/* give it to the superclass */
-	return I2C::ioctl(filp, cmd, arg);
 }
 
 void
@@ -550,7 +541,7 @@ SDP600::start()
 {
 	/* reset the report ring and state machine */
 	_measurement_phase = true;
-	_oldest_report = _next_report = 0;
+	_reports->flush();
 
 	/* schedule a cycle to start things */
 	work_queue(HPWORK, &_work, (worker_t)&SDP600::cycle_trampoline, this, 1);
@@ -616,7 +607,8 @@ SDP600::measurement()
 	perf_begin(_sample_perf);
 
 	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
-	_reports[_next_report].timestamp = hrt_absolute_time();
+	struct differential_pressure_s report;
+	//report.timestamp = hrt_absolute_time();
 
 	/* fetch the raw value */
 
@@ -664,23 +656,20 @@ SDP600::measurement()
 		_max_differential_pressure_pa = dPressure;
 	}
 
-	_reports[_next_report].timestamp = hrt_absolute_time();
-	_reports[_next_report].error_count = perf_event_count(_comms_errors);
-	_reports[_next_report].temperature = temperature;
-	_reports[_next_report].differential_pressure_filtered_pa =  _filter.apply(dPressure);
-	_reports[_next_report].differential_pressure_raw_pa = dPressure;
-	_reports[_next_report].max_differential_pressure_pa = _max_differential_pressure_pa;
+	report.timestamp = hrt_absolute_time();
+	report.error_count = perf_event_count(_comms_errors);
+	report.temperature = temperature;
+	report.differential_pressure_filtered_pa =  _filter.apply(dPressure);
+	report.differential_pressure_raw_pa = dPressure;
+	report.max_differential_pressure_pa = _max_differential_pressure_pa;
 
 	/* publish it */
-	orb_publish(ORB_ID(differential_pressure), _dbaro_topic, &_reports[_next_report]);
+	orb_publish(ORB_ID(differential_pressure), _dbaro_topic, &report);
 
-	/* post a report to the ring - note, not locked */
-	INCREMENT(_next_report, _num_reports);
 
 	/* if we are running up against the oldest report, toss it */
-	if (_next_report == _oldest_report) {
-		perf_count(_buffer_overflows);
-		INCREMENT(_oldest_report, _num_reports);
+	if (_reports->force(&report)) {
+			perf_count(_buffer_overflows);
 	}
 
 	/* notify anyone waiting for data */
@@ -706,7 +695,7 @@ SDP600::temp_measurement()
 	perf_begin(_sample_perf);
 
 	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
-	_reports[_next_report].timestamp = hrt_absolute_time();
+	//_reports[_next_report].timestamp = hrt_absolute_time();
 
 	/* fetch the raw value */
 
@@ -760,7 +749,7 @@ SDP600::vddsupply_measurement()
 	perf_begin(_sample_perf);
 
 	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
-	_reports[_next_report].timestamp = hrt_absolute_time();
+	//_reports[_next_report].timestamp = hrt_absolute_time();
 
 	/* fetch the raw value */
 
@@ -975,8 +964,7 @@ SDP600::print_info()
 	perf_print_counter(_comms_errors);
 	perf_print_counter(_buffer_overflows);
 	printf("poll interval:  %u ticks\n", _measure_ticks);
-	printf("report queue:   %u (%u/%u @ %p)\n",
-	       _num_reports, _oldest_report, _next_report, _reports);
+	_reports->print_info("report queue");
 	printf("Differential Pressure:   %10.4f\n", (double)(dPressure));
 }
 
@@ -1014,7 +1002,7 @@ start()
 		goto fail;
 
 	/* set the poll rate to default, starts automatic data collection */
-	fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
+	fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		goto fail;
@@ -1041,10 +1029,10 @@ test()
 	ssize_t sz;
 	int ret;
 
-	int fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
+	int fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
-		err(1, "%s open failed (try 'SDP600 start' if the driver is not running)", AIRSPEED_DEVICE_PATH);
+		err(1, "%s open failed (try 'SDP600 start' if the driver is not running)", AIRSPEED_BASE_DEVICE_PATH);
 
 	/* do a simple demand read */
 	sz = read(fd, &report, sizeof(report));
@@ -1100,7 +1088,7 @@ test()
 void
 reset()
 {
-	int fd = open(AIRSPEED_DEVICE_PATH, O_RDONLY);
+	int fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		err(1, "failed ");

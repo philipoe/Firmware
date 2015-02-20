@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 
 #include <systemlib/systemlib.h>
 #include <systemlib/err.h>
@@ -123,7 +124,7 @@ int i2c_wd_main(int argc, char *argv[])
 					 SCHED_PRIORITY_DEFAULT,
 					 1024,
 					 i2c_wd_thread_main,
-					 (argv) ? (const char **)&argv[2] : (const char **)NULL);
+					 (argv) ? (char * const *)&argv[2] : (char * const *)NULL);
 
 		/* Setting the I2C WD:						*/
 

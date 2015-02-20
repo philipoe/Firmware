@@ -217,7 +217,7 @@ private:
 	struct gyro_scale	_gyro_scale;
 	float				_gyro_range_scale;
 	float				_gyro_range_rad_s;
-	orb_advert_t		_gyro_topic;
+	//orb_advert_t		_gyro_topic;
 
 	RingBuffer			*_accel_reports;
 
@@ -225,7 +225,8 @@ private:
 	float				_accel_range_scale;
 	float				_accel_range_m_s2;
 	orb_advert_t		_accel_topic;
-	orb_id_t			_accel_orb_id;
+	//orb_id_t			_accel_orb_id;
+	int					_accel_orb_class_instance;
 	int					_accel_class_instance;
 
 
@@ -234,9 +235,9 @@ private:
 	struct mag_scale	_mag_scale;
 	float				_mag_range_scale;
 	float				_mag_range_mgauss;
-	orb_advert_t		_mag_topic;
-	orb_id_t			_mag_orb_id;
-	int					_mag_class_instance;
+	//orb_advert_t		_mag_topic;
+	//orb_id_t			_mag_orb_id;
+	//int					_mag_class_instance;
 
 	unsigned			_sample_rate;
 	perf_counter_t		_accel_reads;
@@ -271,7 +272,7 @@ private:
 	 *
 	 * Resets the chip and measurements ranges, but not scale and offset.
 	 */
-	void			reset();
+	int			reset();
 
 	/**
 	 * Static trampoline from the hrt_call context; because we don't have a
@@ -392,7 +393,8 @@ protected:
 private:
 	ADIS16448			*_parent;
 	orb_advert_t		_gyro_topic;
-	orb_id_t			_gyro_orb_id;
+	//orb_id_t			_gyro_orb_id;
+	int					_gyro_orb_class_instance;
 	int					_gyro_class_instance;
 
 	/* do not allow to copy this class due to pointer data members */
@@ -421,7 +423,8 @@ protected:
 private:
 	ADIS16448			*_parent;
 	orb_advert_t		_mag_topic;
-	orb_id_t			_mag_orb_id;
+	//orb_id_t			_mag_orb_id;
+	int					_mag_orb_class_instance;
 	int					_mag_class_instance;
 
 	/* do not allow to copy this class due to pointer data members */
@@ -447,15 +450,16 @@ ADIS16448::ADIS16448(int bus, const char *path_accel, const char *path_gyro, con
 	_accel_range_scale(0.0f),
 	_accel_range_m_s2(0.0f),
 	_accel_topic(-1),
-	_accel_orb_id(nullptr),
+	//_accel_orb_id(nullptr),
+	_accel_orb_class_instance(-1),
 	_accel_class_instance(-1),
 	_mag_reports(nullptr),
 	_mag_scale{},
 	_mag_range_scale(0.0f),
 	_mag_range_mgauss(0.0f),
-	_mag_topic(-1),
-	_mag_orb_id(nullptr),
-	_mag_class_instance(-1),
+	//_mag_topic(-1),
+	//_mag_orb_id(nullptr),
+	//_mag_class_instance(-1),
 	_sample_rate(100),																			/* Init sampling frequency set to 100Hz */
 	_accel_reads(perf_alloc(PC_COUNT, "adis16448_accel_read")),
 	_gyro_reads(perf_alloc(PC_COUNT, "adis16448_gyro_read")),
@@ -520,10 +524,10 @@ ADIS16448::~ADIS16448()
 		delete _mag_reports;
 
 	if (_accel_class_instance != -1)
-		unregister_class_devname(ACCEL_DEVICE_PATH, _accel_class_instance);
+		unregister_class_devname(ACCEL_BASE_DEVICE_PATH, _accel_class_instance);
 
-	if (_mag_class_instance != -1)
-		unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
+	//if (_mag_class_instance != -1)
+	//	unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
 
 	/* delete the perf counter */
 	perf_free(_sample_perf);
@@ -560,7 +564,8 @@ ADIS16448::init()
 	if (_mag_reports == nullptr)
 		goto out;
 
-	reset();
+	if (reset() != OK)
+		goto out;
 
 	/* Initialize offsets and scales */
 	_gyro_scale.x_offset = 0;
@@ -600,7 +605,7 @@ ADIS16448::init()
 		return ret;
 	}
 
-	_accel_class_instance = register_class_devname(ACCEL_DEVICE_PATH);
+	_accel_class_instance = register_class_devname(ACCEL_BASE_DEVICE_PATH);
 
 	/* fetch an initial set of measurements for advertisement */
 	measure();
@@ -610,22 +615,8 @@ ADIS16448::init()
 	_accel_reports->get(&arp);
 
 	/* measurement will have generated a report, publish */
-	switch (_accel_class_instance) {
-		case CLASS_DEVICE_PRIMARY:
-			_accel_orb_id = ORB_ID(sensor_accel0);
-			break;
-
-		case CLASS_DEVICE_SECONDARY:
-			_accel_orb_id = ORB_ID(sensor_accel1);
-			break;
-
-		case CLASS_DEVICE_TERTIARY:
-			_accel_orb_id = ORB_ID(sensor_accel2);
-			break;
-
-	}
-
-	_accel_topic = orb_advertise(_accel_orb_id, &arp);
+	_accel_topic = orb_advertise_multi(ORB_ID(sensor_accel), &arp,
+			&_accel_orb_class_instance, ORB_PRIO_MAX);
 
 	if (_accel_topic < 0) {
 		warnx("ADVERT FAIL");
@@ -634,44 +625,18 @@ ADIS16448::init()
 	struct gyro_report grp;
 	_gyro_reports->get(&grp);
 
-	switch (_gyro->_gyro_class_instance) {
-		case CLASS_DEVICE_PRIMARY:
-			_gyro->_gyro_orb_id = ORB_ID(sensor_gyro0);
-			break;
-
-		case CLASS_DEVICE_SECONDARY:
-			_gyro->_gyro_orb_id = ORB_ID(sensor_gyro1);
-			break;
-
-		case CLASS_DEVICE_TERTIARY:
-			_gyro->_gyro_orb_id = ORB_ID(sensor_gyro2);
-			break;
-	}
-
-	_gyro->_gyro_topic = orb_advertise(_gyro->_gyro_orb_id, &grp);
+	_gyro->_gyro_topic = orb_advertise_multi(ORB_ID(sensor_gyro), &grp,
+			&_gyro->_gyro_orb_class_instance, ORB_PRIO_MAX);
 
 	if (_gyro->_gyro_topic < 0) {
 		warnx("ADVERT FAIL");
 	}
 
 	struct mag_report mrp;
-		_mag_reports->get(&mrp);
+	_mag_reports->get(&mrp);
 
-		switch (_mag->_mag_class_instance) {
-			case CLASS_DEVICE_PRIMARY:
-				_mag->_mag_orb_id = ORB_ID(sensor_mag0);
-				break;
-
-			case CLASS_DEVICE_SECONDARY:
-				_mag->_mag_orb_id = ORB_ID(sensor_mag1);
-				break;
-
-			case CLASS_DEVICE_TERTIARY:
-				_mag->_mag_orb_id = ORB_ID(sensor_mag2);
-				break;
-		}
-
-		_mag->_mag_topic = orb_advertise(_mag->_mag_orb_id, &mrp);
+	_mag->_mag_topic = orb_advertise_multi(ORB_ID(sensor_mag), &mrp,
+			&_mag->_mag_orb_class_instance, ORB_PRIO_MAX);
 
 		if (_mag->_mag_topic < 0) {
 			warnx("ADVERT FAIL");
@@ -681,7 +646,7 @@ out:
 	return ret;
 }
 
-void ADIS16448::reset()
+int ADIS16448::reset()
 {
 
 	// Set gyroscope scale to 250 deg/s
@@ -700,6 +665,8 @@ void ADIS16448::reset()
 	_accel_range_m_s2  = (18.0f * ADIS16448_ONE_G);
 	_mag_range_scale   = (1.0f / 7.0f);
 	_mag_range_mgauss  = (1900.0f);
+
+	return OK;
 
 }
 
@@ -1579,15 +1546,15 @@ ADIS16448::measure()
 
 	/* and publish for subscribers */
 	if (!(_pub_blocked)) {
-		orb_publish(_accel_orb_id, _accel_topic, &arb);
+		orb_publish(ORB_ID(sensor_accel), _accel_topic, &arb);
 	}
 
 	if (!(_pub_blocked)) {
-		orb_publish(_gyro->_gyro_orb_id, _gyro->_gyro_topic, &grb);
+		orb_publish(ORB_ID(sensor_gyro), _gyro->_gyro_topic, &grb);
 	}
 
 	if ((!(_pub_blocked)) && ((adis_report.status >> 7) & 0x1)) {			/* Mag data validity bit (bit 8 DIAG_STAT) */
-		orb_publish(_mag->_mag_orb_id, _mag->_mag_topic, &mrb);
+		orb_publish(ORB_ID(sensor_mag), _mag->_mag_topic, &mrb);
 	}
 
 	/* stop measuring */
@@ -1641,7 +1608,8 @@ ADIS16448_gyro::ADIS16448_gyro(ADIS16448 *parent, const char *path) :
 	CDev("ADIS16448_gyro", path),
 	_parent(parent),
 	_gyro_topic(-1),
-	_gyro_orb_id(nullptr),
+	//_gyro_orb_id(nullptr),
+	_gyro_orb_class_instance(-1),
 	_gyro_class_instance(-1)
 {
 }
@@ -1649,7 +1617,7 @@ ADIS16448_gyro::ADIS16448_gyro(ADIS16448 *parent, const char *path) :
 ADIS16448_gyro::~ADIS16448_gyro()
 {
 	if (_gyro_class_instance != -1)
-		unregister_class_devname(GYRO_DEVICE_PATH, _gyro_class_instance);
+		unregister_class_devname(GYRO_BASE_DEVICE_PATH, _gyro_class_instance);
 }
 
 int
@@ -1666,7 +1634,7 @@ ADIS16448_gyro::init()
 		return ret;
 	}
 
-	_gyro_class_instance = register_class_devname(GYRO_DEVICE_PATH);
+	_gyro_class_instance = register_class_devname(GYRO_BASE_DEVICE_PATH);
 
 	return ret;
 }
@@ -1693,7 +1661,8 @@ ADIS16448_mag::ADIS16448_mag(ADIS16448 *parent, const char *path) :
 	CDev("ADIS16448_mag", path),
 	_parent(parent),
 	_mag_topic(-1),
-	_mag_orb_id(nullptr),
+	//_mag_orb_id(nullptr),
+	_mag_orb_class_instance(-1),
 	_mag_class_instance(-1)
 {
 }
@@ -1701,7 +1670,7 @@ ADIS16448_mag::ADIS16448_mag(ADIS16448 *parent, const char *path) :
 ADIS16448_mag::~ADIS16448_mag()
 {
 	if (_mag_class_instance != -1)
-		unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
+		unregister_class_devname(MAG_BASE_DEVICE_PATH, _mag_class_instance);
 }
 
 int
@@ -1718,7 +1687,7 @@ ADIS16448_mag::init()
 		return ret;
 	}
 
-	_mag_class_instance = register_class_devname(MAG_DEVICE_PATH);
+	_mag_class_instance = register_class_devname(MAG_BASE_DEVICE_PATH);
 
 	return ret;
 }
