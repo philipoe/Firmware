@@ -24,9 +24,9 @@ MODULES		+= drivers/l3gd20
 MODULES		+= drivers/mpu6000
 MODULES		+= drivers/hmc5883
 MODULES		+= drivers/ms5611
-MODULES		+= drivers/ll40ls
-MODULES		+= drivers/trone
-MODULES		+= drivers/mb12xx
+#MODULES		+= drivers/ll40ls
+#MODULES		+= drivers/trone
+#MODULES		+= drivers/mb12xx
 MODULES		+= drivers/gps
 MODULES		+= drivers/hil
 MODULES		+= drivers/adis16448
@@ -47,7 +47,7 @@ MODULES		+= drivers/hdim010
 MODULES			+= drivers/airspeed
 #MODULES		+= drivers/ets_airspeed
 #MODULES		+= drivers/meas_airspeed
-MODULES		+= drivers/frsky_telemetry
+#MODULES		+= drivers/frsky_telemetry
 
 #
 # Board support modules
@@ -79,7 +79,7 @@ MODULES		+= modules/commander
 MODULES		+= modules/navigator
 MODULES		+= modules/mavlink
 MODULES		+= modules/gpio_led
-MODULES 	+= modules/land_detector
+#MODULES 	+= modules/land_detector
 
 #
 # Estimation modules (EKF / other filters)
