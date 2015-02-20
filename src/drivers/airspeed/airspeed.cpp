@@ -86,6 +86,7 @@ Airspeed::Airspeed(int bus, int address, unsigned conversion_interval, const cha
 	_measure_ticks(0),
 	_collect_phase(false),
 	_diff_pres_offset(0.0f),
+	_diff_pres_scale(1.0f),
 	_airspeed_pub(-1),
 	_subsys_pub(-1),
 	_class_instance(-1),
@@ -263,6 +264,7 @@ Airspeed::ioctl(struct file *filp, int cmd, unsigned long arg)
 	case AIRSPEEDIOCSSCALE: {
 		struct airspeed_scale *s = (struct airspeed_scale*)arg;
 		_diff_pres_offset = s->offset_pa;
+		_diff_pres_scale = s->scale_factor;
 		return OK;
 		}
 
@@ -270,6 +272,7 @@ Airspeed::ioctl(struct file *filp, int cmd, unsigned long arg)
 		struct airspeed_scale *s = (struct airspeed_scale*)arg;
 		s->offset_pa = _diff_pres_offset;
 		s->scale = 1.0f;
+		s->scale_factor = _diff_pres_scale;
 		return OK;
 		}
 

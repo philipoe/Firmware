@@ -134,6 +134,7 @@ protected:
 	int				_measure_ticks;
 	bool			_collect_phase;
 	float			_diff_pres_offset;
+	float			_diff_pres_scale;
 
 	orb_advert_t	_airspeed_pub;
 	orb_advert_t	_subsys_pub;

@@ -175,14 +175,11 @@ HDIM010::collect()
 	/* pressure calculation, result in mbar */
 	dPressure = (((float)((int16_t)(cvt.w & 0x7fff))) - HDIM010_PRESSURE_OUTPUT_MIN)/HDIM010_SENSITIVITY +(HDIM010_PRESSURE_VALUE_MIN);
 
-	/* make sure that the pressure read is positive */
-	dPressure = (dPressure > 0.0f) ? dPressure : (-dPressure);
-
 	/* convert mbar to pa					*/
 	dPressure *= 100.0f;
 
-	/* reduce measurement offset 			*/
-	dPressure -= _diff_pres_offset;
+	/* Correct measurement offset and SF 	*/
+	dPressure = (dPressure - _diff_pres_offset)*_diff_pres_scale;
 
 	/* Range check /failure accordingly */
 	if ( (dPressure > 1000.0f) | (dPressure < -1000.0f) ) {

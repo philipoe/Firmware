@@ -283,6 +283,7 @@ private:
 		float scaling_factor[_rc_max_chan_count];
 
 		float diff_pres_offset_pa;
+		float diff_pres_sf;
 		float diff_pres_analog_scale;
 
 		int board_rotation;
@@ -337,7 +338,6 @@ private:
 
 		float dbaro_Dtube;
 		float dbaro_Ltube;
-		float dbaro_offset;
 		float dbaro_dy;
 
 	}		_parameters;			/**< local copies of interesting parameters */
@@ -350,6 +350,7 @@ private:
 		param_t dz[_rc_max_chan_count];
 
 		param_t diff_pres_offset_pa;
+		param_t diff_pres_sf;
 		param_t diff_pres_analog_scale;
 
 		param_t rc_map_roll;
@@ -401,7 +402,6 @@ private:
 
 		param_t dbaro_Dtube;
 		param_t dbaro_Ltube;
-		param_t dbaro_offset;
 		param_t dbaro_dy;
 
 	}		_parameter_handles;		/**< handles for interesting parameters */
@@ -723,6 +723,8 @@ Sensors::Sensors() :
 
 	/* Differential pressure offset */
 	_parameter_handles.diff_pres_offset_pa = param_find("SENS_DPRES_OFF");
+	_parameter_handles.diff_pres_sf = param_find("SENS_DPRES_SF");
+
 	_parameter_handles.diff_pres_analog_scale = param_find("SENS_DPRES_ANSC");
 
 	_parameter_handles.battery_voltage_scaling = param_find("BAT_V_SCALING");
@@ -744,7 +746,6 @@ Sensors::Sensors() :
 	/* ASLUAV parameters */
 	_parameter_handles.dbaro_Dtube = param_find("SENSA_DBaro_D");
 	_parameter_handles.dbaro_Ltube = param_find("SENSA_DBaro_L");
-	_parameter_handles.dbaro_offset = param_find("SENSA_DBaro_OFF");
 	_parameter_handles.dbaro_dy = param_find("SENSA_DBaro_dy");
 
 	/* fetch initial parameter values */
@@ -926,6 +927,7 @@ Sensors::parameters_update()
 	/* Airspeed offset */
 	param_get(_parameter_handles.diff_pres_offset_pa, &(_parameters.diff_pres_offset_pa));
 	param_get(_parameter_handles.diff_pres_analog_scale, &(_parameters.diff_pres_analog_scale));
+	param_get(_parameter_handles.diff_pres_sf, &(_parameters.diff_pres_sf));
 
 	/* scaling of ADC ticks to battery voltage */
 	if (param_get(_parameter_handles.battery_voltage_scaling, &(_parameters.battery_voltage_scaling)) != OK) {
@@ -967,7 +969,6 @@ Sensors::parameters_update()
 	/* ASLUAV custom parameters */
 	param_get(_parameter_handles.dbaro_Dtube, &(_parameters.dbaro_Dtube));
 	param_get(_parameter_handles.dbaro_Ltube, &(_parameters.dbaro_Ltube));
-	param_get(_parameter_handles.dbaro_offset, &(_parameters.dbaro_offset));
 	param_get(_parameter_handles.dbaro_dy, &(_parameters.dbaro_dy));
 
 	/** fine tune board offset on parameter update **/
@@ -1977,6 +1978,7 @@ Sensors::parameter_update_poll(bool forced)
 			struct airspeed_scale airscale = {
 				_parameters.diff_pres_offset_pa,
 				1.0f,
+				_parameters.diff_pres_sf
 			};
 
 			if (OK != ioctl(fd, AIRSPEEDIOCSSCALE, (long unsigned int)&airscale)) {
