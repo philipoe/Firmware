@@ -300,12 +300,6 @@ int subscriptions::update_aslctrl_params(void)
 	param_get(handle, &(aslctrl_params.HL_vZSink));
 
 	//TECS & HL
-	handle = param_find("HL_Vel_vMin");
-	param_get(handle, &(aslctrl_params.airspeed_min));
-	handle = param_find("HL_Vel_vNom");
-	param_get(handle, &(aslctrl_params.airspeed_trim));
-	handle = param_find("HL_Vel_vMax");
-	param_get(handle, &(aslctrl_params.airspeed_max));
 	handle = param_find("FW_P_LIM_MIN");
 	if(bParamSanityChecksEnabled && Sanitize_param(handle, -60.0f, 0.0f) != 0) return -1;
 	param_get(handle, &(aslctrl_params.pitch_limit_min));

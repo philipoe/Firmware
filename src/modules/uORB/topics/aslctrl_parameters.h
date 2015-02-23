@@ -163,9 +163,6 @@ struct aslctrl_parameters_s {
 	float roll_throttle_compensation;
 	float speed_weight;
 	float pitch_damping;
-	float airspeed_min;
-	float airspeed_trim;
-	float airspeed_max;
 	float pitch_limit_min;
 	float pitch_limit_max;
 	float throttle_min;

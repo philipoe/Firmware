@@ -53,8 +53,8 @@ void HL::CopyUpdatedParams(void)
 	tecs.set_roll_throttle_compensation(math::radians(params->roll_throttle_compensation));
 	tecs.set_speed_weight(params->speed_weight);
 	tecs.set_pitch_damping(params->pitch_damping);
-	tecs.set_indicated_airspeed_min(params->airspeed_min);
-	tecs.set_indicated_airspeed_max(params->airspeed_max);
+	tecs.set_indicated_airspeed_min(params->HL_Vel_vMin);
+	tecs.set_indicated_airspeed_max(params->HL_Vel_vMax);
 	tecs.set_max_climb_rate(params->max_climb_rate);
 	tecs.set_heightrate_p(params->heightrate_p);
 	tecs.set_heightrate_ff(params->heightrate_ff);

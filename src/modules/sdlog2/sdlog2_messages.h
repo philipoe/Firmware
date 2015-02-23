@@ -542,9 +542,6 @@ struct log_AHL_s {
 	float roll_throttle_compensation;
 	float speed_weight;
 	float pitch_damping;
-	float airspeed_min;
-	float airspeed_trim;
-	float airspeed_max;
 	float pitch_limit_min;
 	float pitch_limit_max;
 	float throttle_min;
@@ -675,7 +672,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(ASLC, "QBBBBBBBB","timestamp,CtrlType,GainSch_E,GainSch_Q,StallProt,VelCtrl,OnRCLoss,OvSpdProt,CoordTurn"),
 	LOG_FORMAT(ASAS, "fffffffffffffffffffffffffff","tSample,R_kP,P_kP,Y_kP,R_PDir,P_PDir,Y_PDir,RYDec_kari,Y_TurnFF,Y_TurnkP,R_Lim,P_Lim,Y_Lim,Y_LPw,P_LPw,R_LPw,vScaleLimF,vScaleExp,R_T_vNom,R_T_vMin,R_T_vMax,P_T_vNom,P_T_vMin,P_T_vMax,Y_T_vNom,Y_T_vMin,Y_T_vMax"),
 	LOG_FORMAT(ACAS, "Bfffffffffffffff","fMult,P_kP,P_kP_M,P_kI,R_kP,R_kP_M,PRate_Lim,PRate_ILim,PTCkI,PTCILim,RRate_Lim,YRate_Lim,P_Lim,R_Lim,uElevTurnFF,Y_LPw"),
-	LOG_FORMAT(AHL,  "Bfffffffffffffffffffffffffffffffffffff","fMult,L1_Damp,L1_P_vMin,L1_P_vNom,L1_P_vMax,v_vNom,v_vMi,v_vMa,hMax,hMin,h_vZcl,h_vZsi,h_LPw,tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,ami,at,ama,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
+	LOG_FORMAT(AHL,  "Bffffffffffffffffffffffffffffffffff","fMult,L1_Damp,L1_P_vMin,L1_P_vNom,L1_P_vMax,v_vNom,v_vMi,v_vMa,hMax,hMin,h_vZcl,h_vZsi,h_LPw,tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
 	LOG_FORMAT(ASLD, "QIBfffffffffffffBffffffffffffffffBBB", "timestamp,dt,mode,h,hRef,hRef_t,Pitch,PitchRef,PitchRefCT,q,qRef,uElev,uThrot,uThrot2,aZ,AirspeedRef,bSpoilers,Yaw,YawRef,Roll,RollRef,p,pRef,r,rRef,uAil,uRud,Yawdot_ref,Yawdot,f_GS_Q,P_kP_GS_E,R_kP_GS_E,qmax,StallStat,AltStat,vStat"),
 
 	/* system-level messages, ID >= 0x80 */

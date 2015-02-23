@@ -1809,9 +1809,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 			log_msg.body.log_AHL.roll_throttle_compensation = buf.aslctrl_params.roll_throttle_compensation;
 			log_msg.body.log_AHL.speed_weight = buf.aslctrl_params.speed_weight;
 			log_msg.body.log_AHL.pitch_damping = buf.aslctrl_params.pitch_damping;
-			log_msg.body.log_AHL.airspeed_min = buf.aslctrl_params.airspeed_min;
-			log_msg.body.log_AHL.airspeed_trim = buf.aslctrl_params.airspeed_trim;
-			log_msg.body.log_AHL.airspeed_max = buf.aslctrl_params.airspeed_max;
 			log_msg.body.log_AHL.pitch_limit_min = buf.aslctrl_params.pitch_limit_min;
 			log_msg.body.log_AHL.pitch_limit_max = buf.aslctrl_params.pitch_limit_max;
 			log_msg.body.log_AHL.throttle_min = buf.aslctrl_params.throttle_min;
