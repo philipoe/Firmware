@@ -1764,9 +1764,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 			log_msg.body.log_ACAS.CAS_PitchIGain = (float) buf.aslctrl_params.CAS_PitchIGain;
 			log_msg.body.log_ACAS.CAS_RollPGain = (float) buf.aslctrl_params.CAS_RollPGain;
 			log_msg.body.log_ACAS.CAS_RollPGainM = (float) buf.aslctrl_params.CAS_RollPGainM;
-			log_msg.body.log_ACAS.CAS_HeadPGain = (float) buf.aslctrl_params.CAS_HeadPGain;
-			log_msg.body.log_ACAS.CAS_q2uPGain = (float) buf.aslctrl_params.CAS_q2uPGain;
-			log_msg.body.log_ACAS.CAS_p2uPGain = (float) buf.aslctrl_params.CAS_p2uPGain;
 			log_msg.body.log_ACAS.CAS_PitchRateLim = (float) buf.aslctrl_params.CAS_PitchRateLim;
 			log_msg.body.log_ACAS.CAS_PitchRateILim = (float) buf.aslctrl_params.CAS_PitchRateILim;
 			log_msg.body.log_ACAS.CAS_PitchTCkI = (float) buf.aslctrl_params.CAS_PitchTCkI;

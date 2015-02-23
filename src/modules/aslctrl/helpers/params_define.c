@@ -94,12 +94,8 @@ PARAM_DEFINE_FLOAT(CAS_PitchTCkI, 0.0f);	// Pitch Turn Compensation I-Gain
 PARAM_DEFINE_FLOAT(CAS_PitchTCILim, 0.0f);	// Pitch Turn Compensation I-Limit
 PARAM_DEFINE_FLOAT(CAS_RollPGain, 0.0f);	// Roll P-Gain, nominal
 PARAM_DEFINE_FLOAT(CAS_RollPGainM, 0.0f);	// Roll P-Gain, minimal (for gain scheduling)
-PARAM_DEFINE_FLOAT(CAS_HeadPGain, 0.0f);	// Heading P-Gain
-PARAM_DEFINE_FLOAT(CAS_q2uPGain, 0.0f);		// q-rate to u-input command pgain
-PARAM_DEFINE_FLOAT(CAS_p2uPGain, 0.0f);		// p-rate to u-input command pgain
 
 //Limits
-PARAM_DEFINE_FLOAT(CAS_nZPenLim, 0.0f);		// Maximum nZ Penalization
 PARAM_DEFINE_FLOAT(CAS_PRateLim, 0.0f);		// Maximum pitch rate / elevator command from CAS
 PARAM_DEFINE_FLOAT(CAS_PRateILim, 0.0f);	// Maximum pitch rate due to integrator
 PARAM_DEFINE_FLOAT(CAS_RRateLim, 0.0f);		// Maximum roll rate / aileron command from CAS

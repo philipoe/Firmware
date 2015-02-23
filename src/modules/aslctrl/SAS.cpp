@@ -189,14 +189,9 @@ int SAS::RateControl(const float pRef, const float qRef, float& rRef, float &uAi
 	//Convert reference rates to u commands
 	switch(params->ASLC_CtrlType) {
 		case PID_GAINSDECOUPLED:
+		default:
 			uAilCmd = -pRef*params->SAS_RollPDir;
 			uElevCmd = -qRef*params->SAS_PitchPDir;
-			uRudCmd = -rRef*params->SAS_YawPDir;
-			break;
-		case PID_STD:
-		default:
-			uAilCmd = -pRef*params->CAS_p2uPGain*params->SAS_RollPDir*params->SAS_RollPGain;
-			uElevCmd = -qRef*params->CAS_q2uPGain*params->SAS_PitchPDir*params->SAS_PitchPGain;
 			uRudCmd = -rRef*params->SAS_YawPDir;
 			break;
 	}

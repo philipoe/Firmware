@@ -244,13 +244,6 @@ int subscriptions::update_aslctrl_params(void)
 	param_get(handle, &(aslctrl_params.CAS_RollPGain));
 	handle=param_find("CAS_RollPGainM");
 	param_get(handle, &(aslctrl_params.CAS_RollPGainM));
-	handle=param_find("CAS_HeadPGain");
-	if(bParamSanityChecksEnabled && Sanitize_param(handle,0.0f, 10.0f) != 0) return -1;
-	param_get(handle, &(aslctrl_params.CAS_HeadPGain));
-	handle=param_find("CAS_q2uPGain");
-	param_get(handle, &(aslctrl_params.CAS_q2uPGain));
-	handle=param_find("CAS_p2uPGain");
-	param_get(handle, &(aslctrl_params.CAS_p2uPGain));
 	handle=param_find("CAS_PRateLim");
 	param_get(handle, &(aslctrl_params.CAS_PitchRateLim));
 	handle=param_find("CAS_PRateILim");

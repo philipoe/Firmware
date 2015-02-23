@@ -119,9 +119,6 @@ struct aslctrl_parameters_s {
 	float CAS_PitchIGain;
 	float CAS_RollPGain;
 	float CAS_RollPGainM;
-	float CAS_HeadPGain;
-	float CAS_q2uPGain;
-	float CAS_p2uPGain;
 	//Limiters
 	float CAS_PitchRateLim;
 	float CAS_PitchRateILim;

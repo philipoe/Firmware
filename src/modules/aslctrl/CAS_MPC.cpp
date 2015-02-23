@@ -141,7 +141,7 @@ int CAS_MPC::CASRollPitchControl_MPC(float& uAil, float& uEle, float const& Roll
 	else {
 		// TEMP ONLY FIX to allow disabling the PitchControlMPC
 		// Use a crappy standard p-controller on angle and p on rate instead
-		uEle = -params->CAS_PitchPGain*params->CAS_q2uPGain*params->SAS_PitchPGain* (PitchAngleRef-PitchAngle) + params->SAS_PitchPGain*(LP_PitchRate.Get());
+		uEle = -params->CAS_PitchPGain* (PitchAngleRef-PitchAngle) + params->SAS_PitchPGain*(LP_PitchRate.Get());
 	}
 
 	// Dynamic Pressure Scaling

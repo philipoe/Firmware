@@ -345,8 +345,8 @@ void ASLAutopilot::update()
 
 	//Debug
 	if ((counter % 20 == 0) && (params->ASLC_DEBUG==1)) {
-		//printf("MIXED actuators[1-6]: %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f\n",subs.actuators.control[0],subs.actuators.control[1],subs.actuators.control[2],
-		//		subs.actuators.control[3],subs.actuators.control[4],subs.actuators.control[5]);
+		printf("MIXED actuators[1-6]: %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f\n",double(subs.actuators.control[0]),double(subs.actuators.control[1]),double(subs.actuators.control[2]),
+				double(subs.actuators.control[3]),double(subs.actuators.control[4]),double(subs.actuators.control[5]));
 	}
 
 	// update all publications
