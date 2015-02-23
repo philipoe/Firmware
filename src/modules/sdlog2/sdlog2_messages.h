@@ -420,11 +420,12 @@ struct log_ENCD_s {
 /********** ASL-MESSAGES, ID > 100 **************/
 
 /* --- ASLCTRL - ASLC parameter state --- (ASL/PhilippOe) */
-// Abbreviations:
-// A/ASLC=ASLC, S=SAS, C=CAS, HL=HL
-// R=RollAngle/RRate=RollRate, P=Pitch, Y=Yaw
-// kP = P-Gain, kI=I-Gain, L=Lim, IL=Integral-Limit, LP=Low Pass, HP=HighPass, T=Trim,
-// GS=GainScheduling, SP=StallProtection, tS=tSample
+// Abbreviations used to save labeling-space:
+//    Category: A/ASLC=ASLC, S=SAS, C=CAS, HL=HL
+//    Orientation: R=RollAngle/RRate=RollRate, P=Pitch, Y=Yaw
+//    Type of data: kP = P-Gain, kI=I-Gain, L=Limit, IL=Integral-Limit, LP=Low Pass, HP=HighPass, T=Trim, R=Reference, FF=FeedForward
+//    Specifier: N=Nominal, Ma=Max, Mi=Min
+//    GS=GainScheduling, SP=StallProtection, tS=tSample, CT=CoordinatedTurn
 
 #define LOG_ASLC_MSG 101
 struct log_ASLC_s {
@@ -510,8 +511,8 @@ struct log_ACAS_s {
 	float CAS_YawLowPassOmega;
 };
 
-#define LOG_AHL_MSG 104
-struct log_AHL_s {
+#define LOG_AHL1_MSG 104
+struct log_AHL1_s {
 	//---WP following ------------------
 	uint8_t HL_fMult;
 	float HL_WPL1_Damping;
@@ -527,6 +528,10 @@ struct log_AHL_s {
 	float HL_vZClimb;
 	float HL_vZSink;
 	float HL_AltLowPassOmega;
+};
+
+#define LOG_AHL2_MSG 105
+struct log_AHL2_s {
 	//---TECS--------------------
 	float time_const;
 	float time_const_throt;
@@ -552,7 +557,8 @@ struct log_AHL_s {
 	float throttle_slewrate;
 };
 
-#define LOG_ASLD_MSG 105
+
+#define LOG_ASLD_MSG 106
 struct log_ASLD_s {
 	/* --- ASLD - ASLD data state --- */
 	uint64_t timestamp;      /**< in microseconds since system start          */
@@ -669,11 +675,13 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(ENCD, "qfqf",	"cnt0,vel0,cnt1,vel1"),
 
 	/* ASL messages, ID >= 100(0x64) */
-	LOG_FORMAT(ASLC, "QBBBBBBBB","timestamp,CtrlType,GainSch_E,GainSch_Q,StallProt,VelCtrl,OnRCLoss,OvSpdProt,CoordTurn"),
-	LOG_FORMAT(ASAS, "fffffffffffffffffffffffffff","tSample,R_kP,P_kP,Y_kP,R_PDir,P_PDir,Y_PDir,RYDec_kari,Y_TurnFF,Y_TurnkP,R_Lim,P_Lim,Y_Lim,Y_LPw,P_LPw,R_LPw,vScaleLimF,vScaleExp,R_T_vNom,R_T_vMin,R_T_vMax,P_T_vNom,P_T_vMin,P_T_vMax,Y_T_vNom,Y_T_vMin,Y_T_vMax"),
-	LOG_FORMAT(ACAS, "Bfffffffffffffff","fMult,P_kP,P_kP_M,P_kI,R_kP,R_kP_M,PRate_Lim,PRate_ILim,PTCkI,PTCILim,RRate_Lim,YRate_Lim,P_Lim,R_Lim,uElevTurnFF,Y_LPw"),
-	LOG_FORMAT(AHL,  "Bffffffffffffffffffffffffffffffffff","fMult,L1_Damp,L1_P_vMin,L1_P_vNom,L1_P_vMax,v_vNom,v_vMi,v_vMa,hMax,hMin,h_vZcl,h_vZsi,h_LPw,tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
-	LOG_FORMAT(ASLD, "QIBfffffffffffffBffffffffffffffffBBB", "timestamp,dt,mode,h,hRef,hRef_t,Pitch,PitchRef,PitchRefCT,q,qRef,uElev,uThrot,uThrot2,aZ,AirspeedRef,bSpoilers,Yaw,YawRef,Roll,RollRef,p,pRef,r,rRef,uAil,uRud,Yawdot_ref,Yawdot,f_GS_Q,P_kP_GS_E,R_kP_GS_E,qmax,StallStat,AltStat,vStat"),
+	// Note: Message labeling abbreviations are given above
+	LOG_FORMAT(ASLC, "QBBBBBBBB","t,CtrlType,GainSch_E,GainSch_Q,StallProt,VelCtrl,OnRCLoss,OvSpdProt,CoordTurn"),
+	LOG_FORMAT(ASAS, "fffffffffffffffffffffffffff","tS,R_kP,P_kP,Y_kP,RDi,PDi,YDi,RYDe,Y_CTFF,Y_CTkP,R_L,P_L,Y_L,Y_LPw,P_LPw,R_LPw,vSL,vSE,RTN,RTMi,RTMa,PTN,PTMi,PTMa,YTN,YTMi,YTMa"),
+	LOG_FORMAT(ACAS, "Bfffffffffffffff","fM,P_kP,P_kP_M,P_kI,R_kP,R_kP_M,PRate_Lim,PRate_ILim,PTCkI,PTCILim,RRate_Lim,YRate_Lim,P_Lim,R_Lim,uElevTurnFF,Y_LPw"),
+	LOG_FORMAT(AHL1,  "Bffffffffffff","fM,L1_D,L1_P_vMi,L1_P_vN,L1_P_vMa,v_N,v_Mi,v_Ma,hMa,hMi,h_vZcl,h_vZsi,h_LPw"),
+	LOG_FORMAT(AHL2,  "ffffffffffffffffffffff","tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
+	LOG_FORMAT(ASLD, "QIBfffffffffffffBffffffffffffffffBBB", "t,dt,mode,h,hR,hR_t,P,PR,PR_CT,q,qR,uE,uT,uT2,aZ,TAS_R,bSpoil,Y,YR,R,RR,p,pR,r,rR,uA,uR,Yd_R,Yd,GS_Q,P_kPE,R_kPE,qMax,SP,AltS,vS"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */

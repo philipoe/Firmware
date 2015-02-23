@@ -79,8 +79,8 @@ struct log_format_s {
 	uint8_t type;
 	uint8_t length;		// full packet length including header
 	char name[4];
-	char format[64];
-	char labels[256];	// Added by ASL. TODO:Can we reduce this, in order to save memory(RAM/flash)?
+	char format[40];	// Added by ASL. Note: Reducing the array size saves Flash!
+	char labels[128];	// Added by ASL. Note: Reducing the array size saves Flash!
 };
 
 #define LOG_FORMAT(_name, _format, _labels) { \
