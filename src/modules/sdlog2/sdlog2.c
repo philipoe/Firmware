@@ -107,6 +107,7 @@
 #include "logenabler.h"
 #include <uORB/topics/aslctrl_parameters.h>
 #include <uORB/topics/aslctrl_data.h>
+#include <uORB/topics/state_estimator_EKF_parameters.h>
 
 /**
  * Logging rate.
@@ -967,6 +968,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		//added (ASL/PhilippOe)
 		struct aslctrl_parameters_s aslctrl_params;
 		struct aslctrl_data_s aslctrl_data;
+		struct state_estimator_EKF_parameters_s ekf;
 	} buf;
 
 	memset(&buf, 0, sizeof(buf));
@@ -1017,6 +1019,8 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_AHL1_s log_AHL1;
 			struct log_AHL2_s log_AHL2;
 			struct log_ASLD_s log_ASLD;
+			struct log_EKFS_s log_EKFS;
+			struct log_EKFV_s log_EKFV;
 		} body;
 	} log_msg = {
 		LOG_PACKET_HEADER_INIT(0)
@@ -1058,6 +1062,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		//Added (ASL/PhilippOe)
 		int aslctrl_params_sub;
 		int aslctrl_data_sub;
+		int ekf_sub;
 	} subs;
 
 	subs.cmd_sub = orb_subscribe(ORB_ID(vehicle_command));
@@ -1095,7 +1100,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 	//Added(ASL/PhilippOe)
 	subs.aslctrl_params_sub = orb_subscribe(ORB_ID(aslctrl_parameters));
 	subs.aslctrl_data_sub = orb_subscribe(ORB_ID(aslctrl_data));
-	orb_set_interval(subs.aslctrl_data_sub, 25);	//Limit rate of updates / logging
+	subs.ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
 
 	for (int i = 0; i < TELEMETRY_STATUS_ORB_ID_NUM; i++) {
 		subs.telemetry_subs[i] = orb_subscribe(telemetry_status_orb_id[i]);
@@ -1865,6 +1870,35 @@ int sdlog2_thread_main(int argc, char *argv[])
 
 			LOGBUFFER_WRITE_AND_COUNT(ASLD);
 		}
+		/* --- ASLD --- */
+		if (copy_if_updated(ORB_ID(state_estimator_EKF_parameters), subs.ekf_sub, &buf.ekf) && true) {//pLogEnabler.LOG_EKF) {
+
+			//EKF-States Message
+			log_msg.msg_type = LOG_EKFS_MSG;
+			log_msg.body.log_EKFS.timestamp= buf.ekf.timestamp;
+			log_msg.body.log_EKFS.state_p[0] = (float) buf.ekf.x_p[0];
+			log_msg.body.log_EKFS.state_p[1] = (float) buf.ekf.x_p[1];
+			log_msg.body.log_EKFS.state_p[2] = (float) buf.ekf.x_p[2];
+			memcpy(log_msg.body.log_EKFS.state_q_NS, buf.ekf.x_q_NS, sizeof(log_msg.body.log_EKFS.state_q_NS));
+			memcpy(log_msg.body.log_EKFS.state_v_N, buf.ekf.x_v_N, sizeof(log_msg.body.log_EKFS.state_v_N));
+			memcpy(log_msg.body.log_EKFS.state_b_g, buf.ekf.x_b_g, sizeof(log_msg.body.log_EKFS.state_b_g));
+			memcpy(log_msg.body.log_EKFS.state_b_a, buf.ekf.x_b_a, sizeof(log_msg.body.log_EKFS.state_b_a));
+			memcpy(log_msg.body.log_EKFS.state_w, buf.ekf.x_w, sizeof(log_msg.body.log_EKFS.state_w));
+			log_msg.body.log_EKFS.state_QFF = buf.ekf.x_QFF;
+			log_msg.body.log_EKFS.state_K = buf.ekf.x_K;
+			log_msg.body.log_EKFS.alpha = buf.ekf.alpha;
+			log_msg.body.log_EKFS.beta = buf.ekf.beta;
+			log_msg.body.log_EKFS.airspeed = buf.ekf.airspeed;
+			LOGBUFFER_WRITE_AND_COUNT(EKFS);
+
+			//EKF-Variances Message
+			log_msg.msg_type = LOG_EKFV_MSG;
+			log_msg.body.log_EKFV.timestamp= buf.ekf.timestamp;
+			memcpy(log_msg.body.log_EKFV.state_P_var_vect, buf.ekf.P_var_vect, sizeof(log_msg.body.log_EKFV.state_P_var_vect));
+			LOGBUFFER_WRITE_AND_COUNT(EKFV);
+		}
+
+
 		/* --- End of ASL-message writing section */
 
 		/* signal the other thread new data, but not yet unlock */

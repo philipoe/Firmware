@@ -604,6 +604,31 @@ struct log_ASLD_s {
 	uint8_t AltitudeStatus;
 	uint8_t AirspeedCtrlStatus;
 };
+
+#define LOG_EKFS_MSG 107
+struct log_EKFS_s {					// *** EKF-States log message ***
+	uint64_t timestamp;      		// in microseconds since system start
+	float state_p[3];				// position states for latitude, loglitude, altitude (above elipsoid)								// added for testing the EKF
+	float state_q_NS[4]; 			// angular states for q1, q2, q3, q4 																// added for testing the EKF
+	float state_v_N[3];	 			// velocity states for vel_n, vel_e, vel_d															// added for testing the EKF
+	float state_b_g[3];	 			// gyroscope offset states																	    	// added for testing the EKF
+	float state_b_a[3];				// accelerometer offset states 																		// added for testing the EKF
+	float state_QFF;				// QFF states																						// added for testing the EKF
+	float state_w[3];				// wind states																						// added for testing the EKF
+	float state_K;					// dynamic states																			    	// added for testing the EKF
+
+	float alpha;					// Estimated angle of attack [rad]
+	float beta;						// Estimated sideslip angle [rad]
+	float airspeed;					// Filtered/estimated airspeed [m/s]. Safer than using raw airspeed-sensor data.
+};
+
+
+#define LOG_EKFV_MSG 108
+struct log_EKFV_s {					// *** EKF-Variances log message ***
+	uint64_t timestamp;      		// in microseconds since system start
+	float state_P_var_vect[20];		// variance vector
+};
+
 ///////////////////////////////
 
 ///////////////////////////////
@@ -682,6 +707,8 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(AHL1,  "Bffffffffffff","fM,L1_D,L1_P_vMi,L1_P_vN,L1_P_vMa,v_N,v_Mi,v_Ma,hMa,hMi,h_vZcl,h_vZsi,h_LPw"),
 	LOG_FORMAT(AHL2,  "ffffffffffffffffffffff","tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
 	LOG_FORMAT(ASLD, "QIBfffffffffffffBffffffffffffffffBBB", "t,dt,mode,h,hR,hR_t,P,PR,PR_CT,q,qR,uE,uT,uT2,aZ,TAS_R,bSpoil,Y,YR,R,RR,p,pR,r,rR,uA,uR,Yd_R,Yd,GS_Q,P_kPE,R_kPE,qMax,SP,AltS,vS"),
+	LOG_FORMAT(EKFS,  "Qffffffffffffffffffffffff", "t,p1,p2,p3,q1,q2,q3,q4,v1,v2,v3,bg1,bg2,bg3,ba1,ba2,ba3,qff,w1,w2,w3,k,alpha,beta,TAS"),
+	LOG_FORMAT(EKFV,  "Qffffffffffffffffffff", "t,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */
