@@ -199,7 +199,7 @@ int SAS::RateControl(const float pRef, const float qRef, float& rRef, float &uAi
 	//Apply dampers
 	RollDamper(uAilCmd, p, fGainSchedQ, fGainSchedQ);
 	PitchDamper(uElevCmd, q, fGainSchedQ, fGainSchedQ);
-	if(params->ASLC_CoordTurn == 1 || params->ASLC_CoordTurn == 5) CoordinatedTurn_YawDamper(uRudCmd, r, rRef, roll, rollRef, fGainSchedQ, fGainSchedQ);
+	if(params->ASLC_CoordTurn == 1) CoordinatedTurn_YawDamper(uRudCmd, r, rRef, roll, rollRef, fGainSchedQ, fGainSchedQ);
 	else YawDamper(uRudCmd, r, 1.0f, fGainSchedQ);
 
 	//Decoupling
