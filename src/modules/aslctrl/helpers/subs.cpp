@@ -279,7 +279,7 @@ int subscriptions::update_aslctrl_params(void)
 	handle=param_find("HL_WPL1_P_vMax");
 	param_get(handle, &(aslctrl_params.HL_WPL1_P_vMax));
 	handle=param_find("HL_Vel_vNom");
-	if(bParamSanityChecksEnabled && Sanitize_param(handle, 0.0f, 15.0f) != 0) return -1;
+	if(bParamSanityChecksEnabled && Sanitize_param(handle, 5.0f, 20.0f) != 0) return -1;
 	param_get(handle, &(aslctrl_params.HL_Vel_vNom));
 	handle=param_find("HL_Vel_vMin");
 	param_get(handle, &(aslctrl_params.HL_Vel_vMin));

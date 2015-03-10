@@ -209,7 +209,7 @@ int SAS::RateControl(const float pRef, const float qRef, float& rRef, float &uAi
 			(double)temp1,(double)uAilCmd,(double)temp2,(double)uElevCmd,(double)temp3,(double)uRudCmd);
 
 	// Return codes
-	if(fabs(params->SAS_RollPGain) <1.0E-5f || fabs(params->SAS_PitchPGain) <1.0E-5f) {
+	if((fabs(params->SAS_RollPGain) <1.0E-5f || fabs(params->SAS_PitchPGain) <1.0E-5f) && params->ASLC_CtrlType==0) {
 		return -1; //Let the user know that the gains were accidentally set to zero, so there is no control authority!
 	}
 	else if(bOvSpdProt_Protecting) return -2;
