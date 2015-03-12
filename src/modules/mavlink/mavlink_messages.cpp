@@ -79,6 +79,7 @@
 #include "mavlink_main.h"
 
 #include <uORB/topics/aslctrl_data.h>	//Added by ASL/PhilippOe
+#include <uORB/topics/sensor_mppt.h>	//Added by ASL/Amir Melzer
 
 static uint16_t cm_uint16_from_m_float(float m);
 static void get_mavlink_mode_state(struct vehicle_status_s *status, struct position_setpoint_triplet_s *pos_sp_triplet,
@@ -2329,6 +2330,80 @@ protected:
 	}
 };
 
+//---------------------------------------------------
+// Added by ASL/Amir Melzer
+//---------------------------------------------------
+
+class MavlinkStreamAslmpptData : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamAslmpptData::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "ASLMPPT_DATA";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_SENS_MPPT;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamAslmpptData(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_SENS_MPPT_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_Aslmppt_data_sub;
+	uint64_t _Aslmppt_data_time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamAslmpptData(MavlinkStreamAslmpptData &);
+	MavlinkStreamAslmpptData& operator = (const MavlinkStreamAslmpptData &);
+
+protected:
+	explicit MavlinkStreamAslmpptData(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_Aslmppt_data_sub(_mavlink->add_orb_subscription(ORB_ID(sensor_mppt))),
+		_Aslmppt_data_time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct sensor_mppt_s Aslmppt_data;
+
+		if (_Aslmppt_data_sub->update(&_Aslmppt_data_time, &Aslmppt_data)) {
+
+			mavlink_sens_mppt_t msg;
+
+			msg.mppt_timestamp = Aslmppt_data.timestamp;
+			msg.mppt1_amp = Aslmppt_data.mppt_amp[0];
+			msg.mppt1_volt = Aslmppt_data.mppt_volt[0];
+			msg.mppt1_pwm = Aslmppt_data.mppt_pwm[0];
+			msg.mppt1_status = Aslmppt_data.mppt_status[0];
+			msg.mppt2_amp = Aslmppt_data.mppt_amp[1];
+			msg.mppt2_volt = Aslmppt_data.mppt_volt[1];
+			msg.mppt2_pwm = Aslmppt_data.mppt_pwm[1];
+			msg.mppt2_status = Aslmppt_data.mppt_status[1];
+			msg.mppt3_amp = Aslmppt_data.mppt_amp[2];
+			msg.mppt3_volt = Aslmppt_data.mppt_volt[2];
+			msg.mppt3_pwm = Aslmppt_data.mppt_pwm[2];
+			msg.mppt3_status = Aslmppt_data.mppt_status[2];
+
+			_mavlink->send_message(MAVLINK_MSG_ID_SENS_MPPT, &msg);
+
+		}
+	}
+};
+
 StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static),
 	new StreamListItem(&MavlinkStreamStatustext::new_instance, &MavlinkStreamStatustext::get_name_static),
@@ -2360,5 +2435,7 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamDistanceSensor::new_instance, &MavlinkStreamDistanceSensor::get_name_static),
 	new StreamListItem(&MavlinkStreamAslctrlData::new_instance, &MavlinkStreamAslctrlData::get_name_static),
 	new StreamListItem(&MavlinkStreamAslctrlDebug::new_instance, &MavlinkStreamAslctrlDebug::get_name_static),
+	new StreamListItem(&MavlinkStreamAslmpptData::new_instance, &MavlinkStreamAslmpptData::get_name_static),
+
 	nullptr
 };
