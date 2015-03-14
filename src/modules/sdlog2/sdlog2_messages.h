@@ -629,9 +629,14 @@ struct log_EKFV_s {					// *** EKF-Variances log message ***
 	float state_P_var_vect[20];		// variance vector
 };
 
-///////////////////////////////
-
-///////////////////////////////
+#define LOG_MPPT_MSG 109
+struct log_MPPT_s {					// *** MPPT log message ***
+	uint64_t timestamp;      		// in microseconds since system start
+	float mppt_amp[3];				// MPPT current readings in amps
+	float mppt_volt[3];				// MPPT voltage readings in volts
+	uint16_t mppt_pwm[3];			// MPPT pwm readings
+	uint8_t mppt_status[3];			// MPPT status readings
+};
 
 /********** SYSTEM MESSAGES, ID > 0x80 **********/
 
@@ -709,6 +714,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(ASLD, "QIBfffffffffffffBffffffffffffffffBBB", "t,dt,mode,h,hR,hR_t,P,PR,PR_CT,q,qR,uE,uT,uT2,aZ,TAS_R,bSpoil,Y,YR,R,RR,p,pR,r,rR,uA,uR,Yd_R,Yd,GS_Q,P_kPE,R_kPE,qMax,SP,AltS,vS"),
 	LOG_FORMAT(EKFS,  "Qffffffffffffffffffffffff", "t,p1,p2,p3,q1,q2,q3,q4,v1,v2,v3,bg1,bg2,bg3,ba1,ba2,ba3,qff,w1,w2,w3,k,alpha,beta,TAS"),
 	LOG_FORMAT(EKFV,  "Qffffffffffffffffffff", "t,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20"),
+	LOG_FORMAT(MPPT,  "QffHBffHBffHB", "t,Cur1,Volt1,PWM1,Stat1,Cur2,Volt2,PWM2,Stat2,Cur3,Volt3,PWM3,Stat3"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */

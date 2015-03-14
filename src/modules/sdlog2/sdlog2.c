@@ -109,6 +109,9 @@
 #include <uORB/topics/aslctrl_data.h>
 #include <uORB/topics/state_estimator_EKF_parameters.h>
 
+//Added (ASL/Amir Melzer)
+#include <uORB/topics/sensor_mppt.h>
+
 /**
  * Logging rate.
  *
@@ -969,6 +972,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct aslctrl_parameters_s aslctrl_params;
 		struct aslctrl_data_s aslctrl_data;
 		struct state_estimator_EKF_parameters_s ekf;
+		//added (ASL/Amir Melzer)
+		struct sensor_mppt_s mppt;
+
 	} buf;
 
 	memset(&buf, 0, sizeof(buf));
@@ -1021,6 +1027,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_ASLD_s log_ASLD;
 			struct log_EKFS_s log_EKFS;
 			struct log_EKFV_s log_EKFV;
+			//Added(ASL/Amir Melzer)
+			struct log_MPPT_s log_MPPT;
+
 		} body;
 	} log_msg = {
 		LOG_PACKET_HEADER_INIT(0)
@@ -1063,6 +1072,8 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int aslctrl_params_sub;
 		int aslctrl_data_sub;
 		int ekf_sub;
+		//Added (ASL/Amir Melzer)
+		int mppt_sub;
 	} subs;
 
 	subs.cmd_sub = orb_subscribe(ORB_ID(vehicle_command));
@@ -1101,6 +1112,8 @@ int sdlog2_thread_main(int argc, char *argv[])
 	subs.aslctrl_params_sub = orb_subscribe(ORB_ID(aslctrl_parameters));
 	subs.aslctrl_data_sub = orb_subscribe(ORB_ID(aslctrl_data));
 	subs.ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
+	//Added(ASL/Amir Melzer)
+	subs.mppt_sub = orb_subscribe(ORB_ID(sensor_mppt));
 
 	for (int i = 0; i < TELEMETRY_STATUS_ORB_ID_NUM; i++) {
 		subs.telemetry_subs[i] = orb_subscribe(telemetry_status_orb_id[i]);
@@ -1898,6 +1911,23 @@ int sdlog2_thread_main(int argc, char *argv[])
 			LOGBUFFER_WRITE_AND_COUNT(EKFV);
 		}
 
+		/* --- MPPT data --- */
+		if (copy_if_updated(ORB_ID(sensor_mppt), subs.mppt_sub, &buf.mppt)) {
+			log_msg.msg_type = LOG_MPPT_MSG;
+			log_msg.body.log_MPPT.mppt_amp[0] = buf.mppt.mppt_amp[0];
+			log_msg.body.log_MPPT.mppt_volt[0] = buf.mppt.mppt_volt[0];
+			log_msg.body.log_MPPT.mppt_pwm[0] = buf.mppt.mppt_pwm[0];
+			log_msg.body.log_MPPT.mppt_status[0] = buf.mppt.mppt_status[0];
+			log_msg.body.log_MPPT.mppt_amp[1] = buf.mppt.mppt_amp[1];
+			log_msg.body.log_MPPT.mppt_volt[1] = buf.mppt.mppt_volt[1];
+			log_msg.body.log_MPPT.mppt_pwm[1] = buf.mppt.mppt_pwm[1];
+			log_msg.body.log_MPPT.mppt_status[1] = buf.mppt.mppt_status[1];
+			log_msg.body.log_MPPT.mppt_amp[2] = buf.mppt.mppt_amp[2];
+			log_msg.body.log_MPPT.mppt_volt[2] = buf.mppt.mppt_volt[2];
+			log_msg.body.log_MPPT.mppt_pwm[2] = buf.mppt.mppt_pwm[2];
+			log_msg.body.log_MPPT.mppt_status[2] = buf.mppt.mppt_status[2];
+			LOGBUFFER_WRITE_AND_COUNT(MPPT);
+		}
 
 		/* --- End of ASL-message writing section */
 
