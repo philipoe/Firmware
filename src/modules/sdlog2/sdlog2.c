@@ -1912,20 +1912,13 @@ int sdlog2_thread_main(int argc, char *argv[])
 		}
 
 		/* --- MPPT data --- */
-		if (copy_if_updated(ORB_ID(sensor_mppt), subs.mppt_sub, &buf.mppt)) {
+		if (copy_if_updated(ORB_ID(sensor_mppt), subs.mppt_sub, &buf.mppt) && pLogEnabler.LOG_MPPT) {
 			log_msg.msg_type = LOG_MPPT_MSG;
-			log_msg.body.log_MPPT.mppt_amp[0] = buf.mppt.mppt_amp[0];
-			log_msg.body.log_MPPT.mppt_volt[0] = buf.mppt.mppt_volt[0];
-			log_msg.body.log_MPPT.mppt_pwm[0] = buf.mppt.mppt_pwm[0];
-			log_msg.body.log_MPPT.mppt_status[0] = buf.mppt.mppt_status[0];
-			log_msg.body.log_MPPT.mppt_amp[1] = buf.mppt.mppt_amp[1];
-			log_msg.body.log_MPPT.mppt_volt[1] = buf.mppt.mppt_volt[1];
-			log_msg.body.log_MPPT.mppt_pwm[1] = buf.mppt.mppt_pwm[1];
-			log_msg.body.log_MPPT.mppt_status[1] = buf.mppt.mppt_status[1];
-			log_msg.body.log_MPPT.mppt_amp[2] = buf.mppt.mppt_amp[2];
-			log_msg.body.log_MPPT.mppt_volt[2] = buf.mppt.mppt_volt[2];
-			log_msg.body.log_MPPT.mppt_pwm[2] = buf.mppt.mppt_pwm[2];
-			log_msg.body.log_MPPT.mppt_status[2] = buf.mppt.mppt_status[2];
+			log_msg.body.log_MPPT.timestamp = buf.mppt.timestamp;
+			memcpy(log_msg.body.log_MPPT.mppt_amp, buf.mppt.mppt_amp, sizeof(log_msg.body.log_MPPT.mppt_amp));
+			memcpy(log_msg.body.log_MPPT.mppt_volt, buf.mppt.mppt_volt, sizeof(log_msg.body.log_MPPT.mppt_volt));
+			memcpy(log_msg.body.log_MPPT.mppt_pwm, buf.mppt.mppt_pwm, sizeof(log_msg.body.log_MPPT.mppt_pwm));
+			memcpy(log_msg.body.log_MPPT.mppt_status, buf.mppt.mppt_status, sizeof(log_msg.body.log_MPPT.mppt_status));
 			LOGBUFFER_WRITE_AND_COUNT(MPPT);
 		}
 

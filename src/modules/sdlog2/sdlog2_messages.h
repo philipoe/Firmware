@@ -714,7 +714,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(ASLD, "QIBfffffffffffffBffffffffffffffffBBB", "t,dt,mode,h,hR,hR_t,P,PR,PR_CT,q,qR,uE,uT,uT2,aZ,TAS_R,bSpoil,Y,YR,R,RR,p,pR,r,rR,uA,uR,Yd_R,Yd,GS_Q,P_kPE,R_kPE,qMax,SP,AltS,vS"),
 	LOG_FORMAT(EKFS,  "Qffffffffffffffffffffffff", "t,p1,p2,p3,q1,q2,q3,q4,v1,v2,v3,bg1,bg2,bg3,ba1,ba2,ba3,qff,w1,w2,w3,k,alpha,beta,TAS"),
 	LOG_FORMAT(EKFV,  "Qffffffffffffffffffff", "t,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20"),
-	LOG_FORMAT(MPPT,  "QffHBffHBffHB", "t,Cur1,Volt1,PWM1,Stat1,Cur2,Volt2,PWM2,Stat2,Cur3,Volt3,PWM3,Stat3"),
+	LOG_FORMAT(MPPT,  "QffffffHHHBBB", "t,Cur1,Cur2,Cur3,Volt1,Volt2,Volt3,PWM1,PWM2,PWM3,Stat1,Stat2,Stat3"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */

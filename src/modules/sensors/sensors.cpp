@@ -238,7 +238,7 @@ private:
 	//int			_adc121_cspb_sub;		/**< current sensor power board data subscription */
 	//int			_adc121_cs1_sub;		/**< current sensor 1 board data subscription */
 	//int			_adc121_cs2_sub;		/**< current sensor 2 board data subscription */
-	int			_mppt_sub;				/**< MPPTs data subscription 					*/
+	int			_spv1020_sub;				/**< MPPTs data subscription 					*/
 	int 	_params_sub;				/**< notification of parameter updates */
 	int 	_manual_control_sub;		/**< notification of manual control updates */
 	orb_advert_t	_sensor_pub;				/**< combined sensor data topic */
@@ -248,6 +248,7 @@ private:
 	orb_advert_t	_battery_pub;				/**< battery status */
 	orb_advert_t	_airspeed_pub;				/**< airspeed */
 	orb_advert_t	_diff_pres_pub;				/**< differential_pressure */
+	orb_advert_t	_mppt_pub;					/**< mppt sensor data topic */
 
 	perf_counter_t	_loop_perf;					/**< loop performance counter */
 
@@ -609,7 +610,7 @@ Sensors::Sensors() :
 	////_adc121_cspb_sub(-1),										// added
 	////_adc121_cs1_sub(-1),										// added
 	////_adc121_cs2_sub(-1),										// added
-	_mppt_sub(-1),
+	_spv1020_sub(-1),
 	_params_sub(-1),
 	_manual_control_sub(-1),
 
@@ -621,6 +622,7 @@ Sensors::Sensors() :
 	_battery_pub(-1),
 	_airspeed_pub(-1),
 	_diff_pres_pub(-1),
+	_mppt_pub(-1),
 
 /* performance counters */
 	_loop_perf(perf_alloc(PC_ELAPSED, "sensor task update")),
@@ -1608,12 +1610,12 @@ void
 Sensors::mppt_poll(struct sensor_mppt_s &raw_mppt)
 {
 	bool mppt_updated;
-	orb_check(_mppt_sub, &mppt_updated);
+	orb_check(_spv1020_sub, &mppt_updated);
 
 	if (mppt_updated) {
 		struct spv1020_report	spv1020_report;
 
-		orb_copy(ORB_ID(sensor_spv1020), _mppt_sub, &spv1020_report);
+		orb_copy(ORB_ID(sensor_spv1020), _spv1020_sub, &spv1020_report);
 
 		raw_mppt.timestamp		= spv1020_report.timestamp;
 
@@ -1631,6 +1633,15 @@ Sensors::mppt_poll(struct sensor_mppt_s &raw_mppt)
 		raw_mppt.mppt_volt[2]   = spv1020_report.voltage[2]; 				/* MPPT device 2 voltage in volt */
 		raw_mppt.mppt_pwm[2]    = spv1020_report.pwm[2]; 					/* MPPT device 2 pwm 		     */
 		raw_mppt.mppt_status[2] = spv1020_report.status[2]; 				/* MPPT device 2 status		     */
+
+		/* announce the MPPT data if needed just publish else */
+		if (_mppt_pub > 0) {
+			orb_publish(ORB_ID(sensor_mppt), _mppt_pub, &raw_mppt);
+
+		} else {
+			_mppt_pub = orb_advertise(ORB_ID(sensor_mppt), &raw_mppt);
+		}
+
 	}
 }
 
@@ -2156,7 +2167,7 @@ Sensors::task_main()
 	////_adc121_cspb_sub = orb_subscribe(ORB_ID(sensor_adc121_cspb));				// added
 	////_adc121_cs1_sub = orb_subscribe(ORB_ID(sensor_adc121_cs1));					// added
 	////_adc121_cs2_sub = orb_subscribe(ORB_ID(sensor_adc121_cs2));					// added
-	_mppt_sub = orb_subscribe(ORB_ID(sensor_spv1020));
+	_spv1020_sub = orb_subscribe(ORB_ID(sensor_spv1020));
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_manual_control_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
 

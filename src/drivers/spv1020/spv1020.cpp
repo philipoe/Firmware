@@ -70,9 +70,6 @@
 
 #include <drivers/drv_mppt.h>
 
-//#include <uORB/topics/spv1020_i2c_wd.h>														/* added for the I2C WD */
-
-
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
 # undef ERROR
@@ -130,12 +127,6 @@ private:
 	perf_counter_t		_sample_perf;
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
-
-	//struct spv1020_i2c_wd_s 	 _spv1020_i2c_wd_report;	         /* I2C WD */
-	//orb_advert_t		 	 _spv1020_i2c_wd_pub;					 /* I2C WD */
-
-	uint8_t _spv1020_error_counter;									 /* SPV1020 I2C reset */
-
 
 	/**
 	 * Test whether the device supported by the driver is present at a
@@ -303,9 +294,7 @@ SPV1020::SPV1020(int bus) :
 	_mppt_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "SPV1020_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "SPV1020_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "SPV1020_buffer_overflows")),
-	_spv1020_error_counter(0)														/* SPV1020 I2C reset */
-
+	_buffer_overflows(perf_alloc(PC_COUNT, "SPV1020_buffer_overflows"))
 {
 	// enable debug() calls
 	_debug_enabled = true;
@@ -348,9 +337,6 @@ SPV1020::init()
 
 	if (_mppt_topic < 0)
 		debug("failed to create sensor_spv1020 object");
-
-	//_spv1020_i2c_wd_report.spv1020_i2c_error = false;												/* added for the I2C WD */
-	//_spv1020_i2c_wd_pub = orb_advertise(ORB_ID(spv1020_i2c_wd), &_spv1020_i2c_wd_report);    		/* added for the I2C WD */
 
 	//Init mppt-parameters
 	h_mppt_current_bias_term[0]=param_find("SENSA_MPPT1_fI");
@@ -598,22 +584,10 @@ SPV1020::cycle()
 				delete[] _reports;
 			probe();
 #endif
-			// added for testing
-			_spv1020_error_counter++;
-			if (_spv1020_error_counter > SPV1020_MAXIMAL_ERROR_COUNTER){
-				//_spv1020_i2c_wd_report.spv1020_i2c_error = true;															/* I2C WD */
-				//orb_publish(ORB_ID(spv1020_i2c_wd), _spv1020_i2c_wd_pub, &_spv1020_i2c_wd_report.spv1020_i2c_error);		/* I2C WD */
-				//usleep(250000);																							/* I2C WD */
-				_spv1020_error_counter = 0;
-			}
+
 			start();
 			return;
 		}
-		_spv1020_error_counter = 0;																							// added for testing
-
-		/* Ideal command to the I2C WD board */
-		//_spv1020_i2c_wd_report.spv1020_i2c_error = false;
-		//orb_publish(ORB_ID(spv1020_i2c_wd), _spv1020_i2c_wd_pub, &_spv1020_i2c_wd_report.spv1020_i2c_error);
 
 		/* next phase is measurement */
 		_measurement_phase = true;
