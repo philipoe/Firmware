@@ -27,7 +27,7 @@ then
 	mavlink stream -d /dev/ttyS1 -s ATTITUDE -r 2.0
 	mavlink stream -d /dev/ttyS1 -s VFR_HUD -r 2.0
 	mavlink stream -d /dev/ttyS1 -s GPS_RAW_INT -r 0.5
-	mavlink stream -d /dev/ttyS1 -s GLOBAL_POSITION_INT -r 0.5
+	mavlink stream -d /dev/ttyS1 -s GLOBAL_POSITION_INT -r 1.0
 	mavlink stream -d /dev/ttyS1 -s LOCAL_POSITION_NED -r 0.5
 	mavlink stream -d /dev/ttyS1 -s RC_CHANNELS_RAW -r 0.5
 	mavlink stream -d /dev/ttyS1 -s POSITION_TARGET_GLOBAL_INT -r 0.5

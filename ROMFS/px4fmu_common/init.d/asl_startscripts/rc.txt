@@ -9,17 +9,52 @@ echo "[init] ************************************************************"
 # HIL: If Hardware-In-the-Loop is used (HIL==yes), then the GCS-telemetry link uses high baud rate (-> use a cable for HIL!)
 set HIL no
 
-# Autopilot Mixer
-set MIXER ASL_EasyGlider
+# AIRPLANE (EasyGlider, Techpod, AtlantikSolar, SenseSoar)
+set AIRPLANE EasyGlider
 
 # Onboard Computer used? If OBC==yes, then a second mavlink instance will be started
 set OBC no
 
-echo "[init] HIL: " $HIL
-echo "[init] Mixer: " $MIXER
-echo "[init] OBC: " $OBC
+# Just output the current settings
+
+echo "[init] HIL:      " $HIL
+echo "[init] AIRPLANE: " $AIRPLANE 
+echo "[init] OBC:      " $OBC
 echo "[init] ************************************************************"
 
+# Do auto-config based on the above parameters
+
+if [ $AIRPLANE == EasyGlider ]
+then
+	set MIXER ASL_EasyGlider
+	set AIRPLANE_NR_EKF 1
+	param set SENS_BOARD_ROT 12
+fi
+if [ $AIRPLANE == Techpod ]
+then
+	set MIXER ASL_Techpod
+	set AIRPLANE_NR_EKF 3
+	param set SENS_BOARD_ROT 8
+fi
+if [ $AIRPLANE == AtlantikSolar ]
+then
+	set MIXER ASL_AtlantikSolar
+	set AIRPLANE_NR_EKF 2
+	param set SENS_BOARD_ROT 12
+fi
+if [ $AIRPLANE == SenseSoar ]
+then
+	set MIXER ASL_SenseSoar
+	set AIRPLANE_NR_EKF 0
+	param set SENS_BOARD_ROT 12
+fi
+
+if [ $HIL == yes ]
+then
+	# Overwrite mixer for HIL
+	set MIXER ASL_EasyGlider_HIL
+fi
+	
 ################################################
 # DEFAULT PARAMETERS
 ################################################
@@ -236,7 +271,6 @@ fi
 # Start IMU and Magnetometer
 if adis16448 start 
 then
-	param set SENS_BOARD_ROT 12
 	echo "using adis16448"
 else
 	echo "using MPU6000 and HMC5883L"
@@ -342,7 +376,7 @@ fi
 # Start state estimator
 #
 #ekf_att_pos_estimator start
-state_estimator start -d 1
+state_estimator start -d $AIRPLANE_NR_EKF
 
 #
 # Start controllers
