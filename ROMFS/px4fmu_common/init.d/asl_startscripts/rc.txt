@@ -235,13 +235,16 @@ fmu mode_$FMU_MODE
 #####################################################
 
 # start the airspeed sensor:
-if sdp600 start
+if [ $HIL == no ]
 then
-else
-	# start I2C_WD application and hdim010 pressure sensor
-	i2c_wd start
-	usleep 200000
-	hdim010 start
+	if sdp600 start
+	then
+	else
+		# start I2C_WD application and hdim010 pressure sensor
+		i2c_wd start
+		usleep 200000
+		hdim010 start
+	fi
 fi
 
 # start the ambient temperature sensor LM73
