@@ -100,7 +100,7 @@ void SAS::CoordinatedTurn_YawDamper(float &uRudCmd, float const &r, float& rRef,
 	//LP filter to smooth outputs to servos, but do not HP filter because we'll compare this to rRef in any case.
 	float rFilt = LP_Yaw.update(r);
 
-	if(LP_Airspeed.Get()>1.0f /*bAirspeedValid*/) {
+	if(LP_Airspeed.Get()>5.0f /*bAirspeedValid*/) {
 		// Recalculate reference body-yawrate (i.e. r-rate) necessary for a coordinated turn
 		rRef = g * sinf(roll) / LP_Airspeed.Get();
 
