@@ -57,6 +57,12 @@ struct spv1020_report {
 	uint64_t timestamp;
 };
 
+struct current_bias_term {
+	float	mppt1;
+	float	mppt2;
+	float	mppt3;
+};
+
 /*
  * ObjDev tag for raw voltage and current data.
  */
@@ -67,7 +73,9 @@ ORB_DECLARE(sensor_spv1020);
  */
 
 #define _MPPTIOCBASE		(0x2f00)						// check the MPPTIOCBASE value of 0x2f00
-#define _CURRENTIOC(_n)		(_IOC(_MPPTIOCBASE, _n))
+#define _MPPTIOC(_n)		(_IOC(_MPPTIOCBASE, _n))
 
+/** set the mppt raw current bias term */
+#define MPPTIOCSSCALE	_MPPTIOC(0)
 
 #endif /* _DRV_MPPT_H */

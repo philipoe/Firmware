@@ -119,14 +119,14 @@ private:
 	uint8_t 			mppt_status[3];
 
 	float				mppt_current_bias_term[3];
-	param_t 			h_mppt_current_bias_term[3];
-	int					counter;									  /* Counter for scheduling mppt parameter updates */
 
 	orb_advert_t		_mppt_topic;
 
 	perf_counter_t		_sample_perf;
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
+
+	current_bias_term	_current_bias_term;
 
 	/**
 	 * Test whether the device supported by the driver is present at a
@@ -287,12 +287,17 @@ SPV1020::SPV1020(int bus) :
 	_mppt_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "SPV1020_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "SPV1020_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "SPV1020_buffer_overflows"))
+	_buffer_overflows(perf_alloc(PC_COUNT, "SPV1020_buffer_overflows")),
+	_current_bias_term{}
 {
 	_debug_enabled = true;
 
 	// work_cancel in the dtor will explode if we don't do this...
 	memset(&_work, 0, sizeof(_work));
+
+	_current_bias_term.mppt1 = 0.0f;
+	_current_bias_term.mppt2 = 0.0f;
+	_current_bias_term.mppt3 = 0.0f;
 }
 
 SPV1020::~SPV1020()
@@ -329,19 +334,6 @@ SPV1020::init()
 
 	if (_mppt_topic < 0)
 		debug("failed to create sensor_spv1020 object");
-
-	//Init mppt-parameters
-	h_mppt_current_bias_term[0]=param_find("SENSA_MPPT1_fI");
-	h_mppt_current_bias_term[1]=param_find("SENSA_MPPT2_fI");
-	h_mppt_current_bias_term[2]=param_find("SENSA_MPPT3_fI");
-
-	for(int i=0;i<max_mppt_devices;i++) {
-		if ((param_get(h_mppt_current_bias_term[i], &(mppt_current_bias_term[i]))) > 0){
-			warnx("SPV1020: Couldn't get current bias parameter of MPPT %d, set to default value of 0 [A]", i);
-			mppt_current_bias_term[i] = 0.0f;
-		}
-	}
-	counter=0;
 
 	ret = OK;
 out:
@@ -527,6 +519,17 @@ SPV1020::ioctl(struct file *filp, int cmd, unsigned long arg)
 		start();
 		return OK;
 		//return -EINVAL;
+
+	case MPPTIOCSSCALE: {
+		/* copy mppt bias */
+		struct current_bias_term *s = (struct current_bias_term *) arg;
+		memcpy(&_current_bias_term, s, sizeof(_current_bias_term));
+		mppt_current_bias_term[0] = _current_bias_term.mppt1;
+		mppt_current_bias_term[1] = _current_bias_term.mppt2;
+		mppt_current_bias_term[2] = _current_bias_term.mppt3;
+		return OK;
+		}
+
 	default:
 		break;
 	}
@@ -587,20 +590,6 @@ SPV1020::cycle()
 int
 SPV1020::mppt_measurement()
 {
-	//MPPT-parameter update (once every n steps)
-	// TODO: This should ideally be called only when the parameters-topic has been updated!
-	counter++;
-	if(counter % 10 == 0)
-	{
-		for(int i=0;i<max_mppt_devices;i++) {
-			//param_get(h_mppt_current_bias_term[i], &(mppt_current_bias_term[i]));
-			if (!(param_get(h_mppt_current_bias_term[i], &(mppt_current_bias_term[i])))){
-				//warnx("SPV1020: Couldn't get current bias parameter of MPPT %d, set to default value", i);
-			}
-		}
-		counter=0;
-	}
-
 	/* read the most recent measurement */
 	perf_begin(_sample_perf);
 
@@ -678,7 +667,6 @@ SPV1020::mppt_current_read(uint8_t mppt_device)
 	cmd[3] = 0x00;
 
 	/* Send current read command to the MPPT */
-	//if (OK != transfer(&cmd[0], 2, nullptr, 0)) {
 	if (OK != transfer(&cmd[0], 4, nullptr, 0)) {
 		perf_count(_comms_errors);
 		return -EIO;

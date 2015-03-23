@@ -334,6 +334,10 @@ private:
 		float dbaro_Ltube;
 		float dbaro_dy;
 
+		float mppt1_b;
+		float mppt2_b;
+		float mppt3_b;
+
 	}		_parameters;			/**< local copies of interesting parameters */
 
 	struct {
@@ -396,6 +400,10 @@ private:
 		param_t dbaro_Dtube;
 		param_t dbaro_Ltube;
 		param_t dbaro_dy;
+
+		param_t mppt1_b;
+		param_t mppt2_b;
+		param_t mppt3_b;
 
 	}		_parameter_handles;		/**< handles for interesting parameters */
 
@@ -746,6 +754,10 @@ Sensors::Sensors() :
 	_parameter_handles.dbaro_Ltube = param_find("SENSA_DBaro_L");
 	_parameter_handles.dbaro_dy = param_find("SENSA_DBaro_dy");
 
+	_parameter_handles.mppt1_b = param_find("SENSA_MPPT1_fI");
+	_parameter_handles.mppt2_b = param_find("SENSA_MPPT2_fI");
+	_parameter_handles.mppt3_b = param_find("SENSA_MPPT3_fI");
+
 	/* fetch initial parameter values */
 	parameters_update();
 }
@@ -967,6 +979,10 @@ Sensors::parameters_update()
 	param_get(_parameter_handles.dbaro_Dtube, &(_parameters.dbaro_Dtube));
 	param_get(_parameter_handles.dbaro_Ltube, &(_parameters.dbaro_Ltube));
 	param_get(_parameter_handles.dbaro_dy, &(_parameters.dbaro_dy));
+
+	param_get(_parameter_handles.mppt1_b, &(_parameters.mppt1_b));
+	param_get(_parameter_handles.mppt2_b, &(_parameters.mppt2_b));
+	param_get(_parameter_handles.mppt3_b, &(_parameters.mppt3_b));
 
 	/** fine tune board offset on parameter update **/
 	math::Matrix<3, 3> board_rotation_offset;
@@ -1763,6 +1779,19 @@ Sensors::parameter_update_poll(bool forced)
 			}
 			close(fd);
 		}
+
+		fd = open(SPV1020_DEVICE_PATH, 0);
+		struct current_bias_term mpptscale = {
+			_parameters.mppt1_b,
+			_parameters.mppt2_b,
+			_parameters.mppt3_b,
+		};
+
+		if (OK != ioctl(fd, MPPTIOCSSCALE, (long unsigned int)&mpptscale)) {
+			warn("WARNING: failed to set offsets for mppts");
+		}
+
+		close(fd);
 
 #if 0
 		printf("CH0: RAW MAX: %d MIN %d S: %d MID: %d FUNC: %d\n", (int)_parameters.max[0], (int)_parameters.min[0], (int)(_rc.channels[0].scaling_factor * 10000), (int)(_rc.channels[0].mid), (int)_rc.function[0]);
