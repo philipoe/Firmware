@@ -66,7 +66,7 @@
 
 #include <systemlib/perf_counter.h>
 #include <systemlib/err.h>
-#include <systemlib/param/param.h>	//Added (PhOe): Additional parameters for MPPT calibration<<<<
+#include <systemlib/param/param.h>
 
 #include <drivers/drv_mppt.h>
 
@@ -170,7 +170,7 @@ private:
 	static void		cycle_trampoline(void *arg);
 
 	/**
-	 * Issue a MPPT measurement command for retrieving the current, voltage and status vector.
+	 * Issue a MPPT measurement command for retrieving the current, voltage , PWM  and status vector.
 	 *
 	 * @return		OK if the measurement command was successful.
 	 */
@@ -181,7 +181,6 @@ private:
 	 *
 	 * @return		OK if the measurement command was successful.
 	 */
-
 	int			mppt_current_read(uint8_t mppt_device);
 
 	/**
@@ -189,7 +188,6 @@ private:
 	 *
 	 * @return		OK if the measurement command was successful.
 	 */
-
 	int			mppt_voltage_read(uint8_t mppt_device);
 
 	/**
@@ -197,7 +195,6 @@ private:
 	 *
 	 * @return		OK if the measurement command was successful.
 	 */
-
 	int			mppt_pwm_read(uint8_t mppt_device);
 
 	/**
@@ -205,21 +202,18 @@ private:
 	 *
 	 * @return		OK if the measurement command was successful.
 	 */
-
 	int			mppt_status_read(uint8_t mppt_device);
 
 	/**
 	 * Send a reset command to the SPV1020.    // delete!
 	 *
 	 */
-
 	int			cmd_reset();
 
 	/**
 	 * Configure the I2C to SPI bridge (SC18IS602) to be used for the SPV1020.
 	 *
 	 */
-
 	int 		conf_I2C_SPI_bridge();
 
 };
@@ -282,7 +276,6 @@ private:
  */
 extern "C" __EXPORT int spv1020_main(int argc, char *argv[]);
 
-
 SPV1020::SPV1020(int bus) :
 	I2C("SPV1020", SPV1020_DEVICE_PATH, bus, 0, 400000),
 	_measure_ticks(0),
@@ -296,7 +289,6 @@ SPV1020::SPV1020(int bus) :
 	_comms_errors(perf_alloc(PC_COUNT, "SPV1020_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "SPV1020_buffer_overflows"))
 {
-	// enable debug() calls
 	_debug_enabled = true;
 
 	// work_cancel in the dtor will explode if we don't do this...
@@ -570,35 +562,24 @@ SPV1020::cycle_trampoline(void *arg)
 void
 SPV1020::cycle()
 {
-
 	/* collection phase? */
 	if (_measurement_phase) {
 		/* perform MPPTs reading cycle */
 		if (OK != mppt_measurement()) {
-#if 0																					// commented out for debugging
-
-			log("MPPT measurement error, restarting SPV1020 device");
-
-			/* free any existing reports and reset the state machine and try again */
-			if (_reports != nullptr)
-				delete[] _reports;
-			probe();
-#endif
-
 			start();
 			return;
 		}
 
-		/* next phase is measurement */
-		_measurement_phase = true;
+	/* next phase is measurement */
+	_measurement_phase = true;
 
-		/* schedule a fresh cycle call when the measurement is done */
-		work_queue(HPWORK,
-			   &_work,
-			   (worker_t)&SPV1020::cycle_trampoline,
-			   this,
-			   //USEC2TICK(SPV1020_CONVERSION_INTERVAL));  			// temp marked for testing the replacement of SPV1020_CONVERSION_INTERVAL
-		   	   _measure_ticks);										// SPV1020_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
+	/* schedule a fresh cycle call when the measurement is done */
+	work_queue(HPWORK,
+		   &_work,
+		   (worker_t)&SPV1020::cycle_trampoline,
+		   this,
+		   //USEC2TICK(SPV1020_CONVERSION_INTERVAL));  			// temp marked for testing the replacement of SPV1020_CONVERSION_INTERVAL
+		   _measure_ticks);										// SPV1020_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
 	}
 }
 
@@ -717,6 +698,7 @@ SPV1020::mppt_current_read(uint8_t mppt_device)
 	//mppt_current[mppt_device] = ((float)((uint16_t)(cvt.w & 0x03ff)))*MPPT_CURR_COV_FACTOR;
 
 	uint16_t mppt_current_bin = (uint16_t)(cvt.w & 0x03ff);
+
 	mppt_current[mppt_device] = ((float)(mppt_current_bin))/55.6f/(1.0f+ 2e-6f * (POW2((float)(mppt_current_bin) - mppt_current_bias_term[mppt_device])));
 
 	if (mppt_current[mppt_device] > SPV1020_MAXIMAL_CURRENT_RANGE) {
