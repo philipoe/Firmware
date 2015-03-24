@@ -316,17 +316,15 @@ void ASLAutopilot::update()
 	subs.actuators.control[CH_RDR] = ctrldata->uRud;
 	subs.actuators.control[CH_AIL_L] = ctrldata->uAil;		//Aileron-Differential applied in PX4IO-mixer
 
+	//Flaps/Spoilers on CH_FLAPS
+	if((counter%20==0) && (params->ASLC_DEBUG==31)) printf("flap switch: %.3f\n",(double)subs.manual_sp.flaps);
+	if(subs.manual_sp.flaps<-0.5f || ctrldata->bEngageSpoilers) subs.actuators.control[CH_FLAPS]=1.0f;
+	else subs.actuators.control[CH_FLAPS]=0.0f;
+
 	if(0) {
 		//Throttle channel 2 on AUX
 		subs.actuators.control[CH_AUX] = ctrldata->uThrot2;
 	}
-	else {
-		//Spoilers on AUX
-		if((counter%20==0) && (params->ASLC_DEBUG==31)) printf("flap switch: %.3f\n",(double)subs.manual_sp.flaps);
-		if(subs.manual_sp.flaps<-0.5f || ctrldata->bEngageSpoilers) subs.actuators.control[CH_AUX]=1.0f;
-		else subs.actuators.control[CH_AUX]=0.0f;
-	}
-
 
 	//Debug
 	if ((counter % 20 == 0) && (params->ASLC_DEBUG==1)) {
