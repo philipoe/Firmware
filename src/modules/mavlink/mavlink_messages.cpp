@@ -69,6 +69,8 @@
 #include <uORB/topics/airspeed.h>
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/navigation_capabilities.h>
+#include <uORB/topics/aslctrl_data.h>
+#include <uORB/topics/sensor_mppt.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_range_finder.h>
@@ -78,8 +80,6 @@
 #include "mavlink_messages.h"
 #include "mavlink_main.h"
 
-#include <uORB/topics/aslctrl_data.h>	//Added by ASL/PhilippOe
-#include <uORB/topics/sensor_mppt.h>	//Added by ASL/Amir Melzer
 
 static uint16_t cm_uint16_from_m_float(float m);
 static void get_mavlink_mode_state(struct vehicle_status_s *status, struct position_setpoint_triplet_s *pos_sp_triplet,
@@ -2177,10 +2177,6 @@ protected:
 	}
 };
 
-//---------------------------------------------------
-// Added by ASL/PhilippOe
-//---------------------------------------------------
-
 class MavlinkStreamAslctrlData : public MavlinkStream
 {
 public:
@@ -2329,10 +2325,6 @@ protected:
 		}
 	}
 };
-
-//---------------------------------------------------
-// Added by ASL/Amir Melzer
-//---------------------------------------------------
 
 class MavlinkStreamAslmpptData : public MavlinkStream
 {

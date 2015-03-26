@@ -103,13 +103,10 @@
 #include "sdlog2_format.h"
 #include "sdlog2_messages.h"
 
-//Added (ASL/PhilippOe)
 #include "logenabler.h"
 #include <uORB/topics/aslctrl_parameters.h>
 #include <uORB/topics/aslctrl_data.h>
 #include <uORB/topics/state_estimator_EKF_parameters.h>
-
-//Added (ASL/Amir Melzer)
 #include <uORB/topics/sensor_mppt.h>
 
 /**
@@ -926,7 +923,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 		errx(1, "can't allocate log buffer, exiting");
 	}
 
-	//Added (ASL/PhilippOe)
 	GetLogEnablerParams();
 
 	struct vehicle_status_s buf_status;
@@ -968,11 +964,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct satellite_info_s sat_info;
 		struct wind_estimate_s wind_estimate;
 		struct encoders_s encoders;
-		//added (ASL/PhilippOe)
 		struct aslctrl_parameters_s aslctrl_params;
 		struct aslctrl_data_s aslctrl_data;
 		struct state_estimator_EKF_parameters_s ekf;
-		//added (ASL/Amir Melzer)
 		struct sensor_mppt_s mppt;
 
 	} buf;
@@ -1018,7 +1012,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_TECS_s log_TECS;
 			struct log_WIND_s log_WIND;
 			struct log_ENCD_s log_ENCD;
-			//Added(ASL/PhilippOe)
 			struct log_ASLC_s log_ASLC;
 			struct log_ASAS_s log_ASAS;
 			struct log_ACAS_s log_ACAS;
@@ -1027,7 +1020,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_ASLD_s log_ASLD;
 			struct log_EKFS_s log_EKFS;
 			struct log_EKFV_s log_EKFV;
-			//Added(ASL/Amir Melzer)
 			struct log_MPPT_s log_MPPT;
 
 		} body;
@@ -1068,11 +1060,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int servorail_status_sub;
 		int wind_sub;
 		int encoders_sub;
-		//Added (ASL/PhilippOe)
 		int aslctrl_params_sub;
 		int aslctrl_data_sub;
 		int ekf_sub;
-		//Added (ASL/Amir Melzer)
 		int mppt_sub;
 	} subs;
 
@@ -1106,13 +1096,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 	/* we need to rate-limit wind, as we do not need the full update rate */
 	orb_set_interval(subs.wind_sub, 90);
 	subs.encoders_sub = orb_subscribe(ORB_ID(encoders));
-
-	/* add new topics HERE */
-	//Added(ASL/PhilippOe)
 	subs.aslctrl_params_sub = orb_subscribe(ORB_ID(aslctrl_parameters));
 	subs.aslctrl_data_sub = orb_subscribe(ORB_ID(aslctrl_data));
 	subs.ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
-	//Added(ASL/Amir Melzer)
 	subs.mppt_sub = orb_subscribe(ORB_ID(sensor_mppt));
 
 	for (int i = 0; i < TELEMETRY_STATUS_ORB_ID_NUM; i++) {
@@ -1724,7 +1710,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		}
 
 		/* ------------------------------------------------------------- */
-		/* Logging of ASL-messages (added by ASL/PhilippOe & AmirMelzer) */
+		/* Logging of ASL-messages										 */
 		/* ------------------------------------------------------------- */
 		/* --- ASLCTRL parameters --- */
 		if (copy_if_updated(ORB_ID(aslctrl_parameters), subs.aslctrl_params_sub, &buf.aslctrl_params) && pLogEnabler.LOG_ASLC) {

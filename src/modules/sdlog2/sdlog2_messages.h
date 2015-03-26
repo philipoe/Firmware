@@ -608,14 +608,14 @@ struct log_ASLD_s {
 #define LOG_EKFS_MSG 107
 struct log_EKFS_s {					// *** EKF-States log message ***
 	uint64_t timestamp;      		// in microseconds since system start
-	float state_p[3];				// position states for latitude, loglitude, altitude (above elipsoid)								// added for testing the EKF
-	float state_q_NS[4]; 			// angular states for q1, q2, q3, q4 																// added for testing the EKF
-	float state_v_N[3];	 			// velocity states for vel_n, vel_e, vel_d															// added for testing the EKF
-	float state_b_g[3];	 			// gyroscope offset states																	    	// added for testing the EKF
-	float state_b_a[3];				// accelerometer offset states 																		// added for testing the EKF
-	float state_QFF;				// QFF states																						// added for testing the EKF
-	float state_w[3];				// wind states																						// added for testing the EKF
-	float state_K;					// dynamic states																			    	// added for testing the EKF
+	float state_p[3];				// position states for latitude, loglitude, altitude (above elipsoid)
+	float state_q_NS[4]; 			// angular states for q1, q2, q3, q4
+	float state_v_N[3];	 			// velocity states for vel_n, vel_e, vel_d
+	float state_b_g[3];	 			// gyroscope offset states
+	float state_b_a[3];				// accelerometer offset states
+	float state_QFF;				// QFF states
+	float state_w[3];				// wind states
+	float state_K;					// dynamic states
 
 	float alpha;					// Estimated angle of attack [rad]
 	float beta;						// Estimated sideslip angle [rad]

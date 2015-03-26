@@ -265,8 +265,6 @@ private:
 #define MPPT_VOLT_COV_FACTOR	0.01876f	/* MPPT_VOLT_COV_FACTOR = (1+R101/R102)*(1.25/2^10) = 0.01876  */
 #define MPPT_CURR_COV_FACTOR	0.00878f	/* MPPT_CURR_COV_FACTOR = (9/2^10) = 0.00878 				   */
 
-#define SPV1020_MAXIMAL_ERROR_COUNTER	10	/* Added for the SPV1020 reset (number of error required for the I2C reset) */
-
 #define SPV1020_MAXIMAL_VOLTAGE_RANGE	40.0f
 #define SPV1020_MAXIMAL_CURRENT_RANGE	9.0f
 #define SPV1020_MAXIMAL_PWM_RANGE		512
