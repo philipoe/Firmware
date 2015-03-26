@@ -2336,7 +2336,7 @@ public:
 
 	static const char *get_name_static()
 	{
-		return "ASLMPPT_DATA";
+		return "SENS_MPPT";
 	}
 
 	uint8_t get_id()
@@ -2355,8 +2355,8 @@ public:
 	}
 
 private:
-	MavlinkOrbSubscription *_Aslmppt_data_sub;
-	uint64_t _Aslmppt_data_time;
+	MavlinkOrbSubscription *_mppt_data_sub;
+	uint64_t _mppt_data_time;
 
 	/* do not allow top copying this class */
 	MavlinkStreamAslmpptData(MavlinkStreamAslmpptData &);
@@ -2364,31 +2364,31 @@ private:
 
 protected:
 	explicit MavlinkStreamAslmpptData(Mavlink *mavlink) : MavlinkStream(mavlink),
-		_Aslmppt_data_sub(_mavlink->add_orb_subscription(ORB_ID(sensor_mppt))),
-		_Aslmppt_data_time(0)
+		_mppt_data_sub(_mavlink->add_orb_subscription(ORB_ID(sensor_mppt))),
+		_mppt_data_time(0)
 	{}
 
 	void send(const hrt_abstime t)
 	{
-		struct sensor_mppt_s Aslmppt_data;
+		struct sensor_mppt_s mppt_data;
 
-		if (_Aslmppt_data_sub->update(&_Aslmppt_data_time, &Aslmppt_data)) {
+		if (_mppt_data_sub->update(&_mppt_data_time, &mppt_data)) {
 
 			mavlink_sens_mppt_t msg;
 
-			msg.mppt_timestamp = Aslmppt_data.timestamp;
-			msg.mppt1_amp = Aslmppt_data.mppt_amp[0];
-			msg.mppt1_volt = Aslmppt_data.mppt_volt[0];
-			msg.mppt1_pwm = Aslmppt_data.mppt_pwm[0];
-			msg.mppt1_status = Aslmppt_data.mppt_status[0];
-			msg.mppt2_amp = Aslmppt_data.mppt_amp[1];
-			msg.mppt2_volt = Aslmppt_data.mppt_volt[1];
-			msg.mppt2_pwm = Aslmppt_data.mppt_pwm[1];
-			msg.mppt2_status = Aslmppt_data.mppt_status[1];
-			msg.mppt3_amp = Aslmppt_data.mppt_amp[2];
-			msg.mppt3_volt = Aslmppt_data.mppt_volt[2];
-			msg.mppt3_pwm = Aslmppt_data.mppt_pwm[2];
-			msg.mppt3_status = Aslmppt_data.mppt_status[2];
+			msg.mppt_timestamp = mppt_data.timestamp;
+			msg.mppt1_amp = mppt_data.mppt_amp[0];
+			msg.mppt1_volt = mppt_data.mppt_volt[0];
+			msg.mppt1_pwm = mppt_data.mppt_pwm[0];
+			msg.mppt1_status = mppt_data.mppt_status[0];
+			msg.mppt2_amp = mppt_data.mppt_amp[1];
+			msg.mppt2_volt = mppt_data.mppt_volt[1];
+			msg.mppt2_pwm = mppt_data.mppt_pwm[1];
+			msg.mppt2_status = mppt_data.mppt_status[1];
+			msg.mppt3_amp = mppt_data.mppt_amp[2];
+			msg.mppt3_volt = mppt_data.mppt_volt[2];
+			msg.mppt3_pwm = mppt_data.mppt_pwm[2];
+			msg.mppt3_status = mppt_data.mppt_status[2];
 
 			_mavlink->send_message(MAVLINK_MSG_ID_SENS_MPPT, &msg);
 
