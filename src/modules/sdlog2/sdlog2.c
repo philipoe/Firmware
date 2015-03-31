@@ -973,28 +973,16 @@ int sdlog2_thread_main(int argc, char *argv[])
 	//Added (ASL/PhilippOe)
 	GetLogEnablerParams();
 
-	struct vehicle_status_s *buf_status;
+	struct vehicle_status_s buf_status;
 
-	struct vehicle_gps_position_s *buf_gps_pos;
+	struct vehicle_gps_position_s buf_gps_pos;
 
-	//memset(&buf_status, 0, sizeof(buf_status));
-	buf_status = (struct vehicle_status_s*)calloc(1,sizeof(struct vehicle_status_s));
-	if(NULL==buf_status)
-	{
-		main_thread_should_exit = true;
-		warnx("Could not allocate enough memory, thread will be closed");
-	}
+	memset(&buf_status, 0, sizeof(buf_status));
 
-	//memset(&buf_gps_pos, 0, sizeof(buf_gps_pos));
-	buf_gps_pos = (struct vehicle_gps_position_s*)calloc(1,sizeof(struct vehicle_gps_position_s));
-	if(NULL==buf_gps_pos)
-	{
-		main_thread_should_exit = true;
-		warnx("Could not allocate enough memory, thread will be closed");
-	}
+	memset(&buf_gps_pos, 0, sizeof(buf_gps_pos));
 
 	/* warning! using union here to save memory, elements should be used separately! */
-	 typedef union buf_u {
+	 union {
 		struct vehicle_command_s cmd;
 		struct sensor_combined_s sensor;
 		struct vehicle_attitude_s att;
@@ -1030,16 +1018,9 @@ int sdlog2_thread_main(int argc, char *argv[])
 		//added (ASL/PhilippOe)
 		struct aslctrl_parameters_s aslctrl_params;
 		struct aslctrl_data_s aslctrl_data;
-	} buf_t;
+	} buf;
 
-	buf_t *buf = (buf_t*) calloc(1,sizeof(buf_t));
-	if(NULL==buf)
-	{
-		main_thread_should_exit = true;
-		warnx("Could not allocate enough memory, thread will be closed");
-	}
-
-	//memset(&buf, 0, sizeof(buf));
+	memset(&buf, 0, sizeof(buf));
 
 	/* log message buffer: header + body */
 #pragma pack(push, 1)
@@ -1217,7 +1198,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		/* check GPS topic to get GPS time */
 		if (log_name_timestamp) {
 			if (!orb_copy(ORB_ID(vehicle_gps_position), subs.gps_pos_sub, &buf_gps_pos)) {
-				gps_time = buf_gps_pos->time_utc_usec;
+				gps_time = buf_gps_pos.time_utc_usec;
 			}
 		}
 
@@ -1228,24 +1209,24 @@ int sdlog2_thread_main(int argc, char *argv[])
 		usleep(sleep_delay);
 
 		/* --- VEHICLE COMMAND - LOG MANAGEMENT --- */
-		if (copy_if_updated(ORB_ID(vehicle_command), subs.cmd_sub, &(buf->cmd))) {
-			handle_command(&(buf->cmd));
+		if (copy_if_updated(ORB_ID(vehicle_command), subs.cmd_sub, &(buf.cmd))) {
+			handle_command(&(buf.cmd));
 		}
 
 		/* --- VEHICLE STATUS - LOG MANAGEMENT --- */
-		bool status_updated = copy_if_updated(ORB_ID(vehicle_status), subs.status_sub, buf_status);
+		bool status_updated = copy_if_updated(ORB_ID(vehicle_status), subs.status_sub, &buf_status);
 
 		if (status_updated) {
 			if (log_when_armed) {
-				handle_status(buf_status);
+				handle_status(&buf_status);
 			}
 		}
 
 		/* --- GPS POSITION - LOG MANAGEMENT --- */
-		bool gps_pos_updated = copy_if_updated(ORB_ID(vehicle_gps_position), subs.gps_pos_sub, buf_gps_pos);
+		bool gps_pos_updated = copy_if_updated(ORB_ID(vehicle_gps_position), subs.gps_pos_sub, &buf_gps_pos);
 
 		if (gps_pos_updated && log_name_timestamp) {
-			gps_time = buf_gps_pos->time_utc_usec;
+			gps_time = buf_gps_pos.time_utc_usec;
 		}
 
 		if (!logging_enabled) {
@@ -1262,19 +1243,19 @@ int sdlog2_thread_main(int argc, char *argv[])
 		/* --- VEHICLE STATUS --- */
 		if (status_updated) {
 			log_msg.msg_type = LOG_STAT_MSG;
-			log_msg.body.log_STAT.main_state = (uint8_t) buf_status->main_state;
-			log_msg.body.log_STAT.arming_state = (uint8_t) buf_status->arming_state;
-			log_msg.body.log_STAT.failsafe_state = (uint8_t) buf_status->failsafe;
-			log_msg.body.log_STAT.battery_remaining = buf_status->battery_remaining;
-			log_msg.body.log_STAT.battery_warning = (uint8_t) buf_status->battery_warning;
-			log_msg.body.log_STAT.landed = (uint8_t) buf_status->condition_landed;
+			log_msg.body.log_STAT.main_state = (uint8_t) buf_status.main_state;
+			log_msg.body.log_STAT.arming_state = (uint8_t) buf_status.arming_state;
+			log_msg.body.log_STAT.failsafe_state = (uint8_t) buf_status.failsafe;
+			log_msg.body.log_STAT.battery_remaining = buf_status.battery_remaining;
+			log_msg.body.log_STAT.battery_warning = (uint8_t) buf_status.battery_warning;
+			log_msg.body.log_STAT.landed = (uint8_t) buf_status.condition_landed;
 			LOGBUFFER_WRITE_AND_COUNT(STAT);
 		}
 
 		/* --- VTOL VEHICLE STATUS --- */
-		if(copy_if_updated(ORB_ID(vtol_vehicle_status), subs.vtol_status_sub, &(buf->vtol_status))) {
+		if(copy_if_updated(ORB_ID(vtol_vehicle_status), subs.vtol_status_sub, &(buf.vtol_status))) {
 			log_msg.msg_type = LOG_VTOL_MSG;
-			log_msg.body.log_VTOL.airspeed_tot = buf->vtol_status.airspeed_tot;
+			log_msg.body.log_VTOL.airspeed_tot = buf.vtol_status.airspeed_tot;
 			LOGBUFFER_WRITE_AND_COUNT(VTOL);
 		}
 
@@ -1282,31 +1263,31 @@ int sdlog2_thread_main(int argc, char *argv[])
 		if (gps_pos_updated) {
 
 			log_msg.msg_type = LOG_GPS_MSG;
-			log_msg.body.log_GPS.gps_time = buf_gps_pos->time_utc_usec;
-			log_msg.body.log_GPS.fix_type = buf_gps_pos->fix_type;
-			log_msg.body.log_GPS.eph = buf_gps_pos->eph;
-			log_msg.body.log_GPS.epv = buf_gps_pos->epv;
-			log_msg.body.log_GPS.lat = buf_gps_pos->lat;
-			log_msg.body.log_GPS.lon = buf_gps_pos->lon;
-			log_msg.body.log_GPS.alt = buf_gps_pos->alt * 0.001f;
-			log_msg.body.log_GPS.vel_n = buf_gps_pos->vel_n_m_s;
-			log_msg.body.log_GPS.vel_e = buf_gps_pos->vel_e_m_s;
-			log_msg.body.log_GPS.vel_d = buf_gps_pos->vel_d_m_s;
-			log_msg.body.log_GPS.cog = buf_gps_pos->cog_rad;
-			log_msg.body.log_GPS.sats = buf_gps_pos->satellites_used;
+			log_msg.body.log_GPS.gps_time = buf_gps_pos.time_utc_usec;
+			log_msg.body.log_GPS.fix_type = buf_gps_pos.fix_type;
+			log_msg.body.log_GPS.eph = buf_gps_pos.eph;
+			log_msg.body.log_GPS.epv = buf_gps_pos.epv;
+			log_msg.body.log_GPS.lat = buf_gps_pos.lat;
+			log_msg.body.log_GPS.lon = buf_gps_pos.lon;
+			log_msg.body.log_GPS.alt = buf_gps_pos.alt * 0.001f;
+			log_msg.body.log_GPS.vel_n = buf_gps_pos.vel_n_m_s;
+			log_msg.body.log_GPS.vel_e = buf_gps_pos.vel_e_m_s;
+			log_msg.body.log_GPS.vel_d = buf_gps_pos.vel_d_m_s;
+			log_msg.body.log_GPS.cog = buf_gps_pos.cog_rad;
+			log_msg.body.log_GPS.sats = buf_gps_pos.satellites_used;
 			log_msg.body.log_GPS.snr_mean = snr_mean;
-			log_msg.body.log_GPS.noise_per_ms = buf_gps_pos->noise_per_ms;
-			log_msg.body.log_GPS.jamming_indicator = buf_gps_pos->jamming_indicator;
+			log_msg.body.log_GPS.noise_per_ms = buf_gps_pos.noise_per_ms;
+			log_msg.body.log_GPS.jamming_indicator = buf_gps_pos.jamming_indicator;
 			LOGBUFFER_WRITE_AND_COUNT(GPS);
 		}
 
 		/* --- SATELLITE INFO - UNIT #1 --- */
 		if (_extended_logging) {
 
-			if (copy_if_updated(ORB_ID(satellite_info), subs.sat_info_sub, &buf->sat_info)) {
+			if (copy_if_updated(ORB_ID(satellite_info), subs.sat_info_sub, &buf.sat_info)) {
 
 				/* log the SNR of each satellite for a detailed view of signal quality */
-				unsigned sat_info_count = MIN(buf->sat_info.count, sizeof(buf->sat_info.snr) / sizeof(buf->sat_info.snr[0]));
+				unsigned sat_info_count = MIN(buf.sat_info.count, sizeof(buf.sat_info.snr) / sizeof(buf.sat_info.snr[0]));
 				unsigned log_max_snr = sizeof(log_msg.body.log_GS0A.satellite_snr) / sizeof(log_msg.body.log_GS0A.satellite_snr[0]);
 
 				log_msg.msg_type = LOG_GS0A_MSG;
@@ -1316,14 +1297,14 @@ int sdlog2_thread_main(int argc, char *argv[])
 				/* fill set A and calculate mean SNR */
 				for (unsigned i = 0; i < sat_info_count; i++) {
 
-					snr_mean += buf->sat_info.snr[i];
+					snr_mean += buf.sat_info.snr[i];
 
-					int satindex = buf->sat_info.svid[i] - 1;
+					int satindex = buf.sat_info.svid[i] - 1;
 
 					/* handles index exceeding and wraps to to arithmetic errors */
 					if ((satindex >= 0) && (satindex < (int)log_max_snr)) {
 						/* map satellites by their ID so that logs from two receivers can be compared */
-						log_msg.body.log_GS0A.satellite_snr[satindex] = buf->sat_info.snr[i];
+						log_msg.body.log_GS0A.satellite_snr[satindex] = buf.sat_info.snr[i];
 					}
 				}
 				LOGBUFFER_WRITE_AND_COUNT(GS0A);
@@ -1336,12 +1317,12 @@ int sdlog2_thread_main(int argc, char *argv[])
 				for (unsigned i = 0; i < sat_info_count; i++) {
 
 					/* get second bank of satellites, thus deduct bank size from index */
-					int satindex = buf->sat_info.svid[i] - 1 - log_max_snr;
+					int satindex = buf.sat_info.svid[i] - 1 - log_max_snr;
 
 					/* handles index exceeding and wraps to to arithmetic errors */
 					if ((satindex >= 0) && (satindex < (int)log_max_snr)) {
 						/* map satellites by their ID so that logs from two receivers can be compared */
-						log_msg.body.log_GS0B.satellite_snr[satindex] = buf->sat_info.snr[i];
+						log_msg.body.log_GS0B.satellite_snr[satindex] = buf.sat_info.snr[i];
 					}
 				}
 				LOGBUFFER_WRITE_AND_COUNT(GS0B);
@@ -1349,258 +1330,258 @@ int sdlog2_thread_main(int argc, char *argv[])
 		}
 
 		/* --- SENSOR COMBINED --- */
-		if (copy_if_updated(ORB_ID(sensor_combined), subs.sensor_sub, &buf->sensor)) {
+		if (copy_if_updated(ORB_ID(sensor_combined), subs.sensor_sub, &buf.sensor)) {
 			bool write_IMU = false;
 			bool write_IMU1 = false;
 			bool write_IMU2 = false;
 			bool write_SENS = false;
 			bool write_SENS1 = false;
 
-			if (buf->sensor.timestamp != gyro_timestamp) {
-				gyro_timestamp = buf->sensor.timestamp;
+			if (buf.sensor.timestamp != gyro_timestamp) {
+				gyro_timestamp = buf.sensor.timestamp;
 				write_IMU = true;
 			}
 
-			if (buf->sensor.accelerometer_timestamp != accelerometer_timestamp) {
-				accelerometer_timestamp = buf->sensor.accelerometer_timestamp;
+			if (buf.sensor.accelerometer_timestamp != accelerometer_timestamp) {
+				accelerometer_timestamp = buf.sensor.accelerometer_timestamp;
 				write_IMU = true;
 			}
 
-			if (buf->sensor.magnetometer_timestamp != magnetometer_timestamp) {
-				magnetometer_timestamp = buf->sensor.magnetometer_timestamp;
+			if (buf.sensor.magnetometer_timestamp != magnetometer_timestamp) {
+				magnetometer_timestamp = buf.sensor.magnetometer_timestamp;
 				write_IMU = true;
 			}
 
-			if (buf->sensor.baro_timestamp != barometer_timestamp) {
-				barometer_timestamp = buf->sensor.baro_timestamp;
+			if (buf.sensor.baro_timestamp != barometer_timestamp) {
+				barometer_timestamp = buf.sensor.baro_timestamp;
 				write_SENS = true;
 			}
 
-			if (buf->sensor.differential_pressure_timestamp != differential_pressure_timestamp) {
-				differential_pressure_timestamp = buf->sensor.differential_pressure_timestamp;
+			if (buf.sensor.differential_pressure_timestamp != differential_pressure_timestamp) {
+				differential_pressure_timestamp = buf.sensor.differential_pressure_timestamp;
 				write_SENS = true;
 			}
 
 			if (write_IMU) {
 				log_msg.msg_type = LOG_IMU_MSG;
-				log_msg.body.log_IMU.gyro_x = buf->sensor.gyro_rad_s[0];
-				log_msg.body.log_IMU.gyro_y = buf->sensor.gyro_rad_s[1];
-				log_msg.body.log_IMU.gyro_z = buf->sensor.gyro_rad_s[2];
-				log_msg.body.log_IMU.acc_x = buf->sensor.accelerometer_m_s2[0];
-				log_msg.body.log_IMU.acc_y = buf->sensor.accelerometer_m_s2[1];
-				log_msg.body.log_IMU.acc_z = buf->sensor.accelerometer_m_s2[2];
-				log_msg.body.log_IMU.mag_x = buf->sensor.magnetometer_ga[0];
-				log_msg.body.log_IMU.mag_y = buf->sensor.magnetometer_ga[1];
-				log_msg.body.log_IMU.mag_z = buf->sensor.magnetometer_ga[2];
+				log_msg.body.log_IMU.gyro_x = buf.sensor.gyro_rad_s[0];
+				log_msg.body.log_IMU.gyro_y = buf.sensor.gyro_rad_s[1];
+				log_msg.body.log_IMU.gyro_z = buf.sensor.gyro_rad_s[2];
+				log_msg.body.log_IMU.acc_x = buf.sensor.accelerometer_m_s2[0];
+				log_msg.body.log_IMU.acc_y = buf.sensor.accelerometer_m_s2[1];
+				log_msg.body.log_IMU.acc_z = buf.sensor.accelerometer_m_s2[2];
+				log_msg.body.log_IMU.mag_x = buf.sensor.magnetometer_ga[0];
+				log_msg.body.log_IMU.mag_y = buf.sensor.magnetometer_ga[1];
+				log_msg.body.log_IMU.mag_z = buf.sensor.magnetometer_ga[2];
 				LOGBUFFER_WRITE_AND_COUNT(IMU);
 			}
 
 			if (write_SENS) {
 				log_msg.msg_type = LOG_SENS_MSG;
-				log_msg.body.log_SENS.baro_pres = buf->sensor.baro_pres_mbar;
-				log_msg.body.log_SENS.baro_alt = buf->sensor.baro_alt_meter;
-				log_msg.body.log_SENS.baro_temp = buf->sensor.baro_temp_celcius;
-				log_msg.body.log_SENS.diff_pres = buf->sensor.differential_pressure_pa;
-				log_msg.body.log_SENS.diff_pres_filtered = buf->sensor.differential_pressure_filtered_pa;
+				log_msg.body.log_SENS.baro_pres = buf.sensor.baro_pres_mbar;
+				log_msg.body.log_SENS.baro_alt = buf.sensor.baro_alt_meter;
+				log_msg.body.log_SENS.baro_temp = buf.sensor.baro_temp_celcius;
+				log_msg.body.log_SENS.diff_pres = buf.sensor.differential_pressure_pa;
+				log_msg.body.log_SENS.diff_pres_filtered = buf.sensor.differential_pressure_filtered_pa;
 				LOGBUFFER_WRITE_AND_COUNT(SENS);
 			}
 
-			if (buf->sensor.baro1_timestamp != barometer1_timestamp) {
-				barometer1_timestamp = buf->sensor.baro1_timestamp;
+			if (buf.sensor.baro1_timestamp != barometer1_timestamp) {
+				barometer1_timestamp = buf.sensor.baro1_timestamp;
 				write_SENS1 = true;
 			}
 
 			if (write_SENS1) {
 				log_msg.msg_type = LOG_AIR1_MSG;
-				log_msg.body.log_SENS.baro_pres = buf->sensor.baro1_pres_mbar;
-				log_msg.body.log_SENS.baro_alt = buf->sensor.baro1_alt_meter;
-				log_msg.body.log_SENS.baro_temp = buf->sensor.baro1_temp_celcius;
-				log_msg.body.log_SENS.diff_pres = buf->sensor.differential_pressure1_pa;
-				log_msg.body.log_SENS.diff_pres_filtered = buf->sensor.differential_pressure1_filtered_pa;
+				log_msg.body.log_SENS.baro_pres = buf.sensor.baro1_pres_mbar;
+				log_msg.body.log_SENS.baro_alt = buf.sensor.baro1_alt_meter;
+				log_msg.body.log_SENS.baro_temp = buf.sensor.baro1_temp_celcius;
+				log_msg.body.log_SENS.diff_pres = buf.sensor.differential_pressure1_pa;
+				log_msg.body.log_SENS.diff_pres_filtered = buf.sensor.differential_pressure1_filtered_pa;
 				// XXX moving to AIR0-AIR2 instead of SENS
 				LOGBUFFER_WRITE_AND_COUNT(SENS);
 			}
 
-			if (buf->sensor.accelerometer1_timestamp != accelerometer1_timestamp) {
-				accelerometer1_timestamp = buf->sensor.accelerometer1_timestamp;
+			if (buf.sensor.accelerometer1_timestamp != accelerometer1_timestamp) {
+				accelerometer1_timestamp = buf.sensor.accelerometer1_timestamp;
 				write_IMU1 = true;
 			}
 
-			if (buf->sensor.gyro1_timestamp != gyro1_timestamp) {
-				gyro1_timestamp = buf->sensor.gyro1_timestamp;
+			if (buf.sensor.gyro1_timestamp != gyro1_timestamp) {
+				gyro1_timestamp = buf.sensor.gyro1_timestamp;
 				write_IMU1 = true;
 			}
 
-			if (buf->sensor.magnetometer1_timestamp != magnetometer1_timestamp) {
-				magnetometer1_timestamp = buf->sensor.magnetometer1_timestamp;
+			if (buf.sensor.magnetometer1_timestamp != magnetometer1_timestamp) {
+				magnetometer1_timestamp = buf.sensor.magnetometer1_timestamp;
 				write_IMU1 = true;
 			}
 
 			if (write_IMU1) {
 				log_msg.msg_type = LOG_IMU1_MSG;
-				log_msg.body.log_IMU.gyro_x = buf->sensor.gyro1_rad_s[0];
-				log_msg.body.log_IMU.gyro_y = buf->sensor.gyro1_rad_s[1];
-				log_msg.body.log_IMU.gyro_z = buf->sensor.gyro1_rad_s[2];
-				log_msg.body.log_IMU.acc_x = buf->sensor.accelerometer1_m_s2[0];
-				log_msg.body.log_IMU.acc_y = buf->sensor.accelerometer1_m_s2[1];
-				log_msg.body.log_IMU.acc_z = buf->sensor.accelerometer1_m_s2[2];
-				log_msg.body.log_IMU.mag_x = buf->sensor.magnetometer1_ga[0];
-				log_msg.body.log_IMU.mag_y = buf->sensor.magnetometer1_ga[1];
-				log_msg.body.log_IMU.mag_z = buf->sensor.magnetometer1_ga[2];
+				log_msg.body.log_IMU.gyro_x = buf.sensor.gyro1_rad_s[0];
+				log_msg.body.log_IMU.gyro_y = buf.sensor.gyro1_rad_s[1];
+				log_msg.body.log_IMU.gyro_z = buf.sensor.gyro1_rad_s[2];
+				log_msg.body.log_IMU.acc_x = buf.sensor.accelerometer1_m_s2[0];
+				log_msg.body.log_IMU.acc_y = buf.sensor.accelerometer1_m_s2[1];
+				log_msg.body.log_IMU.acc_z = buf.sensor.accelerometer1_m_s2[2];
+				log_msg.body.log_IMU.mag_x = buf.sensor.magnetometer1_ga[0];
+				log_msg.body.log_IMU.mag_y = buf.sensor.magnetometer1_ga[1];
+				log_msg.body.log_IMU.mag_z = buf.sensor.magnetometer1_ga[2];
 				LOGBUFFER_WRITE_AND_COUNT(IMU);
 			}
 
-			if (buf->sensor.accelerometer2_timestamp != accelerometer2_timestamp) {
-				accelerometer2_timestamp = buf->sensor.accelerometer2_timestamp;
+			if (buf.sensor.accelerometer2_timestamp != accelerometer2_timestamp) {
+				accelerometer2_timestamp = buf.sensor.accelerometer2_timestamp;
 				write_IMU2 = true;
 			}
 
-			if (buf->sensor.gyro2_timestamp != gyro2_timestamp) {
-				gyro2_timestamp = buf->sensor.gyro2_timestamp;
+			if (buf.sensor.gyro2_timestamp != gyro2_timestamp) {
+				gyro2_timestamp = buf.sensor.gyro2_timestamp;
 				write_IMU2 = true;
 			}
 
-			if (buf->sensor.magnetometer2_timestamp != magnetometer2_timestamp) {
-				magnetometer2_timestamp = buf->sensor.magnetometer2_timestamp;
+			if (buf.sensor.magnetometer2_timestamp != magnetometer2_timestamp) {
+				magnetometer2_timestamp = buf.sensor.magnetometer2_timestamp;
 				write_IMU2 = true;
 			}
 
 			if (write_IMU2) {
 				log_msg.msg_type = LOG_IMU2_MSG;
-				log_msg.body.log_IMU.gyro_x = buf->sensor.gyro2_rad_s[0];
-				log_msg.body.log_IMU.gyro_y = buf->sensor.gyro2_rad_s[1];
-				log_msg.body.log_IMU.gyro_z = buf->sensor.gyro2_rad_s[2];
-				log_msg.body.log_IMU.acc_x = buf->sensor.accelerometer2_m_s2[0];
-				log_msg.body.log_IMU.acc_y = buf->sensor.accelerometer2_m_s2[1];
-				log_msg.body.log_IMU.acc_z = buf->sensor.accelerometer2_m_s2[2];
-				log_msg.body.log_IMU.mag_x = buf->sensor.magnetometer2_ga[0];
-				log_msg.body.log_IMU.mag_y = buf->sensor.magnetometer2_ga[1];
-				log_msg.body.log_IMU.mag_z = buf->sensor.magnetometer2_ga[2];
+				log_msg.body.log_IMU.gyro_x = buf.sensor.gyro2_rad_s[0];
+				log_msg.body.log_IMU.gyro_y = buf.sensor.gyro2_rad_s[1];
+				log_msg.body.log_IMU.gyro_z = buf.sensor.gyro2_rad_s[2];
+				log_msg.body.log_IMU.acc_x = buf.sensor.accelerometer2_m_s2[0];
+				log_msg.body.log_IMU.acc_y = buf.sensor.accelerometer2_m_s2[1];
+				log_msg.body.log_IMU.acc_z = buf.sensor.accelerometer2_m_s2[2];
+				log_msg.body.log_IMU.mag_x = buf.sensor.magnetometer2_ga[0];
+				log_msg.body.log_IMU.mag_y = buf.sensor.magnetometer2_ga[1];
+				log_msg.body.log_IMU.mag_z = buf.sensor.magnetometer2_ga[2];
 				LOGBUFFER_WRITE_AND_COUNT(IMU);
 			}
 
 		}
 
 		/* --- ATTITUDE --- */
-		if (copy_if_updated(ORB_ID(vehicle_attitude), subs.att_sub, &buf->att)) {
+		if (copy_if_updated(ORB_ID(vehicle_attitude), subs.att_sub, &buf.att)) {
 			log_msg.msg_type = LOG_ATT_MSG;
-			log_msg.body.log_ATT.q_w = buf->att.q[0];
-			log_msg.body.log_ATT.q_x = buf->att.q[1];
-			log_msg.body.log_ATT.q_y = buf->att.q[2];
-			log_msg.body.log_ATT.q_z = buf->att.q[3];
-			log_msg.body.log_ATT.roll = buf->att.roll;
-			log_msg.body.log_ATT.pitch = buf->att.pitch;
-			log_msg.body.log_ATT.yaw = buf->att.yaw;
-			log_msg.body.log_ATT.roll_rate = buf->att.rollspeed;
-			log_msg.body.log_ATT.pitch_rate = buf->att.pitchspeed;
-			log_msg.body.log_ATT.yaw_rate = buf->att.yawspeed;
-			log_msg.body.log_ATT.gx = buf->att.g_comp[0];
-			log_msg.body.log_ATT.gy = buf->att.g_comp[1];
-			log_msg.body.log_ATT.gz = buf->att.g_comp[2];
+			log_msg.body.log_ATT.q_w = buf.att.q[0];
+			log_msg.body.log_ATT.q_x = buf.att.q[1];
+			log_msg.body.log_ATT.q_y = buf.att.q[2];
+			log_msg.body.log_ATT.q_z = buf.att.q[3];
+			log_msg.body.log_ATT.roll = buf.att.roll;
+			log_msg.body.log_ATT.pitch = buf.att.pitch;
+			log_msg.body.log_ATT.yaw = buf.att.yaw;
+			log_msg.body.log_ATT.roll_rate = buf.att.rollspeed;
+			log_msg.body.log_ATT.pitch_rate = buf.att.pitchspeed;
+			log_msg.body.log_ATT.yaw_rate = buf.att.yawspeed;
+			log_msg.body.log_ATT.gx = buf.att.g_comp[0];
+			log_msg.body.log_ATT.gy = buf.att.g_comp[1];
+			log_msg.body.log_ATT.gz = buf.att.g_comp[2];
 			LOGBUFFER_WRITE_AND_COUNT(ATT);
 		}
 
 		/* --- ATTITUDE SETPOINT --- */
-		if (copy_if_updated(ORB_ID(vehicle_attitude_setpoint), subs.att_sp_sub, &buf->att_sp)) {
+		if (copy_if_updated(ORB_ID(vehicle_attitude_setpoint), subs.att_sp_sub, &buf.att_sp)) {
 			log_msg.msg_type = LOG_ATSP_MSG;
-			log_msg.body.log_ATSP.roll_sp = buf->att_sp.roll_body;
-			log_msg.body.log_ATSP.pitch_sp = buf->att_sp.pitch_body;
-			log_msg.body.log_ATSP.yaw_sp = buf->att_sp.yaw_body;
-			log_msg.body.log_ATSP.thrust_sp = buf->att_sp.thrust;
+			log_msg.body.log_ATSP.roll_sp = buf.att_sp.roll_body;
+			log_msg.body.log_ATSP.pitch_sp = buf.att_sp.pitch_body;
+			log_msg.body.log_ATSP.yaw_sp = buf.att_sp.yaw_body;
+			log_msg.body.log_ATSP.thrust_sp = buf.att_sp.thrust;
 			LOGBUFFER_WRITE_AND_COUNT(ATSP);
 		}
 
 		/* --- RATES SETPOINT --- */
-		if (copy_if_updated(ORB_ID(vehicle_rates_setpoint), subs.rates_sp_sub, &buf->rates_sp)) {
+		if (copy_if_updated(ORB_ID(vehicle_rates_setpoint), subs.rates_sp_sub, &buf.rates_sp)) {
 			log_msg.msg_type = LOG_ARSP_MSG;
-			log_msg.body.log_ARSP.roll_rate_sp = buf->rates_sp.roll;
-			log_msg.body.log_ARSP.pitch_rate_sp = buf->rates_sp.pitch;
-			log_msg.body.log_ARSP.yaw_rate_sp = buf->rates_sp.yaw;
+			log_msg.body.log_ARSP.roll_rate_sp = buf.rates_sp.roll;
+			log_msg.body.log_ARSP.pitch_rate_sp = buf.rates_sp.pitch;
+			log_msg.body.log_ARSP.yaw_rate_sp = buf.rates_sp.yaw;
 			LOGBUFFER_WRITE_AND_COUNT(ARSP);
 		}
 
 		/* --- ACTUATOR OUTPUTS --- */
-		if (copy_if_updated(ORB_ID(actuator_outputs), subs.act_outputs_sub, &buf->act_outputs)) {
+		if (copy_if_updated(ORB_ID(actuator_outputs), subs.act_outputs_sub, &buf.act_outputs)) {
 			log_msg.msg_type = LOG_OUT0_MSG;
-			memcpy(log_msg.body.log_OUT0.output, buf->act_outputs.output, sizeof(log_msg.body.log_OUT0.output));
+			memcpy(log_msg.body.log_OUT0.output, buf.act_outputs.output, sizeof(log_msg.body.log_OUT0.output));
 			LOGBUFFER_WRITE_AND_COUNT(OUT0);
 		}
 
 		/* --- ACTUATOR CONTROL --- */
-		if (copy_if_updated(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, subs.act_controls_sub, &buf->act_controls)) {
+		if (copy_if_updated(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, subs.act_controls_sub, &buf.act_controls)) {
 			log_msg.msg_type = LOG_ATTC_MSG;
-			log_msg.body.log_ATTC.roll = buf->act_controls.control[0];
-			log_msg.body.log_ATTC.pitch = buf->act_controls.control[1];
-			log_msg.body.log_ATTC.yaw = buf->act_controls.control[2];
-			log_msg.body.log_ATTC.thrust = buf->act_controls.control[3];
+			log_msg.body.log_ATTC.roll = buf.act_controls.control[0];
+			log_msg.body.log_ATTC.pitch = buf.act_controls.control[1];
+			log_msg.body.log_ATTC.yaw = buf.act_controls.control[2];
+			log_msg.body.log_ATTC.thrust = buf.act_controls.control[3];
 			LOGBUFFER_WRITE_AND_COUNT(ATTC);
 		}
 
 		/* --- ACTUATOR CONTROL FW VTOL --- */
-		if(copy_if_updated(ORB_ID(actuator_controls_1),subs.act_controls_1_sub,&buf->act_controls)) {
+		if(copy_if_updated(ORB_ID(actuator_controls_1),subs.act_controls_1_sub,&buf.act_controls)) {
 			log_msg.msg_type = LOG_ATC1_MSG;
-			log_msg.body.log_ATTC.roll = buf->act_controls.control[0];
-			log_msg.body.log_ATTC.pitch = buf->act_controls.control[1];
-			log_msg.body.log_ATTC.yaw = buf->act_controls.control[2];
-			log_msg.body.log_ATTC.thrust = buf->act_controls.control[3];
+			log_msg.body.log_ATTC.roll = buf.act_controls.control[0];
+			log_msg.body.log_ATTC.pitch = buf.act_controls.control[1];
+			log_msg.body.log_ATTC.yaw = buf.act_controls.control[2];
+			log_msg.body.log_ATTC.thrust = buf.act_controls.control[3];
 			LOGBUFFER_WRITE_AND_COUNT(ATTC);
 		}
 
 		/* --- LOCAL POSITION --- */
-		if (copy_if_updated(ORB_ID(vehicle_local_position), subs.local_pos_sub, &buf->local_pos)) {
+		if (copy_if_updated(ORB_ID(vehicle_local_position), subs.local_pos_sub, &buf.local_pos)) {
 			log_msg.msg_type = LOG_LPOS_MSG;
-			log_msg.body.log_LPOS.x = buf->local_pos.x;
-			log_msg.body.log_LPOS.y = buf->local_pos.y;
-			log_msg.body.log_LPOS.z = buf->local_pos.z;
-			log_msg.body.log_LPOS.ground_dist = buf->local_pos.dist_bottom;
-			log_msg.body.log_LPOS.ground_dist_rate = buf->local_pos.dist_bottom_rate;
-			log_msg.body.log_LPOS.vx = buf->local_pos.vx;
-			log_msg.body.log_LPOS.vy = buf->local_pos.vy;
-			log_msg.body.log_LPOS.vz = buf->local_pos.vz;
-			log_msg.body.log_LPOS.ref_lat = buf->local_pos.ref_lat * 1e7;
-			log_msg.body.log_LPOS.ref_lon = buf->local_pos.ref_lon * 1e7;
-			log_msg.body.log_LPOS.ref_alt = buf->local_pos.ref_alt;
-			log_msg.body.log_LPOS.pos_flags = (buf->local_pos.xy_valid ? 1 : 0) |
-											  (buf->local_pos.z_valid ? 2 : 0) |
-											  (buf->local_pos.v_xy_valid ? 4 : 0) |
-											  (buf->local_pos.v_z_valid ? 8 : 0) |
-											  (buf->local_pos.xy_global ? 16 : 0) |
-											  (buf->local_pos.z_global ? 32 : 0);
-			log_msg.body.log_LPOS.ground_dist_flags = (buf->local_pos.dist_bottom_valid ? 1 : 0);
-			log_msg.body.log_LPOS.eph = buf->local_pos.eph;
-			log_msg.body.log_LPOS.epv = buf->local_pos.epv;
+			log_msg.body.log_LPOS.x = buf.local_pos.x;
+			log_msg.body.log_LPOS.y = buf.local_pos.y;
+			log_msg.body.log_LPOS.z = buf.local_pos.z;
+			log_msg.body.log_LPOS.ground_dist = buf.local_pos.dist_bottom;
+			log_msg.body.log_LPOS.ground_dist_rate = buf.local_pos.dist_bottom_rate;
+			log_msg.body.log_LPOS.vx = buf.local_pos.vx;
+			log_msg.body.log_LPOS.vy = buf.local_pos.vy;
+			log_msg.body.log_LPOS.vz = buf.local_pos.vz;
+			log_msg.body.log_LPOS.ref_lat = buf.local_pos.ref_lat * 1e7;
+			log_msg.body.log_LPOS.ref_lon = buf.local_pos.ref_lon * 1e7;
+			log_msg.body.log_LPOS.ref_alt = buf.local_pos.ref_alt;
+			log_msg.body.log_LPOS.pos_flags = (buf.local_pos.xy_valid ? 1 : 0) |
+											  (buf.local_pos.z_valid ? 2 : 0) |
+											  (buf.local_pos.v_xy_valid ? 4 : 0) |
+											  (buf.local_pos.v_z_valid ? 8 : 0) |
+											  (buf.local_pos.xy_global ? 16 : 0) |
+											  (buf.local_pos.z_global ? 32 : 0);
+			log_msg.body.log_LPOS.ground_dist_flags = (buf.local_pos.dist_bottom_valid ? 1 : 0);
+			log_msg.body.log_LPOS.eph = buf.local_pos.eph;
+			log_msg.body.log_LPOS.epv = buf.local_pos.epv;
 			LOGBUFFER_WRITE_AND_COUNT(LPOS);
 		}
 
 		/* --- LOCAL POSITION SETPOINT --- */
-		if (copy_if_updated(ORB_ID(vehicle_local_position_setpoint), subs.local_pos_sp_sub, &buf->local_pos_sp)) {
+		if (copy_if_updated(ORB_ID(vehicle_local_position_setpoint), subs.local_pos_sp_sub, &buf.local_pos_sp)) {
 			log_msg.msg_type = LOG_LPSP_MSG;
-			log_msg.body.log_LPSP.x = buf->local_pos_sp.x;
-			log_msg.body.log_LPSP.y = buf->local_pos_sp.y;
-			log_msg.body.log_LPSP.z = buf->local_pos_sp.z;
-			log_msg.body.log_LPSP.yaw = buf->local_pos_sp.yaw;
-			log_msg.body.log_LPSP.vx = buf->local_pos_sp.vx;
-			log_msg.body.log_LPSP.vy = buf->local_pos_sp.vy;
-			log_msg.body.log_LPSP.vz = buf->local_pos_sp.vz;
-			log_msg.body.log_LPSP.acc_x = buf->local_pos_sp.acc_x;
-			log_msg.body.log_LPSP.acc_y = buf->local_pos_sp.acc_y;
-			log_msg.body.log_LPSP.acc_z = buf->local_pos_sp.acc_z;
+			log_msg.body.log_LPSP.x = buf.local_pos_sp.x;
+			log_msg.body.log_LPSP.y = buf.local_pos_sp.y;
+			log_msg.body.log_LPSP.z = buf.local_pos_sp.z;
+			log_msg.body.log_LPSP.yaw = buf.local_pos_sp.yaw;
+			log_msg.body.log_LPSP.vx = buf.local_pos_sp.vx;
+			log_msg.body.log_LPSP.vy = buf.local_pos_sp.vy;
+			log_msg.body.log_LPSP.vz = buf.local_pos_sp.vz;
+			log_msg.body.log_LPSP.acc_x = buf.local_pos_sp.acc_x;
+			log_msg.body.log_LPSP.acc_y = buf.local_pos_sp.acc_y;
+			log_msg.body.log_LPSP.acc_z = buf.local_pos_sp.acc_z;
 			LOGBUFFER_WRITE_AND_COUNT(LPSP);
 		}
 
 		/* --- GLOBAL POSITION --- */
-		if (copy_if_updated(ORB_ID(vehicle_global_position), subs.global_pos_sub, &buf->global_pos)) {
+		if (copy_if_updated(ORB_ID(vehicle_global_position), subs.global_pos_sub, &buf.global_pos)) {
 			log_msg.msg_type = LOG_GPOS_MSG;
-			log_msg.body.log_GPOS.lat = buf->global_pos.lat * 1e7;
-			log_msg.body.log_GPOS.lon = buf->global_pos.lon * 1e7;
-			log_msg.body.log_GPOS.alt = buf->global_pos.alt;
-			log_msg.body.log_GPOS.vel_n = buf->global_pos.vel_n;
-			log_msg.body.log_GPOS.vel_e = buf->global_pos.vel_e;
-			log_msg.body.log_GPOS.vel_d = buf->global_pos.vel_d;
-			log_msg.body.log_GPOS.eph = buf->global_pos.eph;
-			log_msg.body.log_GPOS.epv = buf->global_pos.epv;
-			if (buf->global_pos.terrain_alt_valid) {
-				log_msg.body.log_GPOS.terrain_alt = buf->global_pos.terrain_alt;
+			log_msg.body.log_GPOS.lat = buf.global_pos.lat * 1e7;
+			log_msg.body.log_GPOS.lon = buf.global_pos.lon * 1e7;
+			log_msg.body.log_GPOS.alt = buf.global_pos.alt;
+			log_msg.body.log_GPOS.vel_n = buf.global_pos.vel_n;
+			log_msg.body.log_GPOS.vel_e = buf.global_pos.vel_e;
+			log_msg.body.log_GPOS.vel_d = buf.global_pos.vel_d;
+			log_msg.body.log_GPOS.eph = buf.global_pos.eph;
+			log_msg.body.log_GPOS.epv = buf.global_pos.epv;
+			if (buf.global_pos.terrain_alt_valid) {
+				log_msg.body.log_GPOS.terrain_alt = buf.global_pos.terrain_alt;
 			} else {
 				log_msg.body.log_GPOS.terrain_alt = -1.0f;
 			}
@@ -1608,224 +1589,224 @@ int sdlog2_thread_main(int argc, char *argv[])
 		}
 
 		/* --- GLOBAL POSITION SETPOINT --- */
-		if (copy_if_updated(ORB_ID(position_setpoint_triplet), subs.triplet_sub, &buf->triplet)) {
+		if (copy_if_updated(ORB_ID(position_setpoint_triplet), subs.triplet_sub, &buf.triplet)) {
 
-			if (buf->triplet.current.valid) {
+			if (buf.triplet.current.valid) {
 				log_msg.msg_type = LOG_GPSP_MSG;
-				log_msg.body.log_GPSP.nav_state = buf->triplet.nav_state;
-				log_msg.body.log_GPSP.lat = (int32_t)(buf->triplet.current.lat * 1e7d);
-				log_msg.body.log_GPSP.lon = (int32_t)(buf->triplet.current.lon * 1e7d);
-				log_msg.body.log_GPSP.alt = buf->triplet.current.alt;
-				log_msg.body.log_GPSP.yaw = buf->triplet.current.yaw;
-				log_msg.body.log_GPSP.type = buf->triplet.current.type;
-				log_msg.body.log_GPSP.loiter_radius = buf->triplet.current.loiter_radius;
-				log_msg.body.log_GPSP.loiter_direction = buf->triplet.current.loiter_direction;
-				log_msg.body.log_GPSP.pitch_min = buf->triplet.current.pitch_min;
+				log_msg.body.log_GPSP.nav_state = buf.triplet.nav_state;
+				log_msg.body.log_GPSP.lat = (int32_t)(buf.triplet.current.lat * 1e7d);
+				log_msg.body.log_GPSP.lon = (int32_t)(buf.triplet.current.lon * 1e7d);
+				log_msg.body.log_GPSP.alt = buf.triplet.current.alt;
+				log_msg.body.log_GPSP.yaw = buf.triplet.current.yaw;
+				log_msg.body.log_GPSP.type = buf.triplet.current.type;
+				log_msg.body.log_GPSP.loiter_radius = buf.triplet.current.loiter_radius;
+				log_msg.body.log_GPSP.loiter_direction = buf.triplet.current.loiter_direction;
+				log_msg.body.log_GPSP.pitch_min = buf.triplet.current.pitch_min;
 				LOGBUFFER_WRITE_AND_COUNT(GPSP);
 			}
 		}
 
 		/* --- VICON POSITION --- */
-		if (copy_if_updated(ORB_ID(vehicle_vicon_position), subs.vicon_pos_sub, &buf->vicon_pos)) {
+		if (copy_if_updated(ORB_ID(vehicle_vicon_position), subs.vicon_pos_sub, &buf.vicon_pos)) {
 			log_msg.msg_type = LOG_VICN_MSG;
-			log_msg.body.log_VICN.x = buf->vicon_pos.x;
-			log_msg.body.log_VICN.y = buf->vicon_pos.y;
-			log_msg.body.log_VICN.z = buf->vicon_pos.z;
-			log_msg.body.log_VICN.pitch = buf->vicon_pos.pitch;
-			log_msg.body.log_VICN.roll = buf->vicon_pos.roll;
-			log_msg.body.log_VICN.yaw = buf->vicon_pos.yaw;
+			log_msg.body.log_VICN.x = buf.vicon_pos.x;
+			log_msg.body.log_VICN.y = buf.vicon_pos.y;
+			log_msg.body.log_VICN.z = buf.vicon_pos.z;
+			log_msg.body.log_VICN.pitch = buf.vicon_pos.pitch;
+			log_msg.body.log_VICN.roll = buf.vicon_pos.roll;
+			log_msg.body.log_VICN.yaw = buf.vicon_pos.yaw;
 			LOGBUFFER_WRITE_AND_COUNT(VICN);
 		}
 
 		/* --- VISION POSITION --- */
-		if (copy_if_updated(ORB_ID(vision_position_estimate), subs.vision_pos_sub, &buf->vision_pos)) {
+		if (copy_if_updated(ORB_ID(vision_position_estimate), subs.vision_pos_sub, &buf.vision_pos)) {
 			log_msg.msg_type = LOG_VISN_MSG;
-			log_msg.body.log_VISN.x = buf->vision_pos.x;
-			log_msg.body.log_VISN.y = buf->vision_pos.y;
-			log_msg.body.log_VISN.z = buf->vision_pos.z;
-			log_msg.body.log_VISN.vx = buf->vision_pos.vx;
-			log_msg.body.log_VISN.vy = buf->vision_pos.vy;
-			log_msg.body.log_VISN.vz = buf->vision_pos.vz;
-			log_msg.body.log_VISN.qx = buf->vision_pos.q[0];
-			log_msg.body.log_VISN.qy = buf->vision_pos.q[1];
-			log_msg.body.log_VISN.qz = buf->vision_pos.q[2];
-			log_msg.body.log_VISN.qw = buf->vision_pos.q[3];
+			log_msg.body.log_VISN.x = buf.vision_pos.x;
+			log_msg.body.log_VISN.y = buf.vision_pos.y;
+			log_msg.body.log_VISN.z = buf.vision_pos.z;
+			log_msg.body.log_VISN.vx = buf.vision_pos.vx;
+			log_msg.body.log_VISN.vy = buf.vision_pos.vy;
+			log_msg.body.log_VISN.vz = buf.vision_pos.vz;
+			log_msg.body.log_VISN.qx = buf.vision_pos.q[0];
+			log_msg.body.log_VISN.qy = buf.vision_pos.q[1];
+			log_msg.body.log_VISN.qz = buf.vision_pos.q[2];
+			log_msg.body.log_VISN.qw = buf.vision_pos.q[3];
 			LOGBUFFER_WRITE_AND_COUNT(VISN);
 		}
 
 		/* --- FLOW --- */
-		if (copy_if_updated(ORB_ID(optical_flow), subs.flow_sub, &buf->flow)) {
+		if (copy_if_updated(ORB_ID(optical_flow), subs.flow_sub, &buf.flow)) {
 			log_msg.msg_type = LOG_FLOW_MSG;
-			log_msg.body.log_FLOW.ground_distance_m = buf->flow.ground_distance_m;
-			log_msg.body.log_FLOW.gyro_temperature = buf->flow.gyro_temperature;
-			log_msg.body.log_FLOW.gyro_x_rate_integral = buf->flow.gyro_x_rate_integral;
-			log_msg.body.log_FLOW.gyro_y_rate_integral = buf->flow.gyro_y_rate_integral;
-			log_msg.body.log_FLOW.gyro_z_rate_integral = buf->flow.gyro_z_rate_integral;
-			log_msg.body.log_FLOW.integration_timespan = buf->flow.integration_timespan;
-			log_msg.body.log_FLOW.pixel_flow_x_integral = buf->flow.pixel_flow_x_integral;
-			log_msg.body.log_FLOW.pixel_flow_y_integral = buf->flow.pixel_flow_y_integral;
-			log_msg.body.log_FLOW.quality = buf->flow.quality;
-			log_msg.body.log_FLOW.sensor_id = buf->flow.sensor_id;
+			log_msg.body.log_FLOW.ground_distance_m = buf.flow.ground_distance_m;
+			log_msg.body.log_FLOW.gyro_temperature = buf.flow.gyro_temperature;
+			log_msg.body.log_FLOW.gyro_x_rate_integral = buf.flow.gyro_x_rate_integral;
+			log_msg.body.log_FLOW.gyro_y_rate_integral = buf.flow.gyro_y_rate_integral;
+			log_msg.body.log_FLOW.gyro_z_rate_integral = buf.flow.gyro_z_rate_integral;
+			log_msg.body.log_FLOW.integration_timespan = buf.flow.integration_timespan;
+			log_msg.body.log_FLOW.pixel_flow_x_integral = buf.flow.pixel_flow_x_integral;
+			log_msg.body.log_FLOW.pixel_flow_y_integral = buf.flow.pixel_flow_y_integral;
+			log_msg.body.log_FLOW.quality = buf.flow.quality;
+			log_msg.body.log_FLOW.sensor_id = buf.flow.sensor_id;
 			LOGBUFFER_WRITE_AND_COUNT(FLOW);
 		}
 
 		/* --- RC CHANNELS --- */
-		if (copy_if_updated(ORB_ID(rc_channels), subs.rc_sub, &buf->rc)) {
+		if (copy_if_updated(ORB_ID(rc_channels), subs.rc_sub, &buf.rc)) {
 			log_msg.msg_type = LOG_RC_MSG;
 			/* Copy only the first 8 channels of 14 */
-			memcpy(log_msg.body.log_RC.channel, buf->rc.channels, sizeof(log_msg.body.log_RC.channel));
-			log_msg.body.log_RC.channel_count = buf->rc.channel_count;
-			log_msg.body.log_RC.signal_lost = buf->rc.signal_lost;
+			memcpy(log_msg.body.log_RC.channel, buf.rc.channels, sizeof(log_msg.body.log_RC.channel));
+			log_msg.body.log_RC.channel_count = buf.rc.channel_count;
+			log_msg.body.log_RC.signal_lost = buf.rc.signal_lost;
 			LOGBUFFER_WRITE_AND_COUNT(RC);
 		}
 
 		/* --- AIRSPEED --- */
-		if (copy_if_updated(ORB_ID(airspeed), subs.airspeed_sub, &buf->airspeed)) {
+		if (copy_if_updated(ORB_ID(airspeed), subs.airspeed_sub, &buf.airspeed)) {
 			log_msg.msg_type = LOG_AIRS_MSG;
-			log_msg.body.log_AIRS.indicated_airspeed = buf->airspeed.indicated_airspeed_m_s;
-			log_msg.body.log_AIRS.true_airspeed = buf->airspeed.true_airspeed_m_s;
-			log_msg.body.log_AIRS.air_temperature_celsius = buf->airspeed.air_temperature_celsius;
+			log_msg.body.log_AIRS.indicated_airspeed = buf.airspeed.indicated_airspeed_m_s;
+			log_msg.body.log_AIRS.true_airspeed = buf.airspeed.true_airspeed_m_s;
+			log_msg.body.log_AIRS.air_temperature_celsius = buf.airspeed.air_temperature_celsius;
 			LOGBUFFER_WRITE_AND_COUNT(AIRS);
 		}
 
 		/* --- ESCs --- */
-		if (copy_if_updated(ORB_ID(esc_status), subs.esc_sub, &buf->esc)) {
-			for (uint8_t i = 0; i < buf->esc.esc_count; i++) {
+		if (copy_if_updated(ORB_ID(esc_status), subs.esc_sub, &buf.esc)) {
+			for (uint8_t i = 0; i < buf.esc.esc_count; i++) {
 				log_msg.msg_type = LOG_ESC_MSG;
-				log_msg.body.log_ESC.counter = buf->esc.counter;
-				log_msg.body.log_ESC.esc_count = buf->esc.esc_count;
-				log_msg.body.log_ESC.esc_connectiontype = buf->esc.esc_connectiontype;
+				log_msg.body.log_ESC.counter = buf.esc.counter;
+				log_msg.body.log_ESC.esc_count = buf.esc.esc_count;
+				log_msg.body.log_ESC.esc_connectiontype = buf.esc.esc_connectiontype;
 				log_msg.body.log_ESC.esc_num = i;
-				log_msg.body.log_ESC.esc_address = buf->esc.esc[i].esc_address;
-				log_msg.body.log_ESC.esc_version = buf->esc.esc[i].esc_version;
-				log_msg.body.log_ESC.esc_voltage = buf->esc.esc[i].esc_voltage;
-				log_msg.body.log_ESC.esc_current = buf->esc.esc[i].esc_current;
-				log_msg.body.log_ESC.esc_rpm = buf->esc.esc[i].esc_rpm;
-				log_msg.body.log_ESC.esc_temperature = buf->esc.esc[i].esc_temperature;
-				log_msg.body.log_ESC.esc_setpoint = buf->esc.esc[i].esc_setpoint;
-				log_msg.body.log_ESC.esc_setpoint_raw = buf->esc.esc[i].esc_setpoint_raw;
+				log_msg.body.log_ESC.esc_address = buf.esc.esc[i].esc_address;
+				log_msg.body.log_ESC.esc_version = buf.esc.esc[i].esc_version;
+				log_msg.body.log_ESC.esc_voltage = buf.esc.esc[i].esc_voltage;
+				log_msg.body.log_ESC.esc_current = buf.esc.esc[i].esc_current;
+				log_msg.body.log_ESC.esc_rpm = buf.esc.esc[i].esc_rpm;
+				log_msg.body.log_ESC.esc_temperature = buf.esc.esc[i].esc_temperature;
+				log_msg.body.log_ESC.esc_setpoint = buf.esc.esc[i].esc_setpoint;
+				log_msg.body.log_ESC.esc_setpoint_raw = buf.esc.esc[i].esc_setpoint_raw;
 				LOGBUFFER_WRITE_AND_COUNT(ESC);
 			}
 		}
 
 		/* --- GLOBAL VELOCITY SETPOINT --- */
-		if (copy_if_updated(ORB_ID(vehicle_global_velocity_setpoint), subs.global_vel_sp_sub, &buf->global_vel_sp)) {
+		if (copy_if_updated(ORB_ID(vehicle_global_velocity_setpoint), subs.global_vel_sp_sub, &buf.global_vel_sp)) {
 			log_msg.msg_type = LOG_GVSP_MSG;
-			log_msg.body.log_GVSP.vx = buf->global_vel_sp.vx;
-			log_msg.body.log_GVSP.vy = buf->global_vel_sp.vy;
-			log_msg.body.log_GVSP.vz = buf->global_vel_sp.vz;
+			log_msg.body.log_GVSP.vx = buf.global_vel_sp.vx;
+			log_msg.body.log_GVSP.vy = buf.global_vel_sp.vy;
+			log_msg.body.log_GVSP.vz = buf.global_vel_sp.vz;
 			LOGBUFFER_WRITE_AND_COUNT(GVSP);
 		}
 
 		/* --- BATTERY --- */
-		if (copy_if_updated(ORB_ID(battery_status), subs.battery_sub, &buf->battery)) {
+		if (copy_if_updated(ORB_ID(battery_status), subs.battery_sub, &buf.battery)) {
 			log_msg.msg_type = LOG_BATT_MSG;
-			log_msg.body.log_BATT.voltage = buf->battery.voltage_v;
-			log_msg.body.log_BATT.voltage_filtered = buf->battery.voltage_filtered_v;
-			log_msg.body.log_BATT.current = buf->battery.current_a;
-			log_msg.body.log_BATT.discharged = buf->battery.discharged_mah;
+			log_msg.body.log_BATT.voltage = buf.battery.voltage_v;
+			log_msg.body.log_BATT.voltage_filtered = buf.battery.voltage_filtered_v;
+			log_msg.body.log_BATT.current = buf.battery.current_a;
+			log_msg.body.log_BATT.discharged = buf.battery.discharged_mah;
 			LOGBUFFER_WRITE_AND_COUNT(BATT);
 		}
 
 		/* --- SYSTEM POWER RAILS --- */
-		if (copy_if_updated(ORB_ID(system_power), subs.system_power_sub, &buf->system_power)) {
+		if (copy_if_updated(ORB_ID(system_power), subs.system_power_sub, &buf.system_power)) {
 			log_msg.msg_type = LOG_PWR_MSG;
-			log_msg.body.log_PWR.peripherals_5v = buf->system_power.voltage5V_v;
-			log_msg.body.log_PWR.usb_ok = buf->system_power.usb_connected;
-			log_msg.body.log_PWR.brick_ok = buf->system_power.brick_valid;
-			log_msg.body.log_PWR.servo_ok = buf->system_power.servo_valid;
-			log_msg.body.log_PWR.low_power_rail_overcurrent = buf->system_power.periph_5V_OC;
-			log_msg.body.log_PWR.high_power_rail_overcurrent = buf->system_power.hipower_5V_OC;
+			log_msg.body.log_PWR.peripherals_5v = buf.system_power.voltage5V_v;
+			log_msg.body.log_PWR.usb_ok = buf.system_power.usb_connected;
+			log_msg.body.log_PWR.brick_ok = buf.system_power.brick_valid;
+			log_msg.body.log_PWR.servo_ok = buf.system_power.servo_valid;
+			log_msg.body.log_PWR.low_power_rail_overcurrent = buf.system_power.periph_5V_OC;
+			log_msg.body.log_PWR.high_power_rail_overcurrent = buf.system_power.hipower_5V_OC;
 
 			/* copy servo rail status topic here too */
-			orb_copy(ORB_ID(servorail_status), subs.servorail_status_sub, &buf->servorail_status);
-			log_msg.body.log_PWR.servo_rail_5v = buf->servorail_status.voltage_v;
-			log_msg.body.log_PWR.servo_rssi = buf->servorail_status.rssi_v;
+			orb_copy(ORB_ID(servorail_status), subs.servorail_status_sub, &buf.servorail_status);
+			log_msg.body.log_PWR.servo_rail_5v = buf.servorail_status.voltage_v;
+			log_msg.body.log_PWR.servo_rssi = buf.servorail_status.rssi_v;
 
 			LOGBUFFER_WRITE_AND_COUNT(PWR);
 		}
 
 		/* --- TELEMETRY --- */
 		for (int i = 0; i < TELEMETRY_STATUS_ORB_ID_NUM; i++) {
-			if (copy_if_updated(telemetry_status_orb_id[i], subs.telemetry_subs[i], &buf->telemetry)) {
+			if (copy_if_updated(telemetry_status_orb_id[i], subs.telemetry_subs[i], &buf.telemetry)) {
 				log_msg.msg_type = LOG_TEL0_MSG + i;
-				log_msg.body.log_TEL.rssi = buf->telemetry.rssi;
-				log_msg.body.log_TEL.remote_rssi = buf->telemetry.remote_rssi;
-				log_msg.body.log_TEL.noise = buf->telemetry.noise;
-				log_msg.body.log_TEL.remote_noise = buf->telemetry.remote_noise;
-				log_msg.body.log_TEL.rxerrors = buf->telemetry.rxerrors;
-				log_msg.body.log_TEL.fixed = buf->telemetry.fixed;
-				log_msg.body.log_TEL.txbuf = buf->telemetry.txbuf;
-				log_msg.body.log_TEL.heartbeat_time = buf->telemetry.heartbeat_time;
+				log_msg.body.log_TEL.rssi = buf.telemetry.rssi;
+				log_msg.body.log_TEL.remote_rssi = buf.telemetry.remote_rssi;
+				log_msg.body.log_TEL.noise = buf.telemetry.noise;
+				log_msg.body.log_TEL.remote_noise = buf.telemetry.remote_noise;
+				log_msg.body.log_TEL.rxerrors = buf.telemetry.rxerrors;
+				log_msg.body.log_TEL.fixed = buf.telemetry.fixed;
+				log_msg.body.log_TEL.txbuf = buf.telemetry.txbuf;
+				log_msg.body.log_TEL.heartbeat_time = buf.telemetry.heartbeat_time;
 				LOGBUFFER_WRITE_AND_COUNT(TEL);
 			}
 		}
 
 		/* --- BOTTOM DISTANCE --- */
-		if (copy_if_updated(ORB_ID(sensor_range_finder), subs.range_finder_sub, &buf->range_finder)) {
+		if (copy_if_updated(ORB_ID(sensor_range_finder), subs.range_finder_sub, &buf.range_finder)) {
 			log_msg.msg_type = LOG_DIST_MSG;
-			log_msg.body.log_DIST.bottom = buf->range_finder.distance;
+			log_msg.body.log_DIST.bottom = buf.range_finder.distance;
 			log_msg.body.log_DIST.bottom_rate = 0.0f;
-			log_msg.body.log_DIST.flags = (buf->range_finder.valid ? 1 : 0);
+			log_msg.body.log_DIST.flags = (buf.range_finder.valid ? 1 : 0);
 			LOGBUFFER_WRITE_AND_COUNT(DIST);
 		}
 
 		/* --- ESTIMATOR STATUS --- */
-		if (copy_if_updated(ORB_ID(estimator_status), subs.estimator_status_sub, &buf->estimator_status)) {
+		if (copy_if_updated(ORB_ID(estimator_status), subs.estimator_status_sub, &buf.estimator_status)) {
 			log_msg.msg_type = LOG_EST0_MSG;
-			unsigned maxcopy0 = (sizeof(buf->estimator_status.states) < sizeof(log_msg.body.log_EST0.s)) ? sizeof(buf->estimator_status.states) : sizeof(log_msg.body.log_EST0.s);
+			unsigned maxcopy0 = (sizeof(buf.estimator_status.states) < sizeof(log_msg.body.log_EST0.s)) ? sizeof(buf.estimator_status.states) : sizeof(log_msg.body.log_EST0.s);
 			memset(&(log_msg.body.log_EST0.s), 0, sizeof(log_msg.body.log_EST0.s));
-			memcpy(&(log_msg.body.log_EST0.s), buf->estimator_status.states, maxcopy0);
-			log_msg.body.log_EST0.n_states = buf->estimator_status.n_states;
-			log_msg.body.log_EST0.nan_flags = buf->estimator_status.nan_flags;
-			log_msg.body.log_EST0.health_flags = buf->estimator_status.health_flags;
-			log_msg.body.log_EST0.timeout_flags = buf->estimator_status.timeout_flags;
+			memcpy(&(log_msg.body.log_EST0.s), buf.estimator_status.states, maxcopy0);
+			log_msg.body.log_EST0.n_states = buf.estimator_status.n_states;
+			log_msg.body.log_EST0.nan_flags = buf.estimator_status.nan_flags;
+			log_msg.body.log_EST0.health_flags = buf.estimator_status.health_flags;
+			log_msg.body.log_EST0.timeout_flags = buf.estimator_status.timeout_flags;
 			LOGBUFFER_WRITE_AND_COUNT(EST0);
 
 			log_msg.msg_type = LOG_EST1_MSG;
-			unsigned maxcopy1 = ((sizeof(buf->estimator_status.states) - maxcopy0) < sizeof(log_msg.body.log_EST1.s)) ? (sizeof(buf->estimator_status.states) - maxcopy0) : sizeof(log_msg.body.log_EST1.s);
+			unsigned maxcopy1 = ((sizeof(buf.estimator_status.states) - maxcopy0) < sizeof(log_msg.body.log_EST1.s)) ? (sizeof(buf.estimator_status.states) - maxcopy0) : sizeof(log_msg.body.log_EST1.s);
 			memset(&(log_msg.body.log_EST1.s), 0, sizeof(log_msg.body.log_EST1.s));
-			memcpy(&(log_msg.body.log_EST1.s), buf->estimator_status.states + maxcopy0/sizeof(buf->estimator_status.states[0]), maxcopy1);
+			memcpy(&(log_msg.body.log_EST1.s), buf.estimator_status.states + maxcopy0/sizeof(buf.estimator_status.states[0]), maxcopy1);
 			LOGBUFFER_WRITE_AND_COUNT(EST1);
 		}
 
 		/* --- TECS STATUS --- */
-		if (copy_if_updated(ORB_ID(tecs_status), subs.tecs_status_sub, &buf->tecs_status)) {
+		if (copy_if_updated(ORB_ID(tecs_status), subs.tecs_status_sub, &buf.tecs_status)) {
 			log_msg.msg_type = LOG_TECS_MSG;
-			log_msg.body.log_TECS.altitudeSp = buf->tecs_status.altitudeSp;
-			log_msg.body.log_TECS.altitudeFiltered = buf->tecs_status.altitude_filtered;
-			log_msg.body.log_TECS.flightPathAngleSp = buf->tecs_status.flightPathAngleSp;
-			log_msg.body.log_TECS.flightPathAngle = buf->tecs_status.flightPathAngle;
-			log_msg.body.log_TECS.flightPathAngleFiltered = buf->tecs_status.flightPathAngleFiltered;
-			log_msg.body.log_TECS.airspeedSp = buf->tecs_status.airspeedSp;
-			log_msg.body.log_TECS.airspeedFiltered = buf->tecs_status.airspeed_filtered;
-			log_msg.body.log_TECS.airspeedDerivativeSp = buf->tecs_status.airspeedDerivativeSp;
-			log_msg.body.log_TECS.airspeedDerivative = buf->tecs_status.airspeedDerivative;
-			log_msg.body.log_TECS.totalEnergyRateSp = buf->tecs_status.totalEnergyRateSp;
-			log_msg.body.log_TECS.totalEnergyRate = buf->tecs_status.totalEnergyRate;
-			log_msg.body.log_TECS.energyDistributionRateSp = buf->tecs_status.energyDistributionRateSp;
-			log_msg.body.log_TECS.energyDistributionRate = buf->tecs_status.energyDistributionRate;
-			log_msg.body.log_TECS.mode = (uint8_t)buf->tecs_status.mode;
+			log_msg.body.log_TECS.altitudeSp = buf.tecs_status.altitudeSp;
+			log_msg.body.log_TECS.altitudeFiltered = buf.tecs_status.altitude_filtered;
+			log_msg.body.log_TECS.flightPathAngleSp = buf.tecs_status.flightPathAngleSp;
+			log_msg.body.log_TECS.flightPathAngle = buf.tecs_status.flightPathAngle;
+			log_msg.body.log_TECS.flightPathAngleFiltered = buf.tecs_status.flightPathAngleFiltered;
+			log_msg.body.log_TECS.airspeedSp = buf.tecs_status.airspeedSp;
+			log_msg.body.log_TECS.airspeedFiltered = buf.tecs_status.airspeed_filtered;
+			log_msg.body.log_TECS.airspeedDerivativeSp = buf.tecs_status.airspeedDerivativeSp;
+			log_msg.body.log_TECS.airspeedDerivative = buf.tecs_status.airspeedDerivative;
+			log_msg.body.log_TECS.totalEnergyRateSp = buf.tecs_status.totalEnergyRateSp;
+			log_msg.body.log_TECS.totalEnergyRate = buf.tecs_status.totalEnergyRate;
+			log_msg.body.log_TECS.energyDistributionRateSp = buf.tecs_status.energyDistributionRateSp;
+			log_msg.body.log_TECS.energyDistributionRate = buf.tecs_status.energyDistributionRate;
+			log_msg.body.log_TECS.mode = (uint8_t)buf.tecs_status.mode;
 			LOGBUFFER_WRITE_AND_COUNT(TECS);
 		}
 
 		/* --- WIND ESTIMATE --- */
-		if (copy_if_updated(ORB_ID(wind_estimate), subs.wind_sub, &buf->wind_estimate)) {
+		if (copy_if_updated(ORB_ID(wind_estimate), subs.wind_sub, &buf.wind_estimate)) {
 			log_msg.msg_type = LOG_WIND_MSG;
-			log_msg.body.log_WIND.x = buf->wind_estimate.windspeed_north;
-			log_msg.body.log_WIND.y = buf->wind_estimate.windspeed_east;
-			log_msg.body.log_WIND.cov_x = buf->wind_estimate.covariance_north;
-			log_msg.body.log_WIND.cov_y = buf->wind_estimate.covariance_east;
+			log_msg.body.log_WIND.x = buf.wind_estimate.windspeed_north;
+			log_msg.body.log_WIND.y = buf.wind_estimate.windspeed_east;
+			log_msg.body.log_WIND.cov_x = buf.wind_estimate.covariance_north;
+			log_msg.body.log_WIND.cov_y = buf.wind_estimate.covariance_east;
 			LOGBUFFER_WRITE_AND_COUNT(WIND);
 		}
 
 		/* --- ENCODERS --- */
-		if (copy_if_updated(ORB_ID(encoders), subs.encoders_sub, &buf->encoders)) {
+		if (copy_if_updated(ORB_ID(encoders), subs.encoders_sub, &buf.encoders)) {
 			log_msg.msg_type = LOG_ENCD_MSG;
-			log_msg.body.log_ENCD.cnt0 = buf->encoders.counts[0];
-			log_msg.body.log_ENCD.vel0 = buf->encoders.velocity[0];
-			log_msg.body.log_ENCD.cnt1 = buf->encoders.counts[1];
-			log_msg.body.log_ENCD.vel1 = buf->encoders.velocity[1];
+			log_msg.body.log_ENCD.cnt0 = buf.encoders.counts[0];
+			log_msg.body.log_ENCD.vel0 = buf.encoders.velocity[0];
+			log_msg.body.log_ENCD.cnt1 = buf.encoders.counts[1];
+			log_msg.body.log_ENCD.vel1 = buf.encoders.velocity[1];
 			LOGBUFFER_WRITE_AND_COUNT(ENCD);
 		}
 
@@ -1833,165 +1814,165 @@ int sdlog2_thread_main(int argc, char *argv[])
 		/* Logging of ASL-messages (added by ASL/PhilippOe & AmirMelzer) */
 		/* ------------------------------------------------------------- */
 		/* --- ASLCTRL parameters --- */
-		if (copy_if_updated(ORB_ID(aslctrl_parameters), subs.aslctrl_params_sub, &buf->aslctrl_params) && pLogEnabler.LOG_ASLC) {
+		if (copy_if_updated(ORB_ID(aslctrl_parameters), subs.aslctrl_params_sub, &buf.aslctrl_params) && pLogEnabler.LOG_ASLC) {
 			// Note: Logging separated into different MSGs because otherwise the message would be too long
 
 			// MSG1: ASLC
 			log_msg.msg_type = LOG_ASLC_MSG;
-			log_msg.body.log_ASLC.timestamp = buf->aslctrl_params.timestamp;
-			log_msg.body.log_ASLC.ASLC_CtrlType = buf->aslctrl_params.ASLC_CtrlType;
-			log_msg.body.log_ASLC.ASLC_GainSch_E = buf->aslctrl_params.ASLC_GainSch_E;
-			log_msg.body.log_ASLC.ASLC_GainSch_Q = buf->aslctrl_params.ASLC_GainSch_Q;
-			log_msg.body.log_ASLC.ASLC_StallProt = buf->aslctrl_params.ASLC_StallProt;
-			log_msg.body.log_ASLC.ASLC_VelCtrl = buf->aslctrl_params.ASLC_VelCtrl;
-			log_msg.body.log_ASLC.ASLC_OnRCLoss = buf->aslctrl_params.ASLC_OnRCLoss;
-			log_msg.body.log_ASLC.ASLC_OvSpdProt = buf->aslctrl_params.ASLC_OvSpdProt;
-			log_msg.body.log_ASLC.ASLC_CoordTurn = buf->aslctrl_params.ASLC_CoordTurn;
+			log_msg.body.log_ASLC.timestamp = buf.aslctrl_params.timestamp;
+			log_msg.body.log_ASLC.ASLC_CtrlType = buf.aslctrl_params.ASLC_CtrlType;
+			log_msg.body.log_ASLC.ASLC_GainSch_E = buf.aslctrl_params.ASLC_GainSch_E;
+			log_msg.body.log_ASLC.ASLC_GainSch_Q = buf.aslctrl_params.ASLC_GainSch_Q;
+			log_msg.body.log_ASLC.ASLC_StallProt = buf.aslctrl_params.ASLC_StallProt;
+			log_msg.body.log_ASLC.ASLC_VelCtrl = buf.aslctrl_params.ASLC_VelCtrl;
+			log_msg.body.log_ASLC.ASLC_OnRCLoss = buf.aslctrl_params.ASLC_OnRCLoss;
+			log_msg.body.log_ASLC.ASLC_OvSpdProt = buf.aslctrl_params.ASLC_OvSpdProt;
+			log_msg.body.log_ASLC.ASLC_CoordTurn = buf.aslctrl_params.ASLC_CoordTurn;
 			LOGBUFFER_WRITE_AND_COUNT(ASLC);
 
 			//MSG2: ASAS
 			log_msg.msg_type = LOG_ASAS_MSG;
-			log_msg.body.log_ASAS.SAS_tSample = (float) buf->aslctrl_params.SAS_tSample;
-			log_msg.body.log_ASAS.SAS_RollPGain = (float) buf->aslctrl_params.SAS_RollPGain;
-			log_msg.body.log_ASAS.SAS_PitchPGain = (float) buf->aslctrl_params.SAS_PitchPGain;
-			log_msg.body.log_ASAS.SAS_YawPGain = (float) buf->aslctrl_params.SAS_YawPGain;
-			log_msg.body.log_ASAS.SAS_RollPDir = (float) buf->aslctrl_params.SAS_RollPDir;
-			log_msg.body.log_ASAS.SAS_PitchPDir = (float) buf->aslctrl_params.SAS_PitchPDir;
-			log_msg.body.log_ASAS.SAS_YawPDir = (float) buf->aslctrl_params.SAS_YawPDir;
-			log_msg.body.log_ASAS.SAS_RollYawDecoupleKari = (float) buf->aslctrl_params.SAS_RollYawDecoupleKari;
-			log_msg.body.log_ASAS.SAS_YawCTFF = (float) buf->aslctrl_params.SAS_YawCTFF;
-			log_msg.body.log_ASAS.SAS_YawCTkP = (float) buf->aslctrl_params.SAS_YawCTkP;
-			log_msg.body.log_ASAS.SAS_RollYawDecoupleKari = (float) buf->aslctrl_params.SAS_RollYawDecoupleKari;
-			log_msg.body.log_ASAS.SAS_RCtrlLim = (float) buf->aslctrl_params.SAS_RCtrlLim;
-			log_msg.body.log_ASAS.SAS_PCtrlLim = (float) buf->aslctrl_params.SAS_PCtrlLim;
-			log_msg.body.log_ASAS.SAS_YCtrlLim = (float) buf->aslctrl_params.SAS_YCtrlLim;
-			log_msg.body.log_ASAS.SAS_YawHighPassOmega = (float) buf->aslctrl_params.SAS_YawHighPassOmega;
-			log_msg.body.log_ASAS.SAS_PitchLowPassOmega = (float) buf->aslctrl_params.SAS_PitchLowPassOmega;
-			log_msg.body.log_ASAS.SAS_RollLowPassOmega = (float) buf->aslctrl_params.SAS_RollLowPassOmega;
-			log_msg.body.log_ASAS.SAS_vScaleLimF = (float) buf->aslctrl_params.SAS_vScaleLimF;
-			log_msg.body.log_ASAS.SAS_vScaleExp = (float) buf->aslctrl_params.SAS_vScaleExp;
-			log_msg.body.log_ASAS.SAS_TrimAilvNom = (float) buf->aslctrl_params.SAS_TrimAilvNom;
-			log_msg.body.log_ASAS.SAS_TrimAilvMin = (float) buf->aslctrl_params.SAS_TrimAilvMin;
-			log_msg.body.log_ASAS.SAS_TrimAilvMax = (float) buf->aslctrl_params.SAS_TrimAilvMax;
-			log_msg.body.log_ASAS.SAS_TrimElevNom = (float) buf->aslctrl_params.SAS_TrimElevNom;
-			log_msg.body.log_ASAS.SAS_TrimElevMin = (float) buf->aslctrl_params.SAS_TrimElevMin;
-			log_msg.body.log_ASAS.SAS_TrimElevMax = (float) buf->aslctrl_params.SAS_TrimElevMax;
-			log_msg.body.log_ASAS.SAS_TrimRudvNom = (float) buf->aslctrl_params.SAS_TrimRudvNom;
-			log_msg.body.log_ASAS.SAS_TrimRudvMin = (float) buf->aslctrl_params.SAS_TrimRudvMin;
-			log_msg.body.log_ASAS.SAS_TrimRudvMax = (float) buf->aslctrl_params.SAS_TrimRudvMax;
+			log_msg.body.log_ASAS.SAS_tSample = (float) buf.aslctrl_params.SAS_tSample;
+			log_msg.body.log_ASAS.SAS_RollPGain = (float) buf.aslctrl_params.SAS_RollPGain;
+			log_msg.body.log_ASAS.SAS_PitchPGain = (float) buf.aslctrl_params.SAS_PitchPGain;
+			log_msg.body.log_ASAS.SAS_YawPGain = (float) buf.aslctrl_params.SAS_YawPGain;
+			log_msg.body.log_ASAS.SAS_RollPDir = (float) buf.aslctrl_params.SAS_RollPDir;
+			log_msg.body.log_ASAS.SAS_PitchPDir = (float) buf.aslctrl_params.SAS_PitchPDir;
+			log_msg.body.log_ASAS.SAS_YawPDir = (float) buf.aslctrl_params.SAS_YawPDir;
+			log_msg.body.log_ASAS.SAS_RollYawDecoupleKari = (float) buf.aslctrl_params.SAS_RollYawDecoupleKari;
+			log_msg.body.log_ASAS.SAS_YawCTFF = (float) buf.aslctrl_params.SAS_YawCTFF;
+			log_msg.body.log_ASAS.SAS_YawCTkP = (float) buf.aslctrl_params.SAS_YawCTkP;
+			log_msg.body.log_ASAS.SAS_RollYawDecoupleKari = (float) buf.aslctrl_params.SAS_RollYawDecoupleKari;
+			log_msg.body.log_ASAS.SAS_RCtrlLim = (float) buf.aslctrl_params.SAS_RCtrlLim;
+			log_msg.body.log_ASAS.SAS_PCtrlLim = (float) buf.aslctrl_params.SAS_PCtrlLim;
+			log_msg.body.log_ASAS.SAS_YCtrlLim = (float) buf.aslctrl_params.SAS_YCtrlLim;
+			log_msg.body.log_ASAS.SAS_YawHighPassOmega = (float) buf.aslctrl_params.SAS_YawHighPassOmega;
+			log_msg.body.log_ASAS.SAS_PitchLowPassOmega = (float) buf.aslctrl_params.SAS_PitchLowPassOmega;
+			log_msg.body.log_ASAS.SAS_RollLowPassOmega = (float) buf.aslctrl_params.SAS_RollLowPassOmega;
+			log_msg.body.log_ASAS.SAS_vScaleLimF = (float) buf.aslctrl_params.SAS_vScaleLimF;
+			log_msg.body.log_ASAS.SAS_vScaleExp = (float) buf.aslctrl_params.SAS_vScaleExp;
+			log_msg.body.log_ASAS.SAS_TrimAilvNom = (float) buf.aslctrl_params.SAS_TrimAilvNom;
+			log_msg.body.log_ASAS.SAS_TrimAilvMin = (float) buf.aslctrl_params.SAS_TrimAilvMin;
+			log_msg.body.log_ASAS.SAS_TrimAilvMax = (float) buf.aslctrl_params.SAS_TrimAilvMax;
+			log_msg.body.log_ASAS.SAS_TrimElevNom = (float) buf.aslctrl_params.SAS_TrimElevNom;
+			log_msg.body.log_ASAS.SAS_TrimElevMin = (float) buf.aslctrl_params.SAS_TrimElevMin;
+			log_msg.body.log_ASAS.SAS_TrimElevMax = (float) buf.aslctrl_params.SAS_TrimElevMax;
+			log_msg.body.log_ASAS.SAS_TrimRudvNom = (float) buf.aslctrl_params.SAS_TrimRudvNom;
+			log_msg.body.log_ASAS.SAS_TrimRudvMin = (float) buf.aslctrl_params.SAS_TrimRudvMin;
+			log_msg.body.log_ASAS.SAS_TrimRudvMax = (float) buf.aslctrl_params.SAS_TrimRudvMax;
 			LOGBUFFER_WRITE_AND_COUNT(ASAS);
 
 			//MSG3: ACAS
 			log_msg.msg_type = LOG_ACAS_MSG;
-			log_msg.body.log_ACAS.CAS_fMult = buf->aslctrl_params.CAS_fMult;
-			log_msg.body.log_ACAS.CAS_PitchPGain = (float) buf->aslctrl_params.CAS_PitchPGain;
-			log_msg.body.log_ACAS.CAS_PitchPGainM = (float) buf->aslctrl_params.CAS_PitchPGainM;
-			log_msg.body.log_ACAS.CAS_PitchIGain = (float) buf->aslctrl_params.CAS_PitchIGain;
-			log_msg.body.log_ACAS.CAS_RollPGain = (float) buf->aslctrl_params.CAS_RollPGain;
-			log_msg.body.log_ACAS.CAS_RollPGainM = (float) buf->aslctrl_params.CAS_RollPGainM;
-			log_msg.body.log_ACAS.CAS_HeadPGain = (float) buf->aslctrl_params.CAS_HeadPGain;
-			log_msg.body.log_ACAS.CAS_q2uPGain = (float) buf->aslctrl_params.CAS_q2uPGain;
-			log_msg.body.log_ACAS.CAS_p2uPGain = (float) buf->aslctrl_params.CAS_p2uPGain;
-			log_msg.body.log_ACAS.CAS_PitchRateLim = (float) buf->aslctrl_params.CAS_PitchRateLim;
-			log_msg.body.log_ACAS.CAS_PitchRateILim = (float) buf->aslctrl_params.CAS_PitchRateILim;
-			log_msg.body.log_ACAS.CAS_PitchTCkI = (float) buf->aslctrl_params.CAS_PitchTCkI;
-			log_msg.body.log_ACAS.CAS_PitchTCILim = (float) buf->aslctrl_params.CAS_PitchTCILim;
-			log_msg.body.log_ACAS.CAS_RollRateLim = (float) buf->aslctrl_params.CAS_RollRateLim;
-			log_msg.body.log_ACAS.CAS_YawRateLim = (float) buf->aslctrl_params.CAS_YawRateLim;
-			log_msg.body.log_ACAS.CAS_PitchAngleLim = (float) buf->aslctrl_params.CAS_PitchAngleLim;
-			log_msg.body.log_ACAS.CAS_RollAngleLim = (float) buf->aslctrl_params.CAS_RollAngleLim;
-			log_msg.body.log_ACAS.CAS_uElevTurnFF = (float) buf->aslctrl_params.CAS_uElevTurnFF;
-			log_msg.body.log_ACAS.CAS_YawLowPassOmega = (float) buf->aslctrl_params.CAS_YawLowPassOmega;
+			log_msg.body.log_ACAS.CAS_fMult = buf.aslctrl_params.CAS_fMult;
+			log_msg.body.log_ACAS.CAS_PitchPGain = (float) buf.aslctrl_params.CAS_PitchPGain;
+			log_msg.body.log_ACAS.CAS_PitchPGainM = (float) buf.aslctrl_params.CAS_PitchPGainM;
+			log_msg.body.log_ACAS.CAS_PitchIGain = (float) buf.aslctrl_params.CAS_PitchIGain;
+			log_msg.body.log_ACAS.CAS_RollPGain = (float) buf.aslctrl_params.CAS_RollPGain;
+			log_msg.body.log_ACAS.CAS_RollPGainM = (float) buf.aslctrl_params.CAS_RollPGainM;
+			log_msg.body.log_ACAS.CAS_HeadPGain = (float) buf.aslctrl_params.CAS_HeadPGain;
+			log_msg.body.log_ACAS.CAS_q2uPGain = (float) buf.aslctrl_params.CAS_q2uPGain;
+			log_msg.body.log_ACAS.CAS_p2uPGain = (float) buf.aslctrl_params.CAS_p2uPGain;
+			log_msg.body.log_ACAS.CAS_PitchRateLim = (float) buf.aslctrl_params.CAS_PitchRateLim;
+			log_msg.body.log_ACAS.CAS_PitchRateILim = (float) buf.aslctrl_params.CAS_PitchRateILim;
+			log_msg.body.log_ACAS.CAS_PitchTCkI = (float) buf.aslctrl_params.CAS_PitchTCkI;
+			log_msg.body.log_ACAS.CAS_PitchTCILim = (float) buf.aslctrl_params.CAS_PitchTCILim;
+			log_msg.body.log_ACAS.CAS_RollRateLim = (float) buf.aslctrl_params.CAS_RollRateLim;
+			log_msg.body.log_ACAS.CAS_YawRateLim = (float) buf.aslctrl_params.CAS_YawRateLim;
+			log_msg.body.log_ACAS.CAS_PitchAngleLim = (float) buf.aslctrl_params.CAS_PitchAngleLim;
+			log_msg.body.log_ACAS.CAS_RollAngleLim = (float) buf.aslctrl_params.CAS_RollAngleLim;
+			log_msg.body.log_ACAS.CAS_uElevTurnFF = (float) buf.aslctrl_params.CAS_uElevTurnFF;
+			log_msg.body.log_ACAS.CAS_YawLowPassOmega = (float) buf.aslctrl_params.CAS_YawLowPassOmega;
 			LOGBUFFER_WRITE_AND_COUNT(ACAS);
 
 			//MSG4: AHL
 			log_msg.msg_type = LOG_AHL_MSG;
-			log_msg.body.log_AHL.HL_fMult = buf->aslctrl_params.HL_fMult;
-			log_msg.body.log_AHL.HL_WPL1_Damping = (float) buf->aslctrl_params.HL_WPL1_Damping;
-			log_msg.body.log_AHL.HL_WPL1_P_vMin = (float) buf->aslctrl_params.HL_WPL1_P_vMin;
-			log_msg.body.log_AHL.HL_WPL1_P_vNom = (float) buf->aslctrl_params.HL_WPL1_P_vNom;
-			log_msg.body.log_AHL.HL_WPL1_P_vMax = (float) buf->aslctrl_params.HL_WPL1_P_vMax;
-			log_msg.body.log_AHL.HL_Vel_vNom = (float) buf->aslctrl_params.HL_Vel_vNom;
-			log_msg.body.log_AHL.HL_Vel_vMin = (float) buf->aslctrl_params.HL_Vel_vMin;
-			log_msg.body.log_AHL.HL_Vel_vMax = (float) buf->aslctrl_params.HL_Vel_vMax;
+			log_msg.body.log_AHL.HL_fMult = buf.aslctrl_params.HL_fMult;
+			log_msg.body.log_AHL.HL_WPL1_Damping = (float) buf.aslctrl_params.HL_WPL1_Damping;
+			log_msg.body.log_AHL.HL_WPL1_P_vMin = (float) buf.aslctrl_params.HL_WPL1_P_vMin;
+			log_msg.body.log_AHL.HL_WPL1_P_vNom = (float) buf.aslctrl_params.HL_WPL1_P_vNom;
+			log_msg.body.log_AHL.HL_WPL1_P_vMax = (float) buf.aslctrl_params.HL_WPL1_P_vMax;
+			log_msg.body.log_AHL.HL_Vel_vNom = (float) buf.aslctrl_params.HL_Vel_vNom;
+			log_msg.body.log_AHL.HL_Vel_vMin = (float) buf.aslctrl_params.HL_Vel_vMin;
+			log_msg.body.log_AHL.HL_Vel_vMax = (float) buf.aslctrl_params.HL_Vel_vMax;
 			//Old altitude controller
-			log_msg.body.log_AHL.HL_AlthMax = (float) buf->aslctrl_params.HL_AlthMax;
-			log_msg.body.log_AHL.HL_AlthMin = (float) buf->aslctrl_params.HL_AlthMin;
-			log_msg.body.log_AHL.HL_vZClimb = (float) buf->aslctrl_params.HL_vZClimb;
-			log_msg.body.log_AHL.HL_vZSink = (float) buf->aslctrl_params.HL_vZSink;
-			log_msg.body.log_AHL.HL_AltLowPassOmega = (float) buf->aslctrl_params.HL_AltLowPassOmega;
+			log_msg.body.log_AHL.HL_AlthMax = (float) buf.aslctrl_params.HL_AlthMax;
+			log_msg.body.log_AHL.HL_AlthMin = (float) buf.aslctrl_params.HL_AlthMin;
+			log_msg.body.log_AHL.HL_vZClimb = (float) buf.aslctrl_params.HL_vZClimb;
+			log_msg.body.log_AHL.HL_vZSink = (float) buf.aslctrl_params.HL_vZSink;
+			log_msg.body.log_AHL.HL_AltLowPassOmega = (float) buf.aslctrl_params.HL_AltLowPassOmega;
 
 			//TECS
 			//---TECS--------------------
-			log_msg.body.log_AHL.time_const = buf->aslctrl_params.time_const;
-			log_msg.body.log_AHL.time_const_throt = buf->aslctrl_params.time_const_throt;
-			log_msg.body.log_AHL.min_sink_rate = buf->aslctrl_params.min_sink_rate;
-			log_msg.body.log_AHL.max_sink_rate = buf->aslctrl_params.max_sink_rate;
-			log_msg.body.log_AHL.max_climb_rate = buf->aslctrl_params.max_climb_rate;
-			log_msg.body.log_AHL.throttle_damp = buf->aslctrl_params.throttle_damp;
-			log_msg.body.log_AHL.integrator_gain = buf->aslctrl_params.integrator_gain;
-			log_msg.body.log_AHL.throttle_ILim = buf->aslctrl_params.throttle_ILim;
-			log_msg.body.log_AHL.vertical_accel_limit = buf->aslctrl_params.vertical_accel_limit;
-			log_msg.body.log_AHL.height_comp_filter_omega = buf->aslctrl_params.height_comp_filter_omega;
-			log_msg.body.log_AHL.speed_comp_filter_omega = buf->aslctrl_params.speed_comp_filter_omega;
-			log_msg.body.log_AHL.roll_throttle_compensation = buf->aslctrl_params.roll_throttle_compensation;
-			log_msg.body.log_AHL.speed_weight = buf->aslctrl_params.speed_weight;
-			log_msg.body.log_AHL.pitch_damping = buf->aslctrl_params.pitch_damping;
-			log_msg.body.log_AHL.airspeed_min = buf->aslctrl_params.airspeed_min;
-			log_msg.body.log_AHL.airspeed_trim = buf->aslctrl_params.airspeed_trim;
-			log_msg.body.log_AHL.airspeed_max = buf->aslctrl_params.airspeed_max;
-			log_msg.body.log_AHL.pitch_limit_min = buf->aslctrl_params.pitch_limit_min;
-			log_msg.body.log_AHL.pitch_limit_max = buf->aslctrl_params.pitch_limit_max;
-			log_msg.body.log_AHL.throttle_min = buf->aslctrl_params.throttle_min;
-			log_msg.body.log_AHL.throttle_max = buf->aslctrl_params.throttle_max;
-			log_msg.body.log_AHL.throttle_cruise = buf->aslctrl_params.throttle_cruise;
-			log_msg.body.log_AHL.heightrate_p = buf->aslctrl_params.heightrate_p;
-			log_msg.body.log_AHL.speedrate_p = buf->aslctrl_params.speedrate_p;
-			log_msg.body.log_AHL.throttle_slewrate = buf->aslctrl_params.throttle_slewrate;
+			log_msg.body.log_AHL.time_const = buf.aslctrl_params.time_const;
+			log_msg.body.log_AHL.time_const_throt = buf.aslctrl_params.time_const_throt;
+			log_msg.body.log_AHL.min_sink_rate = buf.aslctrl_params.min_sink_rate;
+			log_msg.body.log_AHL.max_sink_rate = buf.aslctrl_params.max_sink_rate;
+			log_msg.body.log_AHL.max_climb_rate = buf.aslctrl_params.max_climb_rate;
+			log_msg.body.log_AHL.throttle_damp = buf.aslctrl_params.throttle_damp;
+			log_msg.body.log_AHL.integrator_gain = buf.aslctrl_params.integrator_gain;
+			log_msg.body.log_AHL.throttle_ILim = buf.aslctrl_params.throttle_ILim;
+			log_msg.body.log_AHL.vertical_accel_limit = buf.aslctrl_params.vertical_accel_limit;
+			log_msg.body.log_AHL.height_comp_filter_omega = buf.aslctrl_params.height_comp_filter_omega;
+			log_msg.body.log_AHL.speed_comp_filter_omega = buf.aslctrl_params.speed_comp_filter_omega;
+			log_msg.body.log_AHL.roll_throttle_compensation = buf.aslctrl_params.roll_throttle_compensation;
+			log_msg.body.log_AHL.speed_weight = buf.aslctrl_params.speed_weight;
+			log_msg.body.log_AHL.pitch_damping = buf.aslctrl_params.pitch_damping;
+			log_msg.body.log_AHL.airspeed_min = buf.aslctrl_params.airspeed_min;
+			log_msg.body.log_AHL.airspeed_trim = buf.aslctrl_params.airspeed_trim;
+			log_msg.body.log_AHL.airspeed_max = buf.aslctrl_params.airspeed_max;
+			log_msg.body.log_AHL.pitch_limit_min = buf.aslctrl_params.pitch_limit_min;
+			log_msg.body.log_AHL.pitch_limit_max = buf.aslctrl_params.pitch_limit_max;
+			log_msg.body.log_AHL.throttle_min = buf.aslctrl_params.throttle_min;
+			log_msg.body.log_AHL.throttle_max = buf.aslctrl_params.throttle_max;
+			log_msg.body.log_AHL.throttle_cruise = buf.aslctrl_params.throttle_cruise;
+			log_msg.body.log_AHL.heightrate_p = buf.aslctrl_params.heightrate_p;
+			log_msg.body.log_AHL.speedrate_p = buf.aslctrl_params.speedrate_p;
+			log_msg.body.log_AHL.throttle_slewrate = buf.aslctrl_params.throttle_slewrate;
 
 			LOGBUFFER_WRITE_AND_COUNT(AHL);
 		}
 
 		/* --- ASLD --- */
-		if (copy_if_updated(ORB_ID(aslctrl_data), subs.aslctrl_data_sub, &buf->aslctrl_data) && pLogEnabler.LOG_ASLD) {
+		if (copy_if_updated(ORB_ID(aslctrl_data), subs.aslctrl_data_sub, &buf.aslctrl_data) && pLogEnabler.LOG_ASLD) {
 
 			log_msg.msg_type = LOG_ASLD_MSG;
-			log_msg.body.log_ASLD.timestamp= buf->aslctrl_data.timestamp;
-			log_msg.body.log_ASLD.dt= buf->aslctrl_data.dt;
-			log_msg.body.log_ASLD.aslctrl_mode= buf->aslctrl_data.aslctrl_mode;
-			log_msg.body.log_ASLD.h= buf->aslctrl_data.h;
-			log_msg.body.log_ASLD.hRef= buf->aslctrl_data.hRef;
-			log_msg.body.log_ASLD.hRef_t= buf->aslctrl_data.hRef_t;
-			log_msg.body.log_ASLD.PitchAngle= buf->aslctrl_data.PitchAngle;
-			log_msg.body.log_ASLD.PitchAngleRef= buf->aslctrl_data.PitchAngleRef;
-			log_msg.body.log_ASLD.PitchAngleRefCT= buf->aslctrl_data.PitchAngleRefCT;
-			log_msg.body.log_ASLD.q= buf->aslctrl_data.q;
-			log_msg.body.log_ASLD.qRef= buf->aslctrl_data.qRef;
-			log_msg.body.log_ASLD.uElev= buf->aslctrl_data.uElev;
-			log_msg.body.log_ASLD.uThrot= buf->aslctrl_data.uThrot;
-			log_msg.body.log_ASLD.uThrot2= buf->aslctrl_data.uThrot2;
-			log_msg.body.log_ASLD.aZ= buf->aslctrl_data.aZ;
-			log_msg.body.log_ASLD.YawAngle= buf->aslctrl_data.YawAngle;
-			log_msg.body.log_ASLD.YawAngleRef= buf->aslctrl_data.YawAngleRef;
-			log_msg.body.log_ASLD.RollAngle= buf->aslctrl_data.RollAngle;
-			log_msg.body.log_ASLD.RollAngleRef= buf->aslctrl_data.RollAngleRef;
-			log_msg.body.log_ASLD.p= buf->aslctrl_data.p;
-			log_msg.body.log_ASLD.pRef= buf->aslctrl_data.pRef;
-			log_msg.body.log_ASLD.r= buf->aslctrl_data.r;
-			log_msg.body.log_ASLD.rRef= buf->aslctrl_data.rRef;
-			log_msg.body.log_ASLD.uAil= buf->aslctrl_data.uAil;
-			log_msg.body.log_ASLD.uRud= buf->aslctrl_data.uRud;
-			log_msg.body.log_ASLD.Yawdot_ref= buf->aslctrl_data.Yawdot_ref;
-			log_msg.body.log_ASLD.Yawdot= buf->aslctrl_data.Yawdot;
-			log_msg.body.log_ASLD.AirspeedRef= buf->aslctrl_data.AirspeedRef;
-			log_msg.body.log_ASLD.bEngageSpoilers= buf->aslctrl_data.bEngageSpoilers;
-			log_msg.body.log_ASLD.f_GainSch_Q= buf->aslctrl_data.f_GainSch_Q;
-			log_msg.body.log_ASLD.P_kP_GainSch_E= buf->aslctrl_data.P_kP_GainSch_E;
-			log_msg.body.log_ASLD.R_kP_GainSch_E= buf->aslctrl_data.R_kP_GainSch_E;
-			log_msg.body.log_ASLD.qmax= buf->aslctrl_data.qmax;
-			log_msg.body.log_ASLD.StallStatus= buf->aslctrl_data.StallStatus;
-			log_msg.body.log_ASLD.AltitudeStatus= buf->aslctrl_data.AltitudeStatus;
-			log_msg.body.log_ASLD.AirspeedCtrlStatus= buf->aslctrl_data.AirspeedCtrlStatus;
+			log_msg.body.log_ASLD.timestamp= buf.aslctrl_data.timestamp;
+			log_msg.body.log_ASLD.dt= buf.aslctrl_data.dt;
+			log_msg.body.log_ASLD.aslctrl_mode= buf.aslctrl_data.aslctrl_mode;
+			log_msg.body.log_ASLD.h= buf.aslctrl_data.h;
+			log_msg.body.log_ASLD.hRef= buf.aslctrl_data.hRef;
+			log_msg.body.log_ASLD.hRef_t= buf.aslctrl_data.hRef_t;
+			log_msg.body.log_ASLD.PitchAngle= buf.aslctrl_data.PitchAngle;
+			log_msg.body.log_ASLD.PitchAngleRef= buf.aslctrl_data.PitchAngleRef;
+			log_msg.body.log_ASLD.PitchAngleRefCT= buf.aslctrl_data.PitchAngleRefCT;
+			log_msg.body.log_ASLD.q= buf.aslctrl_data.q;
+			log_msg.body.log_ASLD.qRef= buf.aslctrl_data.qRef;
+			log_msg.body.log_ASLD.uElev= buf.aslctrl_data.uElev;
+			log_msg.body.log_ASLD.uThrot= buf.aslctrl_data.uThrot;
+			log_msg.body.log_ASLD.uThrot2= buf.aslctrl_data.uThrot2;
+			log_msg.body.log_ASLD.aZ= buf.aslctrl_data.aZ;
+			log_msg.body.log_ASLD.YawAngle= buf.aslctrl_data.YawAngle;
+			log_msg.body.log_ASLD.YawAngleRef= buf.aslctrl_data.YawAngleRef;
+			log_msg.body.log_ASLD.RollAngle= buf.aslctrl_data.RollAngle;
+			log_msg.body.log_ASLD.RollAngleRef= buf.aslctrl_data.RollAngleRef;
+			log_msg.body.log_ASLD.p= buf.aslctrl_data.p;
+			log_msg.body.log_ASLD.pRef= buf.aslctrl_data.pRef;
+			log_msg.body.log_ASLD.r= buf.aslctrl_data.r;
+			log_msg.body.log_ASLD.rRef= buf.aslctrl_data.rRef;
+			log_msg.body.log_ASLD.uAil= buf.aslctrl_data.uAil;
+			log_msg.body.log_ASLD.uRud= buf.aslctrl_data.uRud;
+			log_msg.body.log_ASLD.Yawdot_ref= buf.aslctrl_data.Yawdot_ref;
+			log_msg.body.log_ASLD.Yawdot= buf.aslctrl_data.Yawdot;
+			log_msg.body.log_ASLD.AirspeedRef= buf.aslctrl_data.AirspeedRef;
+			log_msg.body.log_ASLD.bEngageSpoilers= buf.aslctrl_data.bEngageSpoilers;
+			log_msg.body.log_ASLD.f_GainSch_Q= buf.aslctrl_data.f_GainSch_Q;
+			log_msg.body.log_ASLD.P_kP_GainSch_E= buf.aslctrl_data.P_kP_GainSch_E;
+			log_msg.body.log_ASLD.R_kP_GainSch_E= buf.aslctrl_data.R_kP_GainSch_E;
+			log_msg.body.log_ASLD.qmax= buf.aslctrl_data.qmax;
+			log_msg.body.log_ASLD.StallStatus= buf.aslctrl_data.StallStatus;
+			log_msg.body.log_ASLD.AltitudeStatus= buf.aslctrl_data.AltitudeStatus;
+			log_msg.body.log_ASLD.AirspeedCtrlStatus= buf.aslctrl_data.AirspeedCtrlStatus;
 
 			LOGBUFFER_WRITE_AND_COUNT(ASLD);
 		}
@@ -2015,9 +1996,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 	pthread_cond_destroy(&logbuffer_cond);
 
 	free(lb.data);
-	free(buf);
-	free(buf_status);
-	free(buf_gps_pos);
 
 	thread_running = false;
 
