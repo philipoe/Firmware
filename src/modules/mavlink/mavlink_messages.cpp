@@ -71,6 +71,7 @@
 #include <uORB/topics/navigation_capabilities.h>
 #include <uORB/topics/aslctrl_data.h>
 #include <uORB/topics/sensor_mppt.h>
+#include <uORB/topics/sensor_power.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_range_finder.h>
@@ -2396,6 +2397,67 @@ protected:
 	}
 };
 
+class MavlinkStreamAslpowerData : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamAslpowerData::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "SENS_POWER";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_SENS_POWER;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamAslpowerData(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_SENS_POWER_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_power_data_sub;
+	uint64_t _power_data_time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamAslpowerData(MavlinkStreamAslpowerData &);
+	MavlinkStreamAslpowerData& operator = (const MavlinkStreamAslpowerData &);
+
+protected:
+	explicit MavlinkStreamAslpowerData(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_power_data_sub(_mavlink->add_orb_subscription(ORB_ID(sensor_power))),
+		_power_data_time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct sensor_power_s power_data;
+
+		if (_power_data_sub->update(&_power_data_time, &power_data)) {
+
+			mavlink_sens_power_t msg;
+
+			msg.adc121_vspb_volt = power_data.adc121_vspb_volt;
+			msg.adc121_cspb_amp = power_data.adc121_cspb_amp;
+			msg.adc121_cs1_amp = power_data.adc121_cs1_amp;
+			msg.adc121_cs2_amp = power_data.adc121_cs2_amp;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_SENS_POWER, &msg);
+
+		}
+	}
+};
+
 StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static),
 	new StreamListItem(&MavlinkStreamStatustext::new_instance, &MavlinkStreamStatustext::get_name_static),
@@ -2428,6 +2490,7 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamAslctrlData::new_instance, &MavlinkStreamAslctrlData::get_name_static),
 	new StreamListItem(&MavlinkStreamAslctrlDebug::new_instance, &MavlinkStreamAslctrlDebug::get_name_static),
 	new StreamListItem(&MavlinkStreamAslmpptData::new_instance, &MavlinkStreamAslmpptData::get_name_static),
+	new StreamListItem(&MavlinkStreamAslpowerData::new_instance, &MavlinkStreamAslpowerData::get_name_static),
 
 	nullptr
 };
