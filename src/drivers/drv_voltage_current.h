@@ -82,7 +82,7 @@ ORB_DECLARE(sensor_adc121_cs2);
 
 /*
  * ioctl() definitions
- */
+*/
 
 #define _VOLTAGECURRENTIOCBASE		(0x2d00)						// check the VOLTAGECURRENTIOCBASE value of 0x2d00
 #define _CURRENTIOC(_n)		(_IOC(_VOLTAGECURRENTIOCBASE, _n))
