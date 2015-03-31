@@ -87,7 +87,7 @@ class ADC121_CSPB : public device::I2C
 {
 public:
 	ADC121_CSPB(int bus);
-	~ADC121_CSPB();
+	virtual ~ADC121_CSPB();
 
 	virtual int		init();
 
@@ -114,7 +114,7 @@ private:
 
 	bool						_measurement_phase;
 
-	float 						current;
+	float 						_current;
 
 	uint32_t 					averaging_counter;					// add averaging counter
 	uint32_t					raw_current;						// add averaging raw current buffer for averaging
@@ -228,6 +228,7 @@ ADC121_CSPB::ADC121_CSPB(int bus) :
 	_oldest_report(0),
 	_reports(nullptr),
 	_measurement_phase(false),
+	_current(0),
 	_current_sensor_pb_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "ADC121_CSPB_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "ADC121_CSPB_comms_errors")),
@@ -522,15 +523,6 @@ ADC121_CSPB::cycle()
 	if (_measurement_phase) {
 		/* perform current measurement */
 		if (OK != current_measurement()) {
-#if 0																					// temp commented out for debugging
-
-			log("current measurement error, restarting ADC121_CSPB device");
-
-			/* free any existing reports and reset the state machine and try again */
-			if (_reports != nullptr)
-				delete[] _reports;
-			probe();
-#endif
 			start();
 			return;
 		}
@@ -543,8 +535,7 @@ ADC121_CSPB::cycle()
 			   &_work,
 			   (worker_t)&ADC121_CSPB::cycle_trampoline,
 			   this,
-			   //USEC2TICK(ADC121_CSPB_CONVERSION_INTERVAL));		// temp marked for testing the replacement of ADC121_CSPB_CONVERSION_INTERVAL
-			   _measure_ticks);										// ADC121_CSPB_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
+			   _measure_ticks);										// ADC121_CSPB_CONVERSION_INTERVAL replaced with _measure_ticks
 	}
 }
 
@@ -604,23 +595,23 @@ ADC121_CSPB::current_measurement()
 	}
 
 	/* current calculation, result in [A] */
-	current = (float)((int16_t)(raw_current - CS_cI * AVERAGING_SAMPLES)) * CS_Vfs / VOLTAGE_MEASUREMENT_RES / CS_fI / AVERAGING_SAMPLES;
+	_current = (float)((int16_t)(raw_current - CS_cI * AVERAGING_SAMPLES)) * CS_Vfs / VOLTAGE_MEASUREMENT_RES / CS_fI / AVERAGING_SAMPLES;
 	raw_current = 0;
 	averaging_counter = 0;
 
 
-	//current = (float)((uint16_t)(cvt.w & 0x0fff) - CURRENT_OFFSET) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR;
+	//_current = (float)((uint16_t)(cvt.w & 0x0fff) - CURRENT_OFFSET) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR;
 
-	if ( (current > CURRENT_MAX)) {
-			warnx("ADC121_CSPB: current measured by the power board is out of range: %3.2f [A]", (double) current);
+	if ( (_current > CURRENT_MAX)) {
+			warnx("ADC121_CSPB: current measured by the power board is out of range: %3.2f [A]", (double) _current);
 			return -EIO;
 			}
 
-	//warnx("measured current by the ADC121 by the power board Sensor: %3.2f [A]", (double) current);  				// remove display!!!!!!!!
+	//warnx("measured current by the ADC121 by the power board Sensor: %3.2f [A]", (double) _current);  				// remove display!!!!!!!!
 
 
 	/* generate a new report */
-		_reports[_next_report].current = current;					/* report in [A] */
+		_reports[_next_report].current = _current;					/* report in [A] */
 
 	/* publish it */
 	orb_publish(ORB_ID(sensor_adc121_cspb), _current_sensor_pb_topic, &_reports[_next_report]);
@@ -651,7 +642,7 @@ ADC121_CSPB::print_info()
 	printf("poll interval:  %u ticks\n", _measure_ticks);
 	printf("report queue:   %u (%u/%u @ %p)\n",
 	       _num_reports, _oldest_report, _next_report, _reports);
-	printf("current:   %10.4f\n", (double)(current));
+	printf("current:   %10.4f\n", (double)(_current));
 }
 
 /**
@@ -734,9 +725,9 @@ test()
 	if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
 		errx(1, "failed to set queue depth");
 
-	/* start the sensor polling at 2Hz */
-	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2))
-		errx(1, "failed to set 2Hz poll rate");
+	/* start the sensor polling at 10Hz */
+	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 10))
+		errx(1, "failed to set 10Hz poll rate");
 
 	/* read the sensor 5x and report each value */
 	for (unsigned i = 0; i < 5; i++) {
@@ -745,7 +736,6 @@ test()
 		/* wait for data to be ready */
 		fds.fd = fd;
 		fds.events = POLLIN;
-		//ret = poll(&fds, 1, 2000);		// temp marked
 		ret = poll(&fds, 1, 8000);			// timeout increased to 8 [sec] due to the averaging
 
 		if (ret != 1)
@@ -761,7 +751,7 @@ test()
 		warnx("time:        %lld", report.timestamp);
 
 	}
-
+	reset();
 	errx(0, "PASS");
 }
 

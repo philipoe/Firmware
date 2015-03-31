@@ -87,7 +87,7 @@ class ADC121_CS1 : public device::I2C
 {
 public:
 	ADC121_CS1(int bus);
-	~ADC121_CS1();
+	virtual ~ADC121_CS1();
 
 	virtual int		init();
 
@@ -114,7 +114,7 @@ private:
 
 	bool						_measurement_phase;
 
-	float 						current;
+	float 						_current;
 
 	uint32_t 					averaging_counter;
 	uint32_t					raw_current;
@@ -229,12 +229,12 @@ ADC121_CS1::ADC121_CS1(int bus) :
 	_oldest_report(0),
 	_reports(nullptr),
 	_measurement_phase(false),
+	_current(0),
 	_current_sensor_pb_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "ADC121_CS1_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "ADC121_CS1_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "ADC121_CS1_buffer_overflows"))
 {
-	// enable debug() calls
 	_debug_enabled = true;
 
 	// work_cancel in the dtor will explode if we don't do this...
@@ -522,14 +522,6 @@ ADC121_CS1::cycle()
 	if (_measurement_phase) {
 		/* perform current measurement */
 		if (OK != current_measurement()) {
-#if 0																					// temp commented out for debugging
-			log("current measurement error, restarting ADC121_CS1 device");
-
-			/* free any existing reports and reset the state machine and try again */
-			if (_reports != nullptr)
-				delete[] _reports;
-			probe();
-#endif
 			start();
 			return;
 		}
@@ -542,7 +534,6 @@ ADC121_CS1::cycle()
 			   &_work,
 			   (worker_t)&ADC121_CS1::cycle_trampoline,
 			   this,
-			   //USEC2TICK(ADC121_CS1_CONVERSION_INTERVAL)); 		// temp marked for testing the replacement of ADC121_CS1_CONVERSION_INTERVAL
 			   _measure_ticks);										// ADC121_CS1_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
 	}
 }
@@ -602,23 +593,23 @@ ADC121_CS1::current_measurement()
 	}
 
 	/* current calculation, result in [A] */
-	current = (float)((int16_t)(raw_current - CS_cI * AVERAGING_SAMPLES)) * CS_Vfs / VOLTAGE_MEASUREMENT_RES / CS_fI / AVERAGING_SAMPLES;
+	_current = (float)((int16_t)(raw_current - CS_cI * AVERAGING_SAMPLES)) * CS_Vfs / VOLTAGE_MEASUREMENT_RES / CS_fI / AVERAGING_SAMPLES;
 	raw_current = 0;
 	averaging_counter = 0;
 
 
-	//current = (float)((uint16_t)(cvt.w & 0x0fff) - CURRENT_OFFSET) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR;
+	//_current = (float)((uint16_t)(cvt.w & 0x0fff) - CURRENT_OFFSET) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR;
 
-	if ( (current > CURRENT_MAX)) {
-			warnx("ADC121_CS1: current measured by the power board is out of range: %3.2f [A]", (double) current);
+	if ( (_current > CURRENT_MAX)) {
+			warnx("ADC121_CS1: current measured by the power board is out of range: %3.2f [A]", (double) _current);
 			return -EIO;
 			}
 
-	//warnx("measured current by the ADC121 by the board Sensor 1: %3.2f [A]", (double) current);  				// remove display!!!!!!!!
+	//warnx("measured current by the ADC121 by the board Sensor 1: %3.2f [A]", (double) _current);  				// remove display!!!!!!!!
 
 
 	/* generate a new report */
-		_reports[_next_report].current = current;					/* report in [A] */
+		_reports[_next_report].current = _current;					/* report in [A] */
 
 	/* publish it */
 	orb_publish(ORB_ID(sensor_adc121_cs1), _current_sensor_pb_topic, &_reports[_next_report]);
@@ -649,7 +640,7 @@ ADC121_CS1::print_info()
 	printf("poll interval:  %u ticks\n", _measure_ticks);
 	printf("report queue:   %u (%u/%u @ %p)\n",
 	       _num_reports, _oldest_report, _next_report, _reports);
-	printf("current:   %10.4f\n", (double)(current));
+	printf("current:   %10.4f\n", (double)(_current));
 }
 
 /**
@@ -760,6 +751,7 @@ test()
 
 	}
 
+	reset();
 	errx(0, "PASS");
 }
 

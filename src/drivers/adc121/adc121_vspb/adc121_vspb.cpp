@@ -87,7 +87,7 @@ class ADC121_VSPB : public device::I2C
 {
 public:
 	ADC121_VSPB(int bus);
-	~ADC121_VSPB();
+	virtual ~ADC121_VSPB();
 
 	virtual int		init();
 
@@ -114,7 +114,7 @@ private:
 
 	bool						_measurement_phase;
 
-	float 						voltage;
+	float 						_voltage;
 
 	orb_advert_t				_voltage_sensor_pb_topic;
 
@@ -226,12 +226,12 @@ ADC121_VSPB::ADC121_VSPB(int bus) :
 	_oldest_report(0),
 	_reports(nullptr),
 	_measurement_phase(false),
+	_voltage(0),
 	_voltage_sensor_pb_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "ADC121_VSPB_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "ADC121_VSPB_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "ADC121_VSPB_buffer_overflows"))
 {
-	// enable debug() calls
 	_debug_enabled = true;
 
 	// work_cancel in the dtor will explode if we don't do this...
@@ -306,7 +306,6 @@ ADC121_VSPB::probe_address(uint8_t address)
 		return -EIO;
 
 	/* Initialization functions: */
-
 
 	return OK;
 }
@@ -508,15 +507,6 @@ ADC121_VSPB::cycle()
 	if (_measurement_phase) {
 		/* perform voltage measurement */
 		if (OK != voltage_measurement()) {
-#if 0																					// temp commented out for debugging
-
-			log("voltage measurement error, restarting ADC121_VSPB device");
-
-			/* free any existing reports and reset the state machine and try again */
-			if (_reports != nullptr)
-				delete[] _reports;
-			probe();
-#endif
 			start();
 			return;
 		}
@@ -529,8 +519,7 @@ ADC121_VSPB::cycle()
 			   &_work,
 			   (worker_t)&ADC121_VSPB::cycle_trampoline,
 			   this,
-			   //USEC2TICK(ADC121_VSPB_CONVERSION_INTERVAL));		// temp marked for testing the replacement of ADC121_VSPB_CONVERSION_INTERVAL
-			   _measure_ticks);										// ADC121_VSPB_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
+			   _measure_ticks);										// ADC121_VSPB_CONVERSION_INTERVAL replaced with _measure_ticks
 	}
 }
 
@@ -572,19 +561,17 @@ ADC121_VSPB::voltage_measurement()
 	cvt.b[1] = data[0];
 
 	/* voltage calculation, result in [v] */
-	voltage = (float)((uint16_t)(cvt.w & 0x0fff)) * VOLTAGE_SCALLING * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES + VSPB_off;
+	_voltage = (float)((uint16_t)(cvt.w & 0x0fff)) * VOLTAGE_SCALLING * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES + VSPB_off;
 
 
-	if ( (voltage > VOLTAGE_MAX) | (voltage < VOLTAGE_MIN) ) {
-			warnx("ADC121_VSPB: voltage measured by power board is out of range: %3.2f [v]", (double) voltage);
+	if ( (_voltage > VOLTAGE_MAX) | (_voltage < VOLTAGE_MIN) ) {
+			warnx("ADC121_VSPB: voltage measured by power board is out of range: %3.2f [v]", (double) _voltage);
 			return -EIO;
-			}
-
+	}
 	//warnx("measured voltage by the ADC121 by the power board sensor: %3.2f [v]", (double) voltage);  				// remove display!!!!!!!!
 
-
 	/* generate a new report */
-		_reports[_next_report].voltage = voltage;					/* report in [v] */
+		_reports[_next_report].voltage = _voltage;					/* report in [v] */
 
 	/* publish it */
 	orb_publish(ORB_ID(sensor_adc121_vspb), _voltage_sensor_pb_topic, &_reports[_next_report]);
@@ -604,7 +591,6 @@ ADC121_VSPB::voltage_measurement()
 	perf_end(_sample_perf);
 
 return OK;
-
 }
 
 void
@@ -616,7 +602,7 @@ ADC121_VSPB::print_info()
 	printf("poll interval:  %u ticks\n", _measure_ticks);
 	printf("report queue:   %u (%u/%u @ %p)\n",
 	       _num_reports, _oldest_report, _next_report, _reports);
-	printf("voltage:   %10.4f\n", (double)(voltage));
+	printf("voltage:   %10.4f\n", (double)(_voltage));
 }
 
 /**
@@ -726,6 +712,7 @@ test()
 
 	}
 
+	reset();
 	errx(0, "PASS");
 }
 
