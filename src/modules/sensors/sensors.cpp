@@ -63,7 +63,7 @@
 #include <drivers/drv_baro.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_amb_temp.h>
-////#include <drivers/drv_voltage_current.h>		// added
+#include <drivers/drv_voltage_current.h>
 #include <drivers/drv_mppt.h>
 ////#include <drivers/drv_rc_input.h>
 #include <drivers/drv_adc.h>
@@ -80,6 +80,7 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/sensor_combined.h>
 #include <uORB/topics/sensor_mppt.h>
+#include <uORB/topics/sensor_power.h>
 #include <uORB/topics/rc_channels.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/actuator_controls.h>
@@ -234,11 +235,11 @@ private:
 	int		_diff_pres_sub;				/**< raw differential pressure subscription */
 	int		_vcontrol_mode_sub;			/**< vehicle control mode subscription */
 	int		_amb_temp_sub;				/**< raw ambient temperature data subscription */
-	//int			_adc121_vspb_sub;		/**< voltage sensor power board data subscription */
-	//int			_adc121_cspb_sub;		/**< current sensor power board data subscription */
-	//int			_adc121_cs1_sub;		/**< current sensor 1 board data subscription */
-	//int			_adc121_cs2_sub;		/**< current sensor 2 board data subscription */
-	int			_spv1020_sub;				/**< MPPTs data subscription 					*/
+	int			_adc121_vspb_sub;		/**< voltage sensor power board data subscription */
+	int			_adc121_cspb_sub;		/**< current sensor power board data subscription */
+	int			_adc121_cs1_sub;		/**< current sensor 1 board data subscription */
+	int			_adc121_cs2_sub;		/**< current sensor 2 board data subscription */
+	int			_spv1020_sub;			/**< MPPTs data subscription 					*/
 	int 	_params_sub;				/**< notification of parameter updates */
 	int 	_manual_control_sub;		/**< notification of manual control updates */
 	orb_advert_t	_sensor_pub;				/**< combined sensor data topic */
@@ -248,6 +249,7 @@ private:
 	orb_advert_t	_battery_pub;				/**< battery status */
 	orb_advert_t	_airspeed_pub;				/**< airspeed */
 	orb_advert_t	_diff_pres_pub;				/**< differential_pressure */
+	orb_advert_t	_power_pub;					/**< power sensor data topic */
 	orb_advert_t	_mppt_pub;					/**< mppt sensor data topic */
 
 	perf_counter_t	_loop_perf;					/**< loop performance counter */
@@ -434,27 +436,27 @@ private:
 	void		baro_init();
 
 	/**
-	 * Do ambient temperate sensor-related initialization.				// added
+	 * Do ambient temperate sensor-related initialization.
 	 */
 	void		amb_temp_init();
 
 	/**
-	 * Do power board voltage sensor-related initialization.			// added
+	 * Do power board voltage sensor-related initialization.
 	 */
 	void		adc121_vspb_init();
 
 	/**
-	 * Do power board current sensor-related initialization.			// added
+	 * Do power board current sensor-related initialization.
 	 */
 	void		adc121_cspb_init();
 
 	/**
-	 * Do board current sensor 1 -related initialization.				// added
+	 * Do board current sensor 1 -related initialization.
 	 */
 	void		adc121_cs1_init();
 
 	/**
-	 * Do board current sensor 2 -related initialization.				// added
+	 * Do board current sensor 2 -related initialization.
 	 */
 	void		adc121_cs2_init();
 
@@ -508,37 +510,13 @@ private:
 	 */
 	void		amb_temp_poll(struct sensor_combined_s &raw);
 
-	/**																		// added
-	 * Poll the voltage sensor power board for updated data.
+	/**
+	 * Poll the power sensor boards for updated data.
 	 *
-	 * @param raw			Combined sensor data structure into which
+	 * @param raw_power 	Combined sensor data structure into which
 	 *				data should be returned.
 	 */
-	void		adc121_vspb_poll(struct sensor_combined_s &raw);
-
-	/**																		// added
-	 * Poll the current sensor power board for updated data.
-	 *
-	 * @param raw			Combined sensor data structure into which
-	 *				data should be returned.
-	 */
-	void		adc121_cspb_poll(struct sensor_combined_s &raw);
-
-	/**																		// added
-	 * Poll the current sensor 1 board for updated data.
-	 *
-	 * @param raw			Combined sensor data structure into which
-	 *				data should be returned.
-	 */
-	void		adc121_cs1_poll(struct sensor_combined_s &raw);
-
-	/**																		// added
-	 * Poll the current sensor 2 board for updated data.
-	 *
-	 * @param raw			Combined sensor data structure into which
-	 *				data should be returned.
-	 */
-	void		adc121_cs2_poll(struct sensor_combined_s &raw);
+	void		power_poll(struct sensor_power_s &raw_power);
 
 	/**
 	 * Poll the MPPTs data for updated data.
@@ -614,10 +592,10 @@ Sensors::Sensors() :
 	_baro_sub(-1),
 	_vcontrol_mode_sub(-1),
 	_amb_temp_sub(-1),
-	////_adc121_vspb_sub(-1),										// added
-	////_adc121_cspb_sub(-1),										// added
-	////_adc121_cs1_sub(-1),										// added
-	////_adc121_cs2_sub(-1),										// added
+	_adc121_vspb_sub(-1),
+	_adc121_cspb_sub(-1),
+	_adc121_cs1_sub(-1),
+	_adc121_cs2_sub(-1),
 	_spv1020_sub(-1),
 	_params_sub(-1),
 	_manual_control_sub(-1),
@@ -630,6 +608,7 @@ Sensors::Sensors() :
 	_battery_pub(-1),
 	_airspeed_pub(-1),
 	_diff_pres_pub(-1),
+	_power_pub(-1),
 	_mppt_pub(-1),
 
 /* performance counters */
@@ -1210,9 +1189,7 @@ Sensors::amb_temp_init()
 
 	close(fd);
 }
-#if 0
-/////
-///// added
+
 void
 Sensors::adc121_vspb_init()
 {
@@ -1224,13 +1201,12 @@ Sensors::adc121_vspb_init()
 		warnx("No power board voltage sensor found, ignoring");
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 10);			// Reduced to 10Hz
+	/* set the driver to poll at 2Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 2);
 
 	close(fd);
 }
-/////
-///// added
+
 void
 Sensors::adc121_cspb_init()
 {
@@ -1242,13 +1218,12 @@ Sensors::adc121_cspb_init()
 		warnx("No power board current sensor found, ignoring");
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz  (set poll rate to 20 Hz (and then average 10 samples))
+	/* set the driver to poll at 20Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);
 
 	close(fd);
 }
-/////
-///// added
+
 void
 Sensors::adc121_cs1_init()
 {
@@ -1260,13 +1235,12 @@ Sensors::adc121_cs1_init()
 		warnx("No board current sensor 1 found, ignoring");
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz  (set poll rate to 10 Hz (and then average 10 samples))
+	/* set the driver to poll at 20Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);
 
 	close(fd);
 }
-/////
-///// added
+
 void
 Sensors::adc121_cs2_init()
 {
@@ -1278,13 +1252,12 @@ Sensors::adc121_cs2_init()
 		warnx("No board current sensor 2 found, ignoring");
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 20);		// Reduced to 20Hz  (set poll rate to 10 Hz (and then average 10 samples))
+	/* set the driver to poll at 20Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);
 
 	close(fd);
 }
-/////
-#endif
+
 void
 Sensors::mppt_init()
 {
@@ -1555,11 +1528,15 @@ Sensors::amb_temp_poll(struct sensor_combined_s &raw)
 		//raw.amb_temp_counter++;
 	}
 }
-#if 0
+
 void
-Sensors::adc121_vspb_poll(struct sensor_combined_s &raw)
+Sensors::power_poll(struct sensor_power_s &raw_power)
 {
 	bool adc121_vspb_updated;
+	bool adc121_cspb_updated;
+	bool adc121_cs1_updated;
+	bool adc121_cs2_updated;
+
 	orb_check(_adc121_vspb_sub, &adc121_vspb_updated);
 
 	if (adc121_vspb_updated) {
@@ -1567,15 +1544,9 @@ Sensors::adc121_vspb_poll(struct sensor_combined_s &raw)
 
 		orb_copy(ORB_ID(sensor_adc121_vspb), _adc121_vspb_sub, &adc121_vspb_report);
 
-		raw.adc121_vspb_volt = adc121_vspb_report.voltage; 			// power board voltage sensor readings in volts
-
-		raw.adc121_vspb_counter++;
+		raw_power.adc121_vspb_volt = adc121_vspb_report.voltage;
 	}
-}
-void
-Sensors::adc121_cspb_poll(struct sensor_combined_s &raw)
-{
-	bool adc121_cspb_updated;
+
 	orb_check(_adc121_cspb_sub, &adc121_cspb_updated);
 
 	if (adc121_cspb_updated) {
@@ -1583,15 +1554,9 @@ Sensors::adc121_cspb_poll(struct sensor_combined_s &raw)
 
 		orb_copy(ORB_ID(sensor_adc121_cspb), _adc121_cspb_sub, &adc121_cspb_report);
 
-		raw.adc121_cspb_amp = adc121_cspb_report.current; 			// power board current sensor readings in amperes
-
-		raw.adc121_cspb_counter++;
+		raw_power.adc121_cspb_amp = adc121_cspb_report.current;
 	}
-}
-void
-Sensors::adc121_cs1_poll(struct sensor_combined_s &raw)
-{
-	bool adc121_cs1_updated;
+
 	orb_check(_adc121_cs1_sub, &adc121_cs1_updated);
 
 	if (adc121_cs1_updated) {
@@ -1599,15 +1564,9 @@ Sensors::adc121_cs1_poll(struct sensor_combined_s &raw)
 
 		orb_copy(ORB_ID(sensor_adc121_cs1), _adc121_cs1_sub, &adc121_cs1_report);
 
-		raw.adc121_cs1_amp = adc121_cs1_report.current; 			//  board current sensor 1 readings in amperes
-
-		raw.adc121_cs1_counter++;
+		raw_power.adc121_cs1_amp = adc121_cs1_report.current;
 	}
-}
-void
-Sensors::adc121_cs2_poll(struct sensor_combined_s &raw)
-{
-	bool adc121_cs2_updated;
+
 	orb_check(_adc121_cs2_sub, &adc121_cs2_updated);
 
 	if (adc121_cs2_updated) {
@@ -1615,12 +1574,18 @@ Sensors::adc121_cs2_poll(struct sensor_combined_s &raw)
 
 		orb_copy(ORB_ID(sensor_adc121_cs2), _adc121_cs2_sub, &adc121_cs2_report);
 
-		raw.adc121_cs2_amp = adc121_cs2_report.current; 			//  board current sensor 2 readings in amperes
+		raw_power.adc121_cs2_amp = adc121_cs2_report.current;
+	}
 
-		raw.adc121_cs2_counter++;
+
+	if (adc121_vspb_updated || adc121_cspb_updated || adc121_cs1_updated || adc121_cs2_updated) {
+		/* announce the power data if needed just publish else */
+		if (_power_pub > 0)
+			orb_publish(ORB_ID(sensor_power), _power_pub, &raw_power);
+		else
+			_power_pub = orb_advertise(ORB_ID(sensor_power), &raw_power);
 	}
 }
-#endif
 
 void
 Sensors::mppt_poll(struct sensor_mppt_s &raw_mppt)
@@ -1657,7 +1622,6 @@ Sensors::mppt_poll(struct sensor_mppt_s &raw_mppt)
 		} else {
 			_mppt_pub = orb_advertise(ORB_ID(sensor_mppt), &raw_mppt);
 		}
-
 	}
 }
 
@@ -2168,10 +2132,10 @@ Sensors::task_main()
 	baro_init();
 	////dbaro_init();					// added
 	amb_temp_init();
-	////adc121_vspb_init();				// added
-	////adc121_cspb_init();				// added
-	////adc121_cs1_init();				// added
-	////adc121_cs2_init();				// added
+	adc121_vspb_init();
+	adc121_cspb_init();
+	adc121_cs1_init();
+	adc121_cs2_init();
 	mppt_init();
 	adc_init();
 
@@ -2192,10 +2156,10 @@ Sensors::task_main()
 	_diff_pres_sub = orb_subscribe(ORB_ID(differential_pressure));
 	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_amb_temp_sub = orb_subscribe(ORB_ID(sensor_lm73));
-	////_adc121_vspb_sub = orb_subscribe(ORB_ID(sensor_adc121_vspb));				// added
-	////_adc121_cspb_sub = orb_subscribe(ORB_ID(sensor_adc121_cspb));				// added
-	////_adc121_cs1_sub = orb_subscribe(ORB_ID(sensor_adc121_cs1));					// added
-	////_adc121_cs2_sub = orb_subscribe(ORB_ID(sensor_adc121_cs2));					// added
+	_adc121_vspb_sub = orb_subscribe(ORB_ID(sensor_adc121_vspb));
+	_adc121_cspb_sub = orb_subscribe(ORB_ID(sensor_adc121_cspb));
+	_adc121_cs1_sub = orb_subscribe(ORB_ID(sensor_adc121_cs1));
+	_adc121_cs2_sub = orb_subscribe(ORB_ID(sensor_adc121_cs2));
 	_spv1020_sub = orb_subscribe(ORB_ID(sensor_spv1020));
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_manual_control_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
@@ -2213,6 +2177,8 @@ Sensors::task_main()
 	memset(&raw, 0, sizeof(raw));
 	struct sensor_mppt_s raw_mppt;
 	memset(&raw_mppt, 0, sizeof(raw_mppt));
+	struct sensor_power_s raw_power;
+	memset(&raw_power, 0, sizeof(raw_power));
 
 	raw.timestamp = hrt_absolute_time();
 	raw.adc_voltage_v[0] = 0.0f;
@@ -2233,10 +2199,7 @@ Sensors::task_main()
 	baro_poll(raw);
 	diff_pres_poll(raw);
 	amb_temp_poll(raw);
-	////adc121_vspb_poll(raw);								// added
-	////adc121_cspb_poll(raw);								// added
-	////adc121_cs1_poll(raw);								// added
-	////adc121_cs2_poll(raw);								// added
+	power_poll(raw_power);
 	mppt_poll(raw_mppt);
 
 	parameter_update_poll(true /* forced */);
@@ -2280,10 +2243,7 @@ Sensors::task_main()
 		mag_poll(raw);
 		baro_poll(raw);
 		amb_temp_poll(raw);
-		////adc121_vspb_poll(raw);												// added
-		////adc121_cspb_poll(raw);												// added
-		////adc121_cs1_poll(raw);												// added
-		////adc121_cs2_poll(raw);												// added
+		power_poll(raw_power);
 		mppt_poll(raw_mppt);
 
 		/* check battery voltage */
