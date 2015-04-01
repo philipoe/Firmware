@@ -7,6 +7,7 @@
 PARAM_DEFINE_INT32(LOG_EKF, 1);		// Enable logging of EKF parameters (1=yes, 0=no).
 PARAM_DEFINE_INT32(LOG_RCIn, 1);	// " ... RC Input channels
 PARAM_DEFINE_INT32(LOG_MPPT, 1);	// " ... MPPT messages
+PARAM_DEFINE_INT32(LOG_POWER, 1);	// " ... Power messages
 PARAM_DEFINE_INT32(LOG_ASLC, 1);
 PARAM_DEFINE_INT32(LOG_ASLD, 1);
 
@@ -14,6 +15,7 @@ struct log_params {
 	bool LOG_EKF;	//bool is used to save RAM here. The parameters themselves are int32 !
 	bool LOG_RCIn;
 	bool LOG_MPPT;
+	bool LOG_POWER;
 	bool LOG_ASLC;
 	bool LOG_ASLD;
 } pLogEnabler;
@@ -34,6 +36,10 @@ void GetLogEnablerParams(void)
 	handle = param_find("LOG_MPPT");
 	param_get(handle, &(temp));
 	pLogEnabler.LOG_MPPT=(temp==1 ? true:false);
+
+	handle = param_find("LOG_POWER");
+	param_get(handle, &(temp));
+	pLogEnabler.LOG_POWER=(temp==1 ? true:false);
 
 	handle = param_find("LOG_ASLC");
 	param_get(handle, &(temp));

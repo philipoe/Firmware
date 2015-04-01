@@ -108,6 +108,7 @@
 #include <uORB/topics/aslctrl_data.h>
 #include <uORB/topics/state_estimator_EKF_parameters.h>
 #include <uORB/topics/sensor_mppt.h>
+#include <uORB/topics/sensor_power.h>
 
 /**
  * Logging rate.
@@ -968,6 +969,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct aslctrl_data_s aslctrl_data;
 		struct state_estimator_EKF_parameters_s ekf;
 		struct sensor_mppt_s mppt;
+		struct sensor_power_s power;
 
 	} buf;
 
@@ -1021,6 +1023,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_EKFS_s log_EKFS;
 			struct log_EKFV_s log_EKFV;
 			struct log_MPPT_s log_MPPT;
+			struct log_POWER_s log_POWER;
 
 		} body;
 	} log_msg = {
@@ -1064,6 +1067,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int aslctrl_data_sub;
 		int ekf_sub;
 		int mppt_sub;
+		int power_sub;
 	} subs;
 
 	subs.cmd_sub = orb_subscribe(ORB_ID(vehicle_command));
@@ -1100,6 +1104,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 	subs.aslctrl_data_sub = orb_subscribe(ORB_ID(aslctrl_data));
 	subs.ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
 	subs.mppt_sub = orb_subscribe(ORB_ID(sensor_mppt));
+	subs.power_sub = orb_subscribe(ORB_ID(sensor_power));
 
 	for (int i = 0; i < TELEMETRY_STATUS_ORB_ID_NUM; i++) {
 		subs.telemetry_subs[i] = orb_subscribe(telemetry_status_orb_id[i]);
@@ -1906,6 +1911,17 @@ int sdlog2_thread_main(int argc, char *argv[])
 			memcpy(log_msg.body.log_MPPT.mppt_pwm, buf.mppt.mppt_pwm, sizeof(log_msg.body.log_MPPT.mppt_pwm));
 			memcpy(log_msg.body.log_MPPT.mppt_status, buf.mppt.mppt_status, sizeof(log_msg.body.log_MPPT.mppt_status));
 			LOGBUFFER_WRITE_AND_COUNT(MPPT);
+		}
+
+		/* --- Power data --- */
+		if (copy_if_updated(ORB_ID(sensor_power), subs.power_sub, &buf.power) && pLogEnabler.LOG_POWER) {
+			log_msg.msg_type = LOG_POWER_MSG;
+			log_msg.body.log_POWER.timestamp = buf.power.timestamp;
+			log_msg.body.log_POWER.adc121_vspb_volt = buf.power.adc121_vspb_volt;
+			log_msg.body.log_POWER.adc121_cspb_amp = buf.power.adc121_cspb_amp;
+			log_msg.body.log_POWER.adc121_cs1_amp = buf.power.adc121_cs1_amp;
+			log_msg.body.log_POWER.adc121_cs2_amp = buf.power.adc121_cs2_amp;
+			LOGBUFFER_WRITE_AND_COUNT(POWER);
 		}
 
 		/* --- End of ASL-message writing section */
