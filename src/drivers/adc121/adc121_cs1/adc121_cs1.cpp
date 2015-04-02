@@ -67,7 +67,6 @@
 
 #include <systemlib/perf_counter.h>
 #include <systemlib/err.h>
-#include <systemlib/param/param.h>
 
 #include <drivers/drv_voltage_current.h>
 
@@ -116,6 +115,9 @@ private:
 
 	float 						_current;
 
+	float						_bias_cal_term;
+	float						_SF_cal_term;
+
 	uint32_t 					averaging_counter;
 	uint32_t					raw_current;
 
@@ -126,11 +128,7 @@ private:
 	perf_counter_t				_comms_errors;
 	perf_counter_t				_buffer_overflows;
 
-	// Current Sensor Calibration Parameters
-	param_t h_CS_Vfs, h_CS_fI, h_CS_cI;
-	float CS_Vfs, CS_fI;
-	int CS_cI;
-	int counter;
+	adc121_cal_term				_adc121_cs1_cal_term;
 
 	/**
 	 * Test whether the device supported by the driver is present at a
@@ -214,6 +212,8 @@ private:
 #define CURRENT_MAX				37.5f 	// [A], from datasheet (linear sensing range)
 #define VOLTAGE_MEASUREMENT_RES	4096.0f
 #define AVERAGING_SAMPLES		10
+#define VOLTAGE_FULLSCALE		3300.0f
+#define CURRENT_CONV_FARTOR		2065.0f
 
 /*
  * Driver 'main' command.
@@ -233,12 +233,19 @@ ADC121_CS1::ADC121_CS1(int bus) :
 	_current_sensor_pb_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "ADC121_CS1_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "ADC121_CS1_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "ADC121_CS1_buffer_overflows"))
+	_buffer_overflows(perf_alloc(PC_COUNT, "ADC121_CS1_buffer_overflows")),
+	_adc121_cs1_cal_term{}
 {
 	_debug_enabled = true;
 
 	// work_cancel in the dtor will explode if we don't do this...
 	memset(&_work, 0, sizeof(_work));
+
+	_adc121_cs1_cal_term.bias = 0.0f;
+	_adc121_cs1_cal_term.SF   = 1.0f;
+
+	_bias_cal_term = 0.0f;
+	_SF_cal_term = 1.0f;
 }
 
 ADC121_CS1::~ADC121_CS1()
@@ -255,15 +262,6 @@ int
 ADC121_CS1::init()
 {
 	int ret = ERROR;
-
-	//Find parameters before we do the first init&poll
-	h_CS_Vfs=param_find("SENSA_CS1_Vfs");
-	h_CS_fI=param_find("SENSA_CS1_fI");
-	h_CS_cI=param_find("SENSA_CS1_cI");
-	param_get(h_CS_Vfs, &CS_Vfs);
-	param_get(h_CS_fI, &CS_fI);
-	param_get(h_CS_cI, &CS_cI);
-	counter=0;
 
 	averaging_counter = 0;				/* init current averaging */
 	raw_current		  = 0;				/* init current averaging */
@@ -477,6 +475,16 @@ ADC121_CS1::ioctl(struct file *filp, int cmd, unsigned long arg)
 		start();
 		return OK;
 		//return -EINVAL;
+
+	 case CS1IOCSSCALE: {
+		 /* copy adc121_cs1 bias and SF */
+		 struct adc121_cs1_cal_term *s = (struct adc121_cs1_cal_term *) arg;
+		 memcpy(&_adc121_cs1_cal_term, s, sizeof(_adc121_cs1_cal_term));
+		 _bias_cal_term = _adc121_cs1_cal_term.bias;
+		 _SF_cal_term = _adc121_cs1_cal_term.SF;
+		 return OK;
+	 	 }
+
 	default:
 		break;
 	}
@@ -542,17 +550,6 @@ ADC121_CS1::cycle()
 int
 ADC121_CS1::current_measurement()
 {
-	//parameter update (once every n steps)
-	// TODO: This should ideally be called only when the parameters-topic has been updated!
-	counter++;
-	if(counter % 10 == 0)
-	{
-		param_get(h_CS_Vfs, &CS_Vfs);
-		param_get(h_CS_fI, &CS_fI);
-		param_get(h_CS_cI, &CS_cI);
-		counter=0;
-	}
-
 	uint8_t ptr = CONV_RES_ADD;
 	uint8_t data[2];
 	union {
@@ -577,13 +574,6 @@ ADC121_CS1::current_measurement()
 	cvt.b[0] = data[1];
 	cvt.b[1] = data[0];
 
-
-#if 0 /* temporary: code for measuring offset (comment the all )*/
-	raw_current = (uint16_t)(cvt.w & 0x0fff);
-	uint64_t temp = hrt_absolute_time();
-	warnx("measured offset by power board Sensor: %lld, %d", temp, raw_current);
-#endif /* temporary: comment all up coming code till return OK for offset measurement */
-
 	/* averaging current measurements */
 
 	if (averaging_counter < AVERAGING_SAMPLES) {
@@ -593,17 +583,15 @@ ADC121_CS1::current_measurement()
 	}
 
 	/* current calculation, result in [A] */
-	_current = (float)((int16_t)(raw_current - CS_cI * AVERAGING_SAMPLES)) * CS_Vfs / VOLTAGE_MEASUREMENT_RES / CS_fI / AVERAGING_SAMPLES;
+	_current = (((float)((int16_t) raw_current) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR / AVERAGING_SAMPLES) + _bias_cal_term) * _SF_cal_term;
+
 	raw_current = 0;
 	averaging_counter = 0;
 
-
-	//_current = (float)((uint16_t)(cvt.w & 0x0fff) - CURRENT_OFFSET) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR;
-
 	if ( (_current > CURRENT_MAX)) {
-			warnx("ADC121_CS1: current measured by the power board is out of range: %3.2f [A]", (double) _current);
-			return -EIO;
-			}
+		warnx("ADC121_CS1: current measured by the power board is out of range: %3.2f [A]", (double) _current);
+		return -EIO;
+	}
 
 	//warnx("measured current by the ADC121 by the board Sensor 1: %3.2f [A]", (double) _current);  				// remove display!!!!!!!!
 

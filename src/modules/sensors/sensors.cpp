@@ -342,6 +342,12 @@ private:
 
 		float adc121_vspb_b;
 		float adc121_vspb_sf;
+		float adc121_cspb_b;
+		float adc121_cspb_sf;
+		float adc121_cs1_b;
+		float adc121_cs1_sf;
+		float adc121_cs2_b;
+		float adc121_cs2_sf;
 
 	}		_parameters;			/**< local copies of interesting parameters */
 
@@ -412,6 +418,12 @@ private:
 
 		param_t adc121_vspb_b;
 		param_t adc121_vspb_sf;
+		param_t adc121_cspb_b;
+		param_t adc121_cspb_sf;
+		param_t adc121_cs1_b;
+		param_t adc121_cs1_sf;
+		param_t adc121_cs2_b;
+		param_t adc121_cs2_sf;
 
 	}		_parameter_handles;		/**< handles for interesting parameters */
 
@@ -745,7 +757,12 @@ Sensors::Sensors() :
 
 	_parameter_handles.adc121_vspb_b  = param_find("SENSA_VSPB_off");
 	_parameter_handles.adc121_vspb_sf = param_find("SENSA_VSPB_scale");
-
+	_parameter_handles.adc121_cspb_b  = param_find("SENSA_CSPB_off");
+	_parameter_handles.adc121_cspb_sf = param_find("SENSA_CSPB_scale");
+	_parameter_handles.adc121_cs1_b    = param_find("SENSA_CS1_off");
+	_parameter_handles.adc121_cs1_sf   = param_find("SENSA_CS1_scale");
+	_parameter_handles.adc121_cs2_b    = param_find("SENSA_CS2_off");
+	_parameter_handles.adc121_cs2_sf   = param_find("SENSA_CS2_scale");
 	/* fetch initial parameter values */
 	parameters_update();
 }
@@ -974,6 +991,13 @@ Sensors::parameters_update()
 
 	param_get(_parameter_handles.adc121_vspb_b, &(_parameters.adc121_vspb_b));
 	param_get(_parameter_handles.adc121_vspb_sf, &(_parameters.adc121_vspb_sf));
+
+	param_get(_parameter_handles.adc121_cspb_b, &(_parameters.adc121_cspb_b));
+	param_get(_parameter_handles.adc121_cspb_sf, &(_parameters.adc121_cspb_sf));
+	param_get(_parameter_handles.adc121_cs1_b, &(_parameters.adc121_cs1_b));
+	param_get(_parameter_handles.adc121_cs1_sf, &(_parameters.adc121_cs1_sf));
+	param_get(_parameter_handles.adc121_cs2_b, &(_parameters.adc121_cs2_b));
+	param_get(_parameter_handles.adc121_cs2_sf, &(_parameters.adc121_cs2_sf));
 
 	/** fine tune board offset on parameter update **/
 	math::Matrix<3, 3> board_rotation_offset;
@@ -1759,29 +1783,81 @@ Sensors::parameter_update_poll(bool forced)
 		}
 
 		fd = open(SPV1020_DEVICE_PATH, 0);
-		struct current_bias_term mpptscale = {
-			_parameters.mppt1_b,
-			_parameters.mppt2_b,
-			_parameters.mppt3_b,
-		};
 
-		if (OK != ioctl(fd, MPPTIOCSSCALE, (long unsigned int)&mpptscale)) {
-			warn("WARNING: failed to set offsets for mppts");
+		if (fd > 0) {
+			struct current_bias_term mpptscale = {
+				_parameters.mppt1_b,
+				_parameters.mppt2_b,
+				_parameters.mppt3_b,
+			};
+
+			if (OK != ioctl(fd, MPPTIOCSSCALE, (long unsigned int)&mpptscale)) {
+				warn("WARNING: failed to set offsets for mppts");
+			}
 		}
 
 		close(fd);
 
 		fd = open(ADC121_VSPB_DEVICE_PATH, 0);
-		struct adc121_cal_term adc121_vspb_scale = {
-			_parameters.adc121_vspb_b,
-			_parameters.adc121_vspb_sf,
-		};
 
-		if (OK != ioctl(fd, VSPBIOCSSCALE, (long unsigned int)&adc121_vspb_scale)) {
-			warn("WARNING: failed to set offsets and scale factor for the adc121_vspb");
+		if (fd > 0) {
+			struct adc121_cal_term adc121_vspb_scale = {
+				_parameters.adc121_vspb_b,
+				_parameters.adc121_vspb_sf,
+			};
+
+			if (OK != ioctl(fd, VSPBIOCSSCALE, (long unsigned int)&adc121_vspb_scale)) {
+				warn("WARNING: failed to set offsets and scale factor for the adc121_vspb");
+			}
 		}
 
 		close(fd);
+
+		fd = open(ADC121_CSPB_DEVICE_PATH, 0);
+
+		if (fd > 0) {
+			struct adc121_cal_term adc121_cspb_scale = {
+				_parameters.adc121_cspb_b,
+				_parameters.adc121_cspb_sf,
+			};
+
+			if (OK != ioctl(fd, CSPBIOCSSCALE, (long unsigned int)&adc121_cspb_scale)) {
+				warn("WARNING: failed to set offsets and scale factor for the adc121_cspb");
+			}
+		}
+
+		close(fd);
+
+		fd = open(ADC121_CS1_DEVICE_PATH, 0);
+
+		if (fd > 0) {
+			struct adc121_cal_term adc121_cs1_scale = {
+				_parameters.adc121_cs1_b,
+				_parameters.adc121_cs1_sf,
+			};
+
+			if (OK != ioctl(fd, CS1IOCSSCALE, (long unsigned int)&adc121_cs1_scale)) {
+				warn("WARNING: failed to set offsets and scale factor for the adc121_cs1");
+			}
+		}
+
+		close(fd);
+
+		fd = open(ADC121_CS2_DEVICE_PATH, 0);
+
+		if (fd > 0) {
+			struct adc121_cal_term adc121_cs2_scale = {
+				_parameters.adc121_cs2_b,
+				_parameters.adc121_cs2_sf,
+			};
+
+			if (OK != ioctl(fd, CS2IOCSSCALE, (long unsigned int)&adc121_cs2_scale)) {
+				warn("WARNING: failed to set offsets and scale factor for the adc121_cs2");
+			}
+		}
+
+		close(fd);
+
 
 #if 0
 		printf("CH0: RAW MAX: %d MIN %d S: %d MID: %d FUNC: %d\n", (int)_parameters.max[0], (int)_parameters.min[0], (int)(_rc.channels[0].scaling_factor * 10000), (int)(_rc.channels[0].mid), (int)_rc.function[0]);
