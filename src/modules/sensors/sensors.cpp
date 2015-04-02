@@ -1537,6 +1537,8 @@ Sensors::power_poll(struct sensor_power_s &raw_power)
 	bool adc121_cs1_updated;
 	bool adc121_cs2_updated;
 
+	raw_power.timestamp = hrt_absolute_time();
+
 	orb_check(_adc121_vspb_sub, &adc121_vspb_updated);
 
 	if (adc121_vspb_updated) {

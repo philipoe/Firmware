@@ -638,8 +638,8 @@ struct log_MPPT_s {					// *** MPPT log message ***
 	uint8_t mppt_status[3];			// MPPT status readings
 };
 
-#define LOG_POWER_MSG 110
-struct log_POWER_s {				// *** Power sensors log message ***
+#define LOG_POWS_MSG 110
+struct log_POWS_s {					// *** Power sensors log message ***
 	uint64_t timestamp;      		// in microseconds since system start
 	float adc121_vspb_volt;			// power board voltage sensor readings in volts
 	float adc121_cspb_amp;			// power board current sensor readings in amps
@@ -724,7 +724,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(EKFS,  "Qffffffffffffffffffffffff", "t,p1,p2,p3,q1,q2,q3,q4,v1,v2,v3,bg1,bg2,bg3,ba1,ba2,ba3,qff,w1,w2,w3,k,alpha,beta,TAS"),
 	LOG_FORMAT(EKFV,  "Qffffffffffffffffffff", "t,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20"),
 	LOG_FORMAT(MPPT,  "QffffffHHHBBB", "t,Cur1,Cur2,Cur3,Volt1,Volt2,Volt3,PWM1,PWM2,PWM3,Stat1,Stat2,Stat3"),
-	LOG_FORMAT(POWER, "Qffff", "t,Main_Volt,Main_Cur,Cur1,Cur2"),
+	LOG_FORMAT(POWS, "Qffff", "t,Main_Volt,Main_Cur,Cur1,Cur2"),
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */
 	LOG_FORMAT(TIME, "Q", "StartTime"),

@@ -1023,7 +1023,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_EKFS_s log_EKFS;
 			struct log_EKFV_s log_EKFV;
 			struct log_MPPT_s log_MPPT;
-			struct log_POWER_s log_POWER;
+			struct log_POWS_s log_POWS;
 
 		} body;
 	} log_msg = {
@@ -1913,15 +1913,15 @@ int sdlog2_thread_main(int argc, char *argv[])
 			LOGBUFFER_WRITE_AND_COUNT(MPPT);
 		}
 
-		/* --- Power data --- */
-		if (copy_if_updated(ORB_ID(sensor_power), subs.power_sub, &buf.power) && pLogEnabler.LOG_POWER) {
-			log_msg.msg_type = LOG_POWER_MSG;
-			log_msg.body.log_POWER.timestamp = buf.power.timestamp;
-			log_msg.body.log_POWER.adc121_vspb_volt = buf.power.adc121_vspb_volt;
-			log_msg.body.log_POWER.adc121_cspb_amp = buf.power.adc121_cspb_amp;
-			log_msg.body.log_POWER.adc121_cs1_amp = buf.power.adc121_cs1_amp;
-			log_msg.body.log_POWER.adc121_cs2_amp = buf.power.adc121_cs2_amp;
-			LOGBUFFER_WRITE_AND_COUNT(POWER);
+		/* --- Power sensor data --- */
+		if (copy_if_updated(ORB_ID(sensor_power), subs.power_sub, &buf.power) && pLogEnabler.LOG_POWS) {
+			log_msg.msg_type = LOG_POWS_MSG;
+			log_msg.body.log_POWS.timestamp = buf.power.timestamp;
+			log_msg.body.log_POWS.adc121_vspb_volt = buf.power.adc121_vspb_volt;
+			log_msg.body.log_POWS.adc121_cspb_amp = buf.power.adc121_cspb_amp;
+			log_msg.body.log_POWS.adc121_cs1_amp = buf.power.adc121_cs1_amp;
+			log_msg.body.log_POWS.adc121_cs2_amp = buf.power.adc121_cs2_amp;
+			LOGBUFFER_WRITE_AND_COUNT(POWS);
 		}
 
 		/* --- End of ASL-message writing section */
