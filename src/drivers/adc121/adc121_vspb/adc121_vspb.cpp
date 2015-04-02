@@ -67,7 +67,6 @@
 
 #include <systemlib/perf_counter.h>
 #include <systemlib/err.h>
-#include <systemlib/param/param.h>
 
 #include <drivers/drv_voltage_current.h>
 
@@ -116,16 +115,16 @@ private:
 
 	float 						_voltage;
 
+	float						_bias_cal_term;
+	float						_SF_cal_term;
+
 	orb_advert_t				_voltage_sensor_pb_topic;
 
 	perf_counter_t				_sample_perf;
 	perf_counter_t				_comms_errors;
 	perf_counter_t				_buffer_overflows;
 
-	// Voltage Sensor Calibration Parameters
-	param_t h_VSPB_off;
-	float VSPB_off;
-	int counter;
+	adc121_cal_term				_adc121_vspb_cal_term;
 
 	/**
 	 * Test whether the device supported by the driver is present at a
@@ -230,12 +229,19 @@ ADC121_VSPB::ADC121_VSPB(int bus) :
 	_voltage_sensor_pb_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "ADC121_VSPB_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "ADC121_VSPB_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "ADC121_VSPB_buffer_overflows"))
+	_buffer_overflows(perf_alloc(PC_COUNT, "ADC121_VSPB_buffer_overflows")),
+	_adc121_vspb_cal_term{}
 {
 	_debug_enabled = true;
 
 	// work_cancel in the dtor will explode if we don't do this...
 	memset(&_work, 0, sizeof(_work));
+
+	_adc121_vspb_cal_term.bias = 0.0f;
+	_adc121_vspb_cal_term.SF   = 1.0f;
+
+	_bias_cal_term = 0.0f;
+	_SF_cal_term = 1.0f;
 }
 
 ADC121_VSPB::~ADC121_VSPB()
@@ -252,11 +258,6 @@ int
 ADC121_VSPB::init()
 {
 	int ret = ERROR;
-
-	//Find parameters before we do the first init&poll
-	h_VSPB_off=param_find("SENSA_VSPB_off");
-	param_get(h_VSPB_off, &VSPB_off);
-	counter=0;
 
 	/* do I2C init (and probe) first */
 	if (I2C::init() != OK)
@@ -466,6 +467,16 @@ ADC121_VSPB::ioctl(struct file *filp, int cmd, unsigned long arg)
 		start();
 		return OK;
 		//return -EINVAL;
+
+	 case VSPBIOCSSCALE: {
+		 /* copy adc121_vspb bias and SF */
+		 struct adc121_vspb_cal_term *s = (struct adc121_vspb_cal_term *) arg;
+		 memcpy(&_adc121_vspb_cal_term, s, sizeof(_adc121_vspb_cal_term));
+		 _bias_cal_term = _adc121_vspb_cal_term.bias;
+		 _SF_cal_term = _adc121_vspb_cal_term.SF;
+		 return OK;
+	 	 }
+
 	default:
 		break;
 	}
@@ -527,15 +538,6 @@ ADC121_VSPB::cycle()
 int
 ADC121_VSPB::voltage_measurement()
 {
-	//parameter update (once every n steps)
-	// TODO: This should ideally be called only when the parameters-topic has been updated!
-	counter++;
-	if(counter % 10 == 0)
-	{
-		param_get(h_VSPB_off, &VSPB_off);
-		counter=0;
-	}
-
 	uint8_t ptr = CONV_RES_ADD;
 	uint8_t data[2];
 	union {
@@ -561,8 +563,7 @@ ADC121_VSPB::voltage_measurement()
 	cvt.b[1] = data[0];
 
 	/* voltage calculation, result in [v] */
-	_voltage = (float)((uint16_t)(cvt.w & 0x0fff)) * VOLTAGE_SCALLING * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES + VSPB_off;
-
+	_voltage = (((float)((uint16_t)(cvt.w & 0x0fff)) * VOLTAGE_SCALLING * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES) + _bias_cal_term) * _SF_cal_term;
 
 	if ( (_voltage > VOLTAGE_MAX) | (_voltage < VOLTAGE_MIN) ) {
 			warnx("ADC121_VSPB: voltage measured by power board is out of range: %3.2f [v]", (double) _voltage);
