@@ -72,6 +72,12 @@ struct adc121_cs2_report {
 	float current;
 	uint64_t timestamp;
 };
+
+struct adc121_cal_term {
+	float	bias;
+	float	SF;
+};
+
 /*
  * ObjDev tag for raw voltage and current data.
  */
@@ -84,8 +90,19 @@ ORB_DECLARE(sensor_adc121_cs2);
  * ioctl() definitions
 */
 
-#define _VOLTAGECURRENTIOCBASE		(0x2d00)						// check the VOLTAGECURRENTIOCBASE value of 0x2d00
-#define _CURRENTIOC(_n)		(_IOC(_VOLTAGECURRENTIOCBASE, _n))
+#define _VOLTAGECURRENTIOCBASE		(0x2d00)
+#define _VOLTAGECURRENTIOC(_n)		(_IOC(_VOLTAGECURRENTIOCBASE, _n))
 
+/** set the VSPB raw voltage bias and SF terms */
+#define VSPBIOCSSCALE	_VOLTAGECURRENTIOC(0)
+
+/** set the CSPB raw current bias and SF terms */
+#define CSPBIOCSSCALE	_VOLTAGECURRENTIOC(1)
+
+/** set the CS1 raw current bias and SF terms */
+#define CS1IOCSSCALE	_VOLTAGECURRENTIOC(2)
+
+/** set the CS2 raw current bias and SF terms */
+#define CS2IOCSSCALE	_VOLTAGECURRENTIOC(3)
 
 #endif /* _DRV_VOLTAGE_CURRENT_H */

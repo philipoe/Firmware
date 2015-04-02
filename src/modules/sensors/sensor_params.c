@@ -888,6 +888,10 @@ PARAM_DEFINE_FLOAT(SENSA_MPPT1_fI, -267.0f);
 PARAM_DEFINE_FLOAT(SENSA_MPPT2_fI, -267.0f);
 PARAM_DEFINE_FLOAT(SENSA_MPPT3_fI, -267.0f);
 
+/* Power Sensors */
+PARAM_DEFINE_FLOAT(SENSA_VSPB_off, 0.0f);			// Voltage offset, [V]
+PARAM_DEFINE_FLOAT(SENSA_VSPB_scale, 1.0f);			// Voltage scale-factor
+
 /* DBaro Correction */
 PARAM_DEFINE_FLOAT(SENSA_DBaro_D, 0.004f);			// Dbaro tube diameter [m]
 PARAM_DEFINE_FLOAT(SENSA_DBaro_L, 0.25f);			// Dbaro tube length [m]
@@ -897,7 +901,6 @@ PARAM_DEFINE_FLOAT(SENSA_DBaro_dy, 0.00f);			// DBaro/Pitot tube lateral positio
 PARAM_DEFINE_FLOAT(SENSA_CSPB_Vfs, 3324.0f);		// Full-scale voltage [V], measured
 PARAM_DEFINE_FLOAT(SENSA_CSPB_fI, 35.00f);			// Current conversion factor [mV/A], measured. Datasheet says 36.96mV/A at V_CC=3.3V
 PARAM_DEFINE_INT32(SENSA_CSPB_cI, 2059);			// Current offset, [ticks]. Measured.
-PARAM_DEFINE_FLOAT(SENSA_VSPB_off, 0.0f);			// Voltage offset, [V]. Measured.
 PARAM_DEFINE_FLOAT(SENSA_CS1_Vfs, 3301.0f);			// Full-scale voltage [V], measured
 PARAM_DEFINE_FLOAT(SENSA_CS1_fI, 36.00f);			// Current conversion factor [mV/A], measured. Datasheet says 36.96mV/A at V_CC=3.3V
 PARAM_DEFINE_INT32(SENSA_CS1_cI, 2065);				// Current offset, [ticks]. Measured.

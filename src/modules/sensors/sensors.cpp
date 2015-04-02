@@ -340,6 +340,9 @@ private:
 		float mppt2_b;
 		float mppt3_b;
 
+		float adc121_vspb_b;
+		float adc121_vspb_sf;
+
 	}		_parameters;			/**< local copies of interesting parameters */
 
 	struct {
@@ -406,6 +409,9 @@ private:
 		param_t mppt1_b;
 		param_t mppt2_b;
 		param_t mppt3_b;
+
+		param_t adc121_vspb_b;
+		param_t adc121_vspb_sf;
 
 	}		_parameter_handles;		/**< handles for interesting parameters */
 
@@ -737,6 +743,9 @@ Sensors::Sensors() :
 	_parameter_handles.mppt2_b = param_find("SENSA_MPPT2_fI");
 	_parameter_handles.mppt3_b = param_find("SENSA_MPPT3_fI");
 
+	_parameter_handles.adc121_vspb_b  = param_find("SENSA_VSPB_off");
+	_parameter_handles.adc121_vspb_sf = param_find("SENSA_VSPB_scale");
+
 	/* fetch initial parameter values */
 	parameters_update();
 }
@@ -962,6 +971,9 @@ Sensors::parameters_update()
 	param_get(_parameter_handles.mppt1_b, &(_parameters.mppt1_b));
 	param_get(_parameter_handles.mppt2_b, &(_parameters.mppt2_b));
 	param_get(_parameter_handles.mppt3_b, &(_parameters.mppt3_b));
+
+	param_get(_parameter_handles.adc121_vspb_b, &(_parameters.adc121_vspb_b));
+	param_get(_parameter_handles.adc121_vspb_sf, &(_parameters.adc121_vspb_sf));
 
 	/** fine tune board offset on parameter update **/
 	math::Matrix<3, 3> board_rotation_offset;
@@ -1755,6 +1767,18 @@ Sensors::parameter_update_poll(bool forced)
 
 		if (OK != ioctl(fd, MPPTIOCSSCALE, (long unsigned int)&mpptscale)) {
 			warn("WARNING: failed to set offsets for mppts");
+		}
+
+		close(fd);
+
+		fd = open(ADC121_VSPB_DEVICE_PATH, 0);
+		struct adc121_cal_term adc121_vspb_scale = {
+			_parameters.adc121_vspb_b,
+			_parameters.adc121_vspb_sf,
+		};
+
+		if (OK != ioctl(fd, VSPBIOCSSCALE, (long unsigned int)&adc121_vspb_scale)) {
+			warn("WARNING: failed to set offsets and scale factor for the adc121_vspb");
 		}
 
 		close(fd);
