@@ -40,7 +40,7 @@ if [ $AIRPLANE == AtlantikSolar ]
 then
 	set MIXER ASL_AtlantikSolar
 	set AIRPLANE_NR_EKF 2
-	param set SENS_BOARD_ROT 12
+	param set SENS_BOARD_ROT 8
 fi
 if [ $AIRPLANE == SenseSoar ]
 then
@@ -84,10 +84,10 @@ set TTYS1_BUSY no
 # Load non-volatile parameters
 #
 set PARAM_FILE /fs/microsd/params
-if mtd start
-then
-	set PARAM_FILE /fs/mtd_params
-fi
+#if mtd start
+#then
+#	set PARAM_FILE /fs/mtd_params
+#fi
 
 param select $PARAM_FILE
 if param load
@@ -269,7 +269,7 @@ fi
 #adc121_cs2 start
 
 # start MPPTs interface
-#spv1020 start -d 1
+#spv1020 start -d 3
 
 # Start IMU and Magnetometer
 if adis16448 start 
