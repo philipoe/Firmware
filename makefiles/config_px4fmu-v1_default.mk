@@ -32,6 +32,7 @@ MODULES		+= drivers/adc121/adc121_cs1
 MODULES		+= drivers/adc121/adc121_cs2
 MODULES		+= drivers/adc121/adc121_cspb
 MODULES		+= drivers/adc121/adc121_vspb
+MODULES		+= drivers/bat_mon
 MODULES		+= drivers/spv1020
 MODULES		+= drivers/sdp600
 MODULES		+= drivers/lm73
