@@ -72,6 +72,7 @@
 #include <uORB/topics/aslctrl_data.h>
 #include <uORB/topics/sensor_mppt.h>
 #include <uORB/topics/sensor_power.h>
+#include <uORB/topics/sensor_bat_mon.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_range_finder.h>
@@ -2458,6 +2459,83 @@ protected:
 	}
 };
 
+class MavlinkStreamSensBatmonData : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamSensBatmonData::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "SENS_BATMON";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_SENS_BATMON;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamSensBatmonData(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_SENS_BATMON_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_batmon_data_sub[MAX_NUM_BAT_MON_SENSORS];
+	uint64_t _batmon_data_time[MAX_NUM_BAT_MON_SENSORS];
+
+	/* do not allow top copying this class */
+	MavlinkStreamSensBatmonData(MavlinkStreamSensBatmonData &);
+	MavlinkStreamSensBatmonData& operator = (const MavlinkStreamSensBatmonData &);
+
+protected:
+	explicit MavlinkStreamSensBatmonData(Mavlink *mavlink) : MavlinkStream(mavlink)
+	{
+		_batmon_data_sub[0]=_mavlink->add_orb_subscription(ORB_ID(sensor_bat_mon_0));
+		_batmon_data_sub[1]=_mavlink->add_orb_subscription(ORB_ID(sensor_bat_mon_1));
+		_batmon_data_sub[2]=_mavlink->add_orb_subscription(ORB_ID(sensor_bat_mon_2));
+
+		for(int i=0;i<MAX_NUM_BAT_MON_SENSORS;i++) {
+			_batmon_data_time[i]=0;
+		}
+	}
+
+	void send(const hrt_abstime t)
+	{
+		struct sensor_bat_mon_s bat_mon_data;
+
+		for(int i=0;i<MAX_NUM_BAT_MON_SENSORS;i++) {
+			if (_batmon_data_sub[i]->update(&_batmon_data_time[i], &bat_mon_data)) {
+
+				mavlink_sens_batmon_t msg;
+
+				msg.temperature=bat_mon_data.temperature;
+				msg.voltage=bat_mon_data.voltage;
+				msg.current=bat_mon_data.current;
+				msg.batterystatus=bat_mon_data.batterystatus;
+				msg.serialnumber=bat_mon_data.serialnumber;
+				msg.hostfetcontrol=bat_mon_data.hostfetcontrol;
+				msg.cellvoltage1=bat_mon_data.cellvoltage1;
+				msg.cellvoltage2=bat_mon_data.cellvoltage2;
+				msg.cellvoltage3=bat_mon_data.cellvoltage3;
+				msg.cellvoltage4=bat_mon_data.cellvoltage4;
+				msg.cellvoltage5=bat_mon_data.cellvoltage5;
+				msg.cellvoltage6=bat_mon_data.cellvoltage6;
+
+				uint8_t component_id = 150+i;
+				_mavlink->send_message(MAVLINK_MSG_ID_SENS_BATMON, &msg,component_id);
+			}
+		}
+	}
+};
+
 StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static),
 	new StreamListItem(&MavlinkStreamStatustext::new_instance, &MavlinkStreamStatustext::get_name_static),
@@ -2491,6 +2569,7 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamAslctrlDebug::new_instance, &MavlinkStreamAslctrlDebug::get_name_static),
 	new StreamListItem(&MavlinkStreamAslmpptData::new_instance, &MavlinkStreamAslmpptData::get_name_static),
 	new StreamListItem(&MavlinkStreamAslpowerData::new_instance, &MavlinkStreamAslpowerData::get_name_static),
+	new StreamListItem(&MavlinkStreamSensBatmonData::new_instance, &MavlinkStreamSensBatmonData::get_name_static),
 
 	nullptr
 };
