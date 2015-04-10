@@ -35,10 +35,10 @@
 # BAT_MON driver for the Battery monitor sensor
 #
 
-MODULE_COMMAND		= bat_mon
+MODULE_COMMAND		= bat_mon_0
 #MODULE_PRIORITY		= SCHED_PRIORITY_DEFAULT
 MODULE_STACKSIZE	= 1024
-SRCS				= bat_mon.cpp
+SRCS				= bat_mon_0.cpp
 EXTRACXXFLAGS		= -Weffc++
 #MAXOPTIMIZATION	 	= -Os
 MAXOPTIMIZATION	 	= -O0

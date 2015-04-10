@@ -45,6 +45,7 @@
 #include "drv_orb_dev.h"
 
 #define BAT_MON_DEVICE_PATH	"/dev/bat_mon"
+#define BAT_MON_0_DEVICE_PATH "/dev/bat_mon_0"
 
 /**
  * Battery monitor sensors report structure.
@@ -70,6 +71,7 @@ struct bat_mon_report {
  * ObjDev tag for raw voltage and current data.
  */
 ORB_DECLARE(sensor_bat_mon);
+ORB_DECLARE(sensor_bat_mon_0);
 
 /*
  * ioctl() definitions
