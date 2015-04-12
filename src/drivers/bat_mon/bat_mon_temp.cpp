@@ -32,8 +32,8 @@
  ****************************************************************************/
 
 /**
- * @file bat_mon_0.cpp
- * Driver for the BAT_MON_0 sensor connected via I2C.
+ * @file bat_mon.cpp
+ * Driver for the BAT_MON voltage sensor connected via I2C.
  *
  * Author: Amir Melzer  <amir.melzer@mavt.ethz.ch>
  * 		   Lorenz Meier <lm@inf.ethz.ch>
@@ -83,11 +83,11 @@ static const int ERROR = -1;
 #endif
 
 
-class BAT_MON_0 : public device::I2C
+class BAT_MON : public device::I2C
 {
 public:
-	BAT_MON_0(int bus);
-	virtual ~BAT_MON_0();
+	BAT_MON(int bus);
+	virtual ~BAT_MON();
 
 	virtual int		init();
 
@@ -127,7 +127,7 @@ private:
 	uint16_t	  				_cellvoltage5;
 	uint16_t	  				_cellvoltage6;
 
-	orb_advert_t				_bat_mon_0_sensor_pb_topic;
+	orb_advert_t				_bat_mon_sensor_pb_topic;
 
 	perf_counter_t				_sample_perf;
 	perf_counter_t				_comms_errors;
@@ -200,7 +200,7 @@ private:
 	 *
 	 * @return		OK if the measurement command was successful.
 	 */
-	int			bat_mon_0_measurement();
+	int			bat_mon_measurement();
 
 
 };
@@ -212,24 +212,24 @@ private:
 #define POW2(_x)		((_x) * (_x))
 
 /*
- * BAT_MON_0 internal constants and data structures.
+ * BAT_MON internal constants and data structures.
  */
 
 /* internal conversion time: 100 ms  */
-#define BAT_MON_0_CONVERSION_INTERVAL	100000	/* microseconds */
+#define BAT_MON_CONVERSION_INTERVAL	100000	/* microseconds */
 
-#define BAT_MON_0_BUS			PX4_I2C_BUS_EXPANSION
+#define BAT_MON_BUS			PX4_I2C_BUS_EXPANSION
 
 /* Measurement definitions: */
 
 /*
  * Driver 'main' command.
  */
-extern "C" __EXPORT int bat_mon_0_main(int argc, char *argv[]);
+extern "C" __EXPORT int bat_mon_main(int argc, char *argv[]);
 
 
-BAT_MON_0::BAT_MON_0(int bus) :
-	I2C("BAT_MON_0", BAT_MON_0_DEVICE_PATH, bus, 0, 100000),							/* set I2C rate to 100KHz */
+BAT_MON::BAT_MON(int bus) :
+	I2C("BAT_MON", BAT_MON_DEVICE_PATH, bus, 0, 100000),							/* set I2C rate to 100KHz */
 	_measure_ticks(0),
 	_num_reports(0),
 	_next_report(0),
@@ -248,10 +248,10 @@ BAT_MON_0::BAT_MON_0(int bus) :
     _cellvoltage4(0),
     _cellvoltage5(0),
     _cellvoltage6(0),
-	_bat_mon_0_sensor_pb_topic(-1),
-	_sample_perf(perf_alloc(PC_ELAPSED, "BAT_MON_0_read")),
-	_comms_errors(perf_alloc(PC_COUNT, "BAT_MON_0_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "BAT_MON_0_buffer_overflows"))
+	_bat_mon_sensor_pb_topic(-1),
+	_sample_perf(perf_alloc(PC_ELAPSED, "BAT_MON_read")),
+	_comms_errors(perf_alloc(PC_COUNT, "BAT_MON_comms_errors")),
+	_buffer_overflows(perf_alloc(PC_COUNT, "BAT_MON_buffer_overflows"))
 {
 	_debug_enabled = true;
 
@@ -260,7 +260,7 @@ BAT_MON_0::BAT_MON_0(int bus) :
 
 }
 
-BAT_MON_0::~BAT_MON_0()
+BAT_MON::~BAT_MON()
 {
 	/* make sure we are truly inactive */
 	stop();
@@ -271,7 +271,7 @@ BAT_MON_0::~BAT_MON_0()
 }
 
 int
-BAT_MON_0::init()
+BAT_MON::init()
 {
 	int ret = ERROR;
 
@@ -288,12 +288,12 @@ BAT_MON_0::init()
 
 	_oldest_report = _next_report = 0;
 
-	/* get a publish handle on the bat_mon_0 topic */
+	/* get a publish handle on the bat_mon topic */
 	memset(&_reports[0], 0, sizeof(_reports[0]));
-	_bat_mon_0_sensor_pb_topic = orb_advertise(ORB_ID(sensor_bat_mon_0), &_reports[0]);
+	_bat_mon_sensor_pb_topic = orb_advertise(ORB_ID(sensor_bat_mon), &_reports[0]);
 
-	if (_bat_mon_0_sensor_pb_topic < 0)
-		debug("failed to create sensor_bat_mon_0 object");
+	if (_bat_mon_sensor_pb_topic < 0)
+		debug("failed to create sensor_bat_mon object");
 
 	ret = OK;
 out:
@@ -301,7 +301,7 @@ out:
 }
 
 int
-BAT_MON_0::probe()
+BAT_MON::probe()
 {
 	_retries = 10;
 
@@ -314,7 +314,7 @@ BAT_MON_0::probe()
 }
 
 int
-BAT_MON_0::probe_address(uint8_t address)
+BAT_MON::probe_address(uint8_t address)
 {
 	set_address(address >> 1);
 
@@ -328,7 +328,7 @@ BAT_MON_0::probe_address(uint8_t address)
 }
 
 ssize_t
-BAT_MON_0::read(struct file *filp, char *buffer, size_t buflen)
+BAT_MON::read(struct file *filp, char *buffer, size_t buflen)
 {
 	unsigned count = buflen / sizeof(struct bat_mon_report);
 	int ret = 0;
@@ -363,7 +363,7 @@ BAT_MON_0::read(struct file *filp, char *buffer, size_t buflen)
 		_oldest_report = _next_report = 0;
 
 		/* Take a battery monitor measurement */
-		if (OK != bat_mon_0_measurement()){
+		if (OK != bat_mon_measurement()){
 			ret = -EIO;
 			break;
 		}
@@ -378,7 +378,7 @@ BAT_MON_0::read(struct file *filp, char *buffer, size_t buflen)
 }
 
 int
-BAT_MON_0::ioctl(struct file *filp, int cmd, unsigned long arg)
+BAT_MON::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	switch (cmd) {
 
@@ -405,7 +405,7 @@ BAT_MON_0::ioctl(struct file *filp, int cmd, unsigned long arg)
 					bool want_start = (_measure_ticks == 0);
 
 					/* set interval for next measurement to minimum legal value */
-					_measure_ticks = USEC2TICK(BAT_MON_0_CONVERSION_INTERVAL);
+					_measure_ticks = USEC2TICK(BAT_MON_CONVERSION_INTERVAL);
 
 					/* if we need to start the poll state machine, do it */
 					if (want_start)
@@ -423,7 +423,7 @@ BAT_MON_0::ioctl(struct file *filp, int cmd, unsigned long arg)
 					unsigned ticks = USEC2TICK(1000000 / arg);
 
 					/* check against maximum rate */
-					if (ticks < USEC2TICK(BAT_MON_0_CONVERSION_INTERVAL))
+					if (ticks < USEC2TICK(BAT_MON_CONVERSION_INTERVAL))
 						return -EINVAL;
 
 					/* update interval for next measurement */
@@ -492,38 +492,38 @@ BAT_MON_0::ioctl(struct file *filp, int cmd, unsigned long arg)
 }
 
 void
-BAT_MON_0::start()
+BAT_MON::start()
 {
 	/* reset the report ring and state machine */
 	_measurement_phase = true;
 	_oldest_report = _next_report = 0;
 
 	/* schedule a cycle to start things */
-	work_queue(HPWORK, &_work, (worker_t)&BAT_MON_0::cycle_trampoline, this, 1);
+	work_queue(HPWORK, &_work, (worker_t)&BAT_MON::cycle_trampoline, this, 1);
 }
 
 void
-BAT_MON_0::stop()
+BAT_MON::stop()
 {
 	work_cancel(HPWORK, &_work);
 }
 
 void
-BAT_MON_0::cycle_trampoline(void *arg)
+BAT_MON::cycle_trampoline(void *arg)
 {
-	BAT_MON_0 *dev = (BAT_MON_0 *)arg;
+	BAT_MON *dev = (BAT_MON *)arg;
 
 	dev->cycle();
 }
 
 void
-BAT_MON_0::cycle()
+BAT_MON::cycle()
 {
 
 	/* collection phase? */
 	if (_measurement_phase) {
 		/* perform voltage measurement */
-		if (OK != bat_mon_0_measurement()) {
+		if (OK != bat_mon_measurement()) {
 			start();
 			return;
 		}
@@ -534,7 +534,7 @@ BAT_MON_0::cycle()
 		/* schedule a fresh cycle call when the measurement is done */
 		work_queue(HPWORK,
 			   &_work,
-			   (worker_t)&BAT_MON_0::cycle_trampoline,
+			   (worker_t)&BAT_MON::cycle_trampoline,
 			   this,
 			   _measure_ticks);
 	}
@@ -542,7 +542,7 @@ BAT_MON_0::cycle()
 
 /* Single Bytes of SBS command Reading */
 int
-BAT_MON_0::get_OneBytesSBSReading(uint8_t sbscmd, uint8_t sbsreading)
+BAT_MON::get_OneBytesSBSReading(uint8_t sbscmd, uint8_t sbsreading)
 {
 	uint8_t data;
 
@@ -559,7 +559,7 @@ return OK;
 
 /* Two Bytes of SBS command Reading */
 int
-BAT_MON_0::get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading)
+BAT_MON::get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading)
 {
 	uint8_t data[2];
 	union {
@@ -584,7 +584,7 @@ return OK;
 
 /* collect Battery monitor measurements: */
 int
-BAT_MON_0::bat_mon_0_measurement()
+BAT_MON::bat_mon_measurement()
 {
 	/* read the most recent measurement */
 	perf_begin(_sample_perf);
@@ -669,10 +669,10 @@ BAT_MON_0::bat_mon_0_measurement()
 	_reports[_next_report].cellvoltage6   	= _cellvoltage6;			/* report in [mv]		*/
 
 
-	//warnx("measurements BAT_MON_0 board sensor: %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d",_temperature, _voltage, _current, _batterystatus, _serialnumber, _hostfetcontrol, _cellvoltage1, _cellvoltage2, _cellvoltage3, _cellvoltage4, _cellvoltage5, _cellvoltage6);
+	//warnx("measurements BAT_MON board sensor: %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d",_temperature, _voltage, _current, _batterystatus, _serialnumber, _hostfetcontrol, _cellvoltage1, _cellvoltage2, _cellvoltage3, _cellvoltage4, _cellvoltage5, _cellvoltage6);
 
 	/* publish it */
-	orb_publish(ORB_ID(sensor_bat_mon_0), _bat_mon_0_sensor_pb_topic, &_reports[_next_report]);
+	orb_publish(ORB_ID(sensor_bat_mon), _bat_mon_sensor_pb_topic, &_reports[_next_report]);
 
 	/* post a report to the ring - note, not locked */
 	INCREMENT(_next_report, _num_reports);
@@ -692,7 +692,7 @@ BAT_MON_0::bat_mon_0_measurement()
 }
 
 void
-BAT_MON_0::print_info()
+BAT_MON::print_info()
 {
 	perf_print_counter(_sample_perf);
 	perf_print_counter(_comms_errors);
@@ -705,10 +705,12 @@ BAT_MON_0::print_info()
 /**
  * Local functions in support of the shell command.
  */
-namespace bat_mon_0
+namespace bat_mon
 {
 
-BAT_MON_0	*g_dev;
+BAT_MON	*g_dev;
+
+BAT_MON	*g_dev_1;
 
 void	start();
 void	test();
@@ -727,7 +729,9 @@ start()
 		errx(1, "already started");
 
 	/* create the driver */
-	g_dev = new BAT_MON_0(BAT_MON_0_BUS);
+	g_dev = new BAT_MON(BAT_MON_BUS);
+
+	g_dev_1 = new BAT_MON(BAT_MON_BUS);
 
 	if (g_dev == nullptr)
 		goto fail;
@@ -736,7 +740,7 @@ start()
 		goto fail;
 
 	/* set the poll rate to default, starts automatic data collection */
-	fd = open(BAT_MON_0_DEVICE_PATH, O_RDONLY);
+	fd = open(BAT_MON_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		goto fail;
@@ -763,10 +767,10 @@ test()
 	ssize_t sz;
 	int ret;
 
-	int fd = open(BAT_MON_0_DEVICE_PATH, O_RDONLY);
+	int fd = open(BAT_MON_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
-		err(1, "%s open failed (try 'BAT_MON_0 start' if the driver is not running)", BAT_MON_0_DEVICE_PATH);
+		err(1, "%s open failed (try 'BAT_MON start' if the driver is not running)", BAT_MON_DEVICE_PATH);
 
 	/* do a simple demand read */
 	sz = read(fd, &report, sizeof(report));
@@ -841,7 +845,7 @@ test()
 void
 reset()
 {
-	int fd = open(BAT_MON_0_DEVICE_PATH, O_RDONLY);
+	int fd = open(BAT_MON_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		err(1, "failed ");
@@ -874,31 +878,31 @@ info()
 } // namespace
 
 int
-bat_mon_0_main(int argc, char *argv[])
+bat_mon_main(int argc, char *argv[])
 {
 	/*
 	 * Start/load the driver.
 	 */
 	if (!strcmp(argv[1], "start"))
-		bat_mon_0::start();
+		bat_mon::start();
 
 	/*
 	 * Test the driver/device.
 	 */
 	if (!strcmp(argv[1], "test"))
-		bat_mon_0::test();
+		bat_mon::test();
 
 	/*
 	 * Reset the driver.
 	 */
 	if (!strcmp(argv[1], "reset"))
-		bat_mon_0::reset();
+		bat_mon::reset();
 
 	/*
 	 * Print driver information.
 	 */
 	if (!strcmp(argv[1], "info"))
-		bat_mon_0::info();
+		bat_mon::info();
 
 	errx(1, "unrecognised command, try 'start', 'test', 'reset' or 'info'");
 }

@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (C) 2012 PX4 Development Team. All rights reserved.
+#   Copyright (c) 2013 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,9 +32,12 @@
 ############################################################################
 
 #
-# Makefile to build the generic Battery monitor sensor driver.
+# Makefile to build the Battery monitor sensor 0 driver.
 #
 
-SRCS				= bat_mon.cpp
-#MAXOPTIMIZATION	 	= -Os
+MODULE_COMMAND		= bat_mon_0
+SRCS				= bat_mon_0.cpp
+MODULE_STACKSIZE	= 1200
+EXTRACXXFLAGS		= -Weffc++
 MAXOPTIMIZATION	 	= -O0
+#MAXOPTIMIZATION	 	= -Os

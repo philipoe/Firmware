@@ -33,7 +33,7 @@
 
 /**
  * @file bat_mon.cpp
- * Driver for the BAT_MON voltage sensor connected via I2C.
+ * Driver for the BAT_MON sensor connected via I2C.
  *
  * Author: Amir Melzer  <amir.melzer@mavt.ethz.ch>
  * 		   Lorenz Meier <lm@inf.ethz.ch>
@@ -46,8 +46,8 @@
 
 #include <sys/types.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <semaphore.h>
 #include <string.h>
 #include <fcntl.h>
@@ -61,182 +61,32 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/clock.h>
 
-#include <board_config.h>
+#include <arch/board/board.h>
 
-#include <drivers/drv_hrt.h>
-
-#include <systemlib/perf_counter.h>
 #include <systemlib/err.h>
+#include <systemlib/param/param.h>
+#include <systemlib/perf_counter.h>
 
 #include <drivers/drv_bat_mon.h>
+#include <drivers/drv_hrt.h>
+#include <drivers/device/ringbuffer.h>
 
-#include "bq78350.h"
+#include <uORB/uORB.h>
+#include <uORB/topics/sensor_bat_mon.h>
+#include <uORB/topics/subsystem_info.h>
 
-/* oddly, ERROR is not defined for c++ */
-#ifdef ERROR
-# undef ERROR
-#endif
-static const int ERROR = -1;
+#include <drivers/bat_mon/bat_mon.h>
 
-#ifndef CONFIG_SCHED_WORKQUEUE
-# error This requires CONFIG_SCHED_WORKQUEUE.
-#endif
-
-
-class BAT_MON : public device::I2C
-{
-public:
-	BAT_MON(int bus);
-	virtual ~BAT_MON();
-
-	virtual int		init();
-
-	virtual ssize_t	read(struct file *filp, char *buffer, size_t buflen);
-	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
-
-	/**
-	 * Diagnostics - print some basic information about the driver.
-	 */
-	void			print_info();
-
-protected:
-	virtual int		probe();
-
-private:
-
-	struct work_s				_work;
-	unsigned					_measure_ticks;
-
-	unsigned					_num_reports;
-	volatile unsigned			_next_report;
-	volatile unsigned			_oldest_report;
-	struct bat_mon_report		*_reports;
-
-	bool						_measurement_phase;
-
-	uint16_t	  				_temperature;
-	uint16_t	  				_voltage;
-	uint16_t	  				_current;
-	uint16_t	  				_batterystatus;
-	uint16_t	  				_serialnumber;
-	uint16_t	  				_hostfetcontrol;
-	uint16_t	  				_cellvoltage1;
-	uint16_t	  				_cellvoltage2;
-	uint16_t	  				_cellvoltage3;
-	uint16_t	  				_cellvoltage4;
-	uint16_t	  				_cellvoltage5;
-	uint16_t	  				_cellvoltage6;
-
-	orb_advert_t				_bat_mon_sensor_pb_topic;
-
-	perf_counter_t				_sample_perf;
-	perf_counter_t				_comms_errors;
-	perf_counter_t				_buffer_overflows;
-
-	/**
-	 * Test whether the device supported by the driver is present at a
-	 * specific address.
-	 *
-	 * @param address	The I2C bus address to probe.
-	 * @return			True if the device is present.
-	 */
-	int			probe_address(uint8_t address);
-
-	/**
-	 * Initialize the automatic measurement state machine and start it.
-	 *
-	 * @note This function is called at open and error time. It might make sense
-	 *       to make it more aggressive about resetting the bus in case of errors.
-	 */
-	void			start();
-
-	/**
-	 * Stop the automatic measurement state machine.
-	 */
-	void			stop();
-
-	/**
-	 * Perform a poll cycle; collect from the previous measurement
-	 * and start a new one.
-	 *
-	 * This is the measurement state machine. This function
-	 * alternately starts a measurement, or collects the data from the
-	 * previous measurement.
-	 *
-	 */
-	void			cycle();
-
-	/**
-	 * Static trampoline from the workq context; because we don't have a
-	 * generic workq wrapper yet.
-	 *
-	 * @param arg		Instance pointer for the driver that is polling.
-	 */
-	static void		cycle_trampoline(void *arg);
-
-	/**
-	 * Issue a voltage measurement command for the current state.
-	 *
-	 * @return		OK if the measurement command was successful.
-	 */
-	int			voltage_measurement();
-
-	/**
-	 * Issue a SBS command for and read back a single byte
-	 *
-	 * @return		OK if the measurement command was successful.
-	 */
-	int			get_OneBytesSBSReading(uint8_t sbscmd, uint8_t sbsreading);
-
-	/**
-	 * Issue a SBS command for and read back two byte
-	 *
-	 * @return		OK if the measurement command was successful.
-	 */
-	int			get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading);
-
-	/**
-	 * collect battery monitor measurements
-	 *
-	 * @return		OK if the measurement command was successful.
-	 */
-	int			bat_mon_measurement();
-
-
-};
-
-/* helper macro for handling report buffer indices */
-#define INCREMENT(_x, _lim)	do { _x++; if (_x >= _lim) _x = 0; } while(0)
-
-/* helper macro for arithmetic - returns the square of the argument */
-#define POW2(_x)		((_x) * (_x))
-
-/*
- * BAT_MON internal constants and data structures.
- */
-
-/* internal conversion time: 100 ms  */
-#define BAT_MON_CONVERSION_INTERVAL	100000	/* microseconds */
-
-#define BAT_MON_BUS			PX4_I2C_BUS_EXPANSION
-
-/* Measurement definitions: */
-
-/*
- * Driver 'main' command.
- */
-extern "C" __EXPORT int bat_mon_main(int argc, char *argv[]);
-
-
-BAT_MON::BAT_MON(int bus) :
-	I2C("BAT_MON", BAT_MON_DEVICE_PATH, bus, 0, 100000),							/* set I2C rate to 100KHz */
-	_measure_ticks(0),
-	_num_reports(0),
-	_next_report(0),
-	_oldest_report(0),
+Bat_mon::Bat_mon(int bus, int address, unsigned conversion_interval, const char* path) :
+	I2C("Bat_mon", path, bus, address, 100000),
 	_reports(nullptr),
+	_buffer_overflows(perf_alloc(PC_COUNT, "bat_mon_buffer_overflows")),
+	_sensor_ok(false),
+	_last_published_sensor_ok(true), /* initialize differently to force publication */
+	_measure_ticks(0),
+	_collect_phase(false),
 	_measurement_phase(false),
-     _temperature(0),
+    _temperature(0),
     _voltage(0),
     _current(0),
     _batterystatus(0),
@@ -248,30 +98,40 @@ BAT_MON::BAT_MON(int bus) :
     _cellvoltage4(0),
     _cellvoltage5(0),
     _cellvoltage6(0),
-	_bat_mon_sensor_pb_topic(-1),
-	_sample_perf(perf_alloc(PC_ELAPSED, "BAT_MON_read")),
-	_comms_errors(perf_alloc(PC_COUNT, "BAT_MON_comms_errors")),
-	_buffer_overflows(perf_alloc(PC_COUNT, "BAT_MON_buffer_overflows"))
+	_bat_mon_pub(-1),
+	_subsys_pub(-1),
+	_class_instance(-1),
+	_conversion_interval(conversion_interval),
+	_sample_perf(perf_alloc(PC_ELAPSED, "bat_mon_read")),
+	_comms_errors(perf_alloc(PC_COUNT, "bat_mon_comms_errors"))
 {
-	_debug_enabled = true;
+	// enable debug() calls
+	_debug_enabled = false;
 
 	// work_cancel in the dtor will explode if we don't do this...
 	memset(&_work, 0, sizeof(_work));
-
 }
 
-BAT_MON::~BAT_MON()
+Bat_mon::~Bat_mon()
 {
 	/* make sure we are truly inactive */
 	stop();
 
+	if (_class_instance != -1)
+		unregister_class_devname(BAT_MON_DEVICE_PATH, _class_instance);
+
 	/* free any existing reports */
 	if (_reports != nullptr)
-		delete[] _reports;
+		delete _reports;
+
+	// free perf counters
+	perf_free(_sample_perf);
+	perf_free(_comms_errors);
+	perf_free(_buffer_overflows);
 }
 
 int
-BAT_MON::init()
+Bat_mon::init()
 {
 	int ret = ERROR;
 
@@ -280,105 +140,49 @@ BAT_MON::init()
 		goto out;
 
 	/* allocate basic report buffers */
-	_num_reports = 2;
-	_reports = new struct bat_mon_report[_num_reports];
-
+	_reports = new RingBuffer(2, sizeof(sensor_bat_mon_s));
 	if (_reports == nullptr)
 		goto out;
 
-	_oldest_report = _next_report = 0;
+	/* register alternate interfaces if we have to */
+	_class_instance = register_class_devname(BAT_MON_DEVICE_PATH);
 
-	/* get a publish handle on the bat_mon topic */
-	memset(&_reports[0], 0, sizeof(_reports[0]));
-	_bat_mon_sensor_pb_topic = orb_advertise(ORB_ID(sensor_bat_mon), &_reports[0]);
+	/* publication init */
+	if (_class_instance == CLASS_DEVICE_PRIMARY) {
 
-	if (_bat_mon_sensor_pb_topic < 0)
-		debug("failed to create sensor_bat_mon object");
+		/* advertise sensor topic, measure manually to initialize valid report */
+		struct sensor_bat_mon_s arp;
+		measure();
+		_reports->get(&arp);
+
+		/* measurement will have generated a report, publish */
+		_bat_mon_pub = orb_advertise(ORB_ID(sensor_bat_mon), &arp);
+
+		if (_bat_mon_pub < 0)
+			warnx("uORB started?");
+	}
 
 	ret = OK;
+
 out:
 	return ret;
 }
 
 int
-BAT_MON::probe()
+Bat_mon::probe()
 {
-	_retries = 10;
-
-	if (OK == probe_address(SMBTAR_ADDCONF)){		///(BAT_MON_ADDRESS)){
-		_retries = 1;
-		return OK;
-	}
-
-	return -EIO;
-}
-
-int
-BAT_MON::probe_address(uint8_t address)
-{
-	set_address(address >> 1);
-
-	/* send reset command */
-	if (OK != get_TwoBytesSBSReading(SERIALNUMBER, &_serialnumber))
-		return -EIO;
-
-	/* Initialization functions: */
-
-	return OK;
-}
-
-ssize_t
-BAT_MON::read(struct file *filp, char *buffer, size_t buflen)
-{
-	unsigned count = buflen / sizeof(struct bat_mon_report);
-	int ret = 0;
-
-	/* buffer must be large enough */
-	if (count < 1)
-		return -ENOSPC;
-
-	/* if automatic measurement is enabled */
-	if (_measure_ticks > 0) {
-
-		/*
-		 * While there is space in the caller's buffer, and reports, copy them.
-		 * Note that we may be pre-empted by the workq thread while we are doing this;
-		 * we are careful to avoid racing with them.
-		 */
-		while (count--) {
-			if (_oldest_report != _next_report) {
-				memcpy(buffer, _reports + _oldest_report, sizeof(*_reports));
-				ret += sizeof(_reports[0]);
-				INCREMENT(_oldest_report, _num_reports);
-			}
-		}
-
-		/* if there was no data, warn the caller */
-		return ret ? ret : -EAGAIN;
-	}
-
-	/* manual measurement - run one conversion */
-	do {
-		_measurement_phase = 0;
-		_oldest_report = _next_report = 0;
-
-		/* Take a battery monitor measurement */
-		if (OK != bat_mon_measurement()){
-			ret = -EIO;
-			break;
-		}
-
-		/* state machine will have generated a report, copy it out */
-		memcpy(buffer, _reports, sizeof(*_reports));
-		ret = sizeof(*_reports);
-
-	} while (0);
-
+	/* on initial power up the device needs more than one retry
+	   for detection. Once it is running then retries aren't
+	   needed
+	*/
+	_retries = 4;
+	int ret = measure();
+	_retries = 0;
 	return ret;
 }
 
 int
-BAT_MON::ioctl(struct file *filp, int cmd, unsigned long arg)
+Bat_mon::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	switch (cmd) {
 
@@ -391,7 +195,7 @@ BAT_MON::ioctl(struct file *filp, int cmd, unsigned long arg)
 				_measure_ticks = 0;
 				return OK;
 
-				/* external signalling not supported */
+				/* external signalling (DRDY) not supported */
 			case SENSOR_POLLRATE_EXTERNAL:
 
 				/* zero would be bad */
@@ -405,7 +209,7 @@ BAT_MON::ioctl(struct file *filp, int cmd, unsigned long arg)
 					bool want_start = (_measure_ticks == 0);
 
 					/* set interval for next measurement to minimum legal value */
-					_measure_ticks = USEC2TICK(BAT_MON_CONVERSION_INTERVAL);
+					_measure_ticks = USEC2TICK(_conversion_interval);
 
 					/* if we need to start the poll state machine, do it */
 					if (want_start)
@@ -423,7 +227,7 @@ BAT_MON::ioctl(struct file *filp, int cmd, unsigned long arg)
 					unsigned ticks = USEC2TICK(1000000 / arg);
 
 					/* check against maximum rate */
-					if (ticks < USEC2TICK(BAT_MON_CONVERSION_INTERVAL))
+					if (ticks < USEC2TICK(_conversion_interval))
 						return -EINVAL;
 
 					/* update interval for next measurement */
@@ -445,464 +249,156 @@ BAT_MON::ioctl(struct file *filp, int cmd, unsigned long arg)
 		return (1000 / _measure_ticks);
 
 	case SENSORIOCSQUEUEDEPTH: {
-			/* add one to account for the sentinel in the ring */
-			arg++;
-
 			/* lower bound is mandatory, upper bound is a sanity check */
-			if ((arg < 2) || (arg > 100))
+			if ((arg < 1) || (arg > 100))
 				return -EINVAL;
 
-			/* allocate new buffer */
-			struct bat_mon_report *buf = new struct bat_mon_report[arg];
-
-			if (nullptr == buf)
+			irqstate_t flags = irqsave();
+			if (!_reports->resize(arg)) {
+				irqrestore(flags);
 				return -ENOMEM;
-
-			/* reset the measurement state machine with the new buffer, free the old */
-			stop();
-			delete[] _reports;
-			_num_reports = arg;
-			_reports = buf;
-			start();
+			}
+			irqrestore(flags);
 
 			return OK;
 		}
 
 	case SENSORIOCGQUEUEDEPTH:
-		return _num_reports - 1;
+		return _reports->size();
 
 	case SENSORIOCRESET:
-		/* reset the measurement state machine */
-		stop();
-
-		/* free any existing reports */
-		if (_reports != nullptr)
-			delete[] _reports;
-
-		start();
-		return OK;
-		//return -EINVAL;
+		/* XXX implement this */
+		return -EINVAL;
 
 	default:
-		break;
+		/* give it to the superclass */
+		return I2C::ioctl(filp, cmd, arg);
+	}
+}
+
+ssize_t
+Bat_mon::read(struct file *filp, char *buffer, size_t buflen)
+{
+	unsigned count = buflen / sizeof(sensor_bat_mon_s);
+	sensor_bat_mon_s *abuf = reinterpret_cast<sensor_bat_mon_s *>(buffer);
+	int ret = 0;
+
+	/* buffer must be large enough */
+	if (count < 1)
+		return -ENOSPC;
+
+	/* if automatic measurement is enabled */
+	if (_measure_ticks > 0) {
+
+		/*
+		 * While there is space in the caller's buffer, and reports, copy them.
+		 * Note that we may be pre-empted by the workq thread while we are doing this;
+		 * we are careful to avoid racing with them.
+		 */
+		while (count--) {
+			if (_reports->get(abuf)) {
+				ret += sizeof(*abuf);
+				abuf++;
+			}
+		}
+
+		/* if there was no data, warn the caller */
+		return ret ? ret : -EAGAIN;
 	}
 
-	/* give it to the superclass */
-	return I2C::ioctl(filp, cmd, arg);
+	/* manual measurement - run one conversion */
+	do {
+		_reports->flush();
+
+		/* trigger a measurement */
+		if (OK != measure()) {
+			ret = -EIO;
+			break;
+		}
+
+		/* wait for it to complete */
+		usleep(_conversion_interval);
+
+		/* run the collection phase */
+		if (OK != collect()) {
+			ret = -EIO;
+			break;
+		}
+
+		/* state machine will have generated a report, copy it out */
+		if (_reports->get(abuf)) {
+			ret = sizeof(*abuf);
+		}
+
+	} while (0);
+
+	return ret;
 }
 
 void
-BAT_MON::start()
+Bat_mon::start()
 {
 	/* reset the report ring and state machine */
-	_measurement_phase = true;
-	_oldest_report = _next_report = 0;
+	_collect_phase = false;
+	_reports->flush();
 
 	/* schedule a cycle to start things */
-	work_queue(HPWORK, &_work, (worker_t)&BAT_MON::cycle_trampoline, this, 1);
+	work_queue(HPWORK, &_work, (worker_t)&Bat_mon::cycle_trampoline, this, 1);
 }
 
 void
-BAT_MON::stop()
+Bat_mon::stop()
 {
 	work_cancel(HPWORK, &_work);
 }
 
 void
-BAT_MON::cycle_trampoline(void *arg)
+Bat_mon::update_status()
 {
-	BAT_MON *dev = (BAT_MON *)arg;
+	if (_sensor_ok != _last_published_sensor_ok) {
+		/* notify about state change */
+		struct subsystem_info_s info = {
+			true,
+			true,
+			_sensor_ok,
+			SUBSYSTEM_TYPE_MOTORCONTROL					/// add sub system for the bat mon
+		};
 
-	dev->cycle();
-}
-
-void
-BAT_MON::cycle()
-{
-
-	/* collection phase? */
-	if (_measurement_phase) {
-		/* perform voltage measurement */
-		if (OK != bat_mon_measurement()) {
-			start();
-			return;
+		if (_subsys_pub > 0) {
+			orb_publish(ORB_ID(subsystem_info), _subsys_pub, &info);
+		} else {
+			_subsys_pub = orb_advertise(ORB_ID(subsystem_info), &info);
 		}
 
-		/* next phase is measurement */
-		_measurement_phase = true;
-
-		/* schedule a fresh cycle call when the measurement is done */
-		work_queue(HPWORK,
-			   &_work,
-			   (worker_t)&BAT_MON::cycle_trampoline,
-			   this,
-			   _measure_ticks);
+		_last_published_sensor_ok = _sensor_ok;
 	}
-}
-
-/* Single Bytes of SBS command Reading */
-int
-BAT_MON::get_OneBytesSBSReading(uint8_t sbscmd, uint8_t sbsreading)
-{
-	uint8_t data;
-
-	/* fetch the raw value */
-	if (OK != transfer(&sbscmd, 1, &data, 2)) {
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	sbsreading = data;
-
-return OK;
-}
-
-/* Two Bytes of SBS command Reading */
-int
-BAT_MON::get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading)
-{
-	uint8_t data[2];
-	union {
-		uint8_t	b[2];
-		uint16_t w;
-	} cvt;
-
-	/* fetch the raw value */
-	if (OK != transfer(&sbscmd, 1, &data[0], 2)) {
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	/* assemble 16 bit value */
-	cvt.b[0] = data[0];
-	cvt.b[1] = data[1];
-
-	*sbsreading = cvt.w;
-
-return OK;
-}
-
-/* collect Battery monitor measurements: */
-int
-BAT_MON::bat_mon_measurement()
-{
-	/* read the most recent measurement */
-	perf_begin(_sample_perf);
-
-	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
-	_reports[_next_report].timestamp = hrt_absolute_time();
-
-
-	if (OK != get_TwoBytesSBSReading(TEMPERATURE, &_temperature)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(VOLTAGE, &_voltage)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(CURRENT, &_current)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(BATTERYSTATUS, &_batterystatus)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(SERIALNUMBER, &_serialnumber)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(HOSTFETCONTROL, &_hostfetcontrol)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE1, &_cellvoltage1)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE2, &_cellvoltage2)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE3, &_cellvoltage3)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE4, &_cellvoltage4)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE5, &_cellvoltage5)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE6, &_cellvoltage6)){
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-
-	/* generate a new report */
-	_reports[_next_report].temperature	  	= _temperature;				/* report in [0.1 K]  	*/
-	_reports[_next_report].voltage 		  	= _voltage;					/* report in [mA] 	   	*/
-	_reports[_next_report].current 		  	= _current;					/* report in Hex word  	*/
-	_reports[_next_report].batterystatus  	= _batterystatus;			/* report in Hex word  	*/
-	_reports[_next_report].serialnumber   	= _serialnumber;			/* report in uint word 	*/
-	_reports[_next_report].hostfetcontrol 	= _hostfetcontrol;			/* report in Hex word  	*/
-	_reports[_next_report].cellvoltage1  	= _cellvoltage1;			/* report in [mv]		*/
-	_reports[_next_report].cellvoltage2   	= _cellvoltage2;			/* report in [mv] 		*/
-	_reports[_next_report].cellvoltage3   	= _cellvoltage3;			/* report in [mv] 		*/
-	_reports[_next_report].cellvoltage4   	= _cellvoltage4;			/* report in [mv] 		*/
-	_reports[_next_report].cellvoltage5  	= _cellvoltage5;			/* report in [mv] 		*/
-	_reports[_next_report].cellvoltage6   	= _cellvoltage6;			/* report in [mv]		*/
-
-
-	//warnx("measurements BAT_MON board sensor: %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d",_temperature, _voltage, _current, _batterystatus, _serialnumber, _hostfetcontrol, _cellvoltage1, _cellvoltage2, _cellvoltage3, _cellvoltage4, _cellvoltage5, _cellvoltage6);
-
-	/* publish it */
-	orb_publish(ORB_ID(sensor_bat_mon), _bat_mon_sensor_pb_topic, &_reports[_next_report]);
-
-	/* post a report to the ring - note, not locked */
-	INCREMENT(_next_report, _num_reports);
-
-	/* if we are running up against the oldest report, toss it */
-	if (_next_report == _oldest_report) {
-		perf_count(_buffer_overflows);
-		INCREMENT(_oldest_report, _num_reports);
-	}
-
-	/* notify anyone waiting for data */
-	poll_notify(POLLIN);
-
-	perf_end(_sample_perf);
-
-	return OK;
 }
 
 void
-BAT_MON::print_info()
+Bat_mon::cycle_trampoline(void *arg)
+{
+	Bat_mon *dev = (Bat_mon *)arg;
+
+	dev->cycle();
+	// XXX we do not know if this is
+	// really helping - do not update the
+	// subsys state right now
+	//dev->update_status();
+}
+
+void
+Bat_mon::print_info()
 {
 	perf_print_counter(_sample_perf);
 	perf_print_counter(_comms_errors);
 	perf_print_counter(_buffer_overflows);
-	printf("poll interval:  %u ticks\n", _measure_ticks);
-	printf("report queue:   %u (%u/%u @ %p)\n",
-	       _num_reports, _oldest_report, _next_report, _reports);
-}
-
-/**
- * Local functions in support of the shell command.
- */
-namespace bat_mon
-{
-
-BAT_MON	*g_dev;
-
-BAT_MON	*g_dev_1;
-
-void	start();
-void	test();
-void	reset();
-void	info();
-
-/**
- * Start the driver.
- */
-void
-start()
-{
-	int fd;
-
-	if (g_dev != nullptr)
-		errx(1, "already started");
-
-	/* create the driver */
-	g_dev = new BAT_MON(BAT_MON_BUS);
-
-	g_dev_1 = new BAT_MON(BAT_MON_BUS);
-
-	if (g_dev == nullptr)
-		goto fail;
-
-	if (OK != g_dev->init())
-		goto fail;
-
-	/* set the poll rate to default, starts automatic data collection */
-	fd = open(BAT_MON_DEVICE_PATH, O_RDONLY);
-
-	if (fd < 0)
-		goto fail;
-
-	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
-		goto fail;
-
-	exit(0);
-
-fail:
-
-	if (g_dev != nullptr) {
-		delete g_dev;
-		g_dev = nullptr;
-	}
-
-	errx(1, "driver start failed");
+	warnx("poll interval:  %u ticks", _measure_ticks);
+	_reports->print_info("report queue");
 }
 
 void
-test()
+Bat_mon::new_report(const sensor_bat_mon_s &report)
 {
-	struct bat_mon_report report;
-	ssize_t sz;
-	int ret;
-
-	int fd = open(BAT_MON_DEVICE_PATH, O_RDONLY);
-
-	if (fd < 0)
-		err(1, "%s open failed (try 'BAT_MON start' if the driver is not running)", BAT_MON_DEVICE_PATH);
-
-	/* do a simple demand read */
-	sz = read(fd, &report, sizeof(report));
-
-	if (sz != sizeof(report))
-		err(1, "immediate read failed");
-
-	warnx("single read");
-	warnx("time:            %lld", report.timestamp);
-	warnx("serialnumber:     %6d", report.serialnumber);
-	warnx("temperature:      %6d", report.temperature);
-	warnx("voltage:          %6d", report.voltage);
-	warnx("current:   	     %6d", report.current);
-	warnx("batterystatus:    %4x", report.batterystatus);
-	warnx("host fet control: %4x", report.hostfetcontrol);
-	warnx("cellvoltage1:     %6d", report.cellvoltage1);
-	warnx("cellvoltage2:     %6d", report.cellvoltage2);
-	warnx("cellvoltage3:     %6d", report.cellvoltage3);
-	warnx("cellvoltage4:     %6d", report.cellvoltage4);
-	warnx("cellvoltage5:     %6d", report.cellvoltage5);
-	warnx("cellvoltage6:     %6d", report.cellvoltage6);
-
-
-	/* set the queue depth to 10 */
-	if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
-		errx(1, "failed to set queue depth");
-
-	/* start the sensor polling at 2Hz */
-	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2))
-		errx(1, "failed to set 2Hz poll rate");
-
-	/* read the sensor 5x and report each value */
-	for (unsigned i = 0; i < 5; i++) {
-		struct pollfd fds;
-
-		/* wait for data to be ready */
-		fds.fd = fd;
-		fds.events = POLLIN;
-		ret = poll(&fds, 1, 2000);
-
-		if (ret != 1)
-			errx(1, "timed out waiting for sensor data");
-
-		/* now go get it */
-		sz = read(fd, &report, sizeof(report));
-
-		if (sz != sizeof(report))
-			err(1, "periodic read failed");
-
-		warnx("time:            %lld", report.timestamp);
-		warnx("serialnumber:     %6d", report.serialnumber);
-		warnx("temperature:      %6d", report.temperature);
-		warnx("voltage:          %6d", report.voltage);
-		warnx("current:   	     %6d", report.current);
-		warnx("batterystatus:    %4x", report.batterystatus);
-		warnx("host fet control: %4x", report.hostfetcontrol);
-		warnx("cellvoltage1:     %6d", report.cellvoltage1);
-		warnx("cellvoltage2:     %6d", report.cellvoltage2);
-		warnx("cellvoltage3:     %6d", report.cellvoltage3);
-		warnx("cellvoltage4:     %6d", report.cellvoltage4);
-		warnx("cellvoltage5:     %6d", report.cellvoltage5);
-		warnx("cellvoltage6:     %6d", report.cellvoltage6);
-	}
-
-	reset();
-	errx(0, "PASS");
-}
-
-/**
- * Reset the driver.
- */
-void
-reset()
-{
-	int fd = open(BAT_MON_DEVICE_PATH, O_RDONLY);
-
-	if (fd < 0)
-		err(1, "failed ");
-
-	if (ioctl(fd, SENSORIOCRESET, 0) < 0)
-		err(1, "driver reset failed");
-
-	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
-		err(1, "driver poll restart failed");
-
-	exit(0);
-}
-
-/**
- * Print a little info about the driver.
- */
-void
-info()
-{
-	if (g_dev == nullptr)
-		errx(1, "driver not running");
-
-	printf("state @ %p\n", g_dev);
-	g_dev->print_info();
-
-	exit(0);
-}
-
-
-} // namespace
-
-int
-bat_mon_main(int argc, char *argv[])
-{
-	/*
-	 * Start/load the driver.
-	 */
-	if (!strcmp(argv[1], "start"))
-		bat_mon::start();
-
-	/*
-	 * Test the driver/device.
-	 */
-	if (!strcmp(argv[1], "test"))
-		bat_mon::test();
-
-	/*
-	 * Reset the driver.
-	 */
-	if (!strcmp(argv[1], "reset"))
-		bat_mon::reset();
-
-	/*
-	 * Print driver information.
-	 */
-	if (!strcmp(argv[1], "info"))
-		bat_mon::info();
-
-	errx(1, "unrecognised command, try 'start', 'test', 'reset' or 'info'");
+	if (!_reports->force(&report))
+		perf_count(_buffer_overflows);
 }
