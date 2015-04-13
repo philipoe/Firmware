@@ -91,7 +91,8 @@ struct sensor_bat_mon_s {
  */
 
 /* register this as object request broker structure */
-ORB_DECLARE(sensor_bat_mon);
+#define MAX_NUM_BAT_MON_SENSORS 3
+
 ORB_DECLARE(sensor_bat_mon_0);
 ORB_DECLARE(sensor_bat_mon_1);
 ORB_DECLARE(sensor_bat_mon_2);
