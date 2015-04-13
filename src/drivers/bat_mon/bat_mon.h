@@ -149,7 +149,6 @@ protected:
 	uint16_t	  	_cellvoltage5;
 	uint16_t	  	_cellvoltage6;
 
-	orb_advert_t	_bat_mon_pub;
 	orb_advert_t	_bat_mon_pub_0;
 	orb_advert_t	_bat_mon_pub_1;
 	orb_advert_t	_bat_mon_pub_2;

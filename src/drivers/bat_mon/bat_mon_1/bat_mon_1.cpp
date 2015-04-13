@@ -82,11 +82,6 @@
 #ifdef ERROR
 # undef ERROR
 #endif
-//static const int ERROR = -1;
-
-//#ifndef CONFIG_SCHED_WORKQUEUE
-//# error This requires CONFIG_SCHED_WORKQUEUE.
-//#endif
 
 /* Measurement rate is 1Hz */
 #define MEAS_RATE 1
@@ -99,25 +94,9 @@ class Bat_mon_1 : public Bat_mon
 {
 public:
 	Bat_mon_1(int bus, int address = (SMBTAR_ADDCONF >> 1), const char *path = BAT_MON_1_DEVICE_PATH);//(int bus);
-	//virtual ~Bat_mon_1();
-
-	//virtual int		init();
-
-	//virtual ssize_t	read(struct file *filp, char *buffer, size_t buflen);
-	//virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
-
-	/**
-	 * Diagnostics - print some basic information about the driver.
-	 */
-	//void			print_info();
 
 protected:
-	//virtual int		probe();
 
-	/**
-	* Perform a poll cycle; collect from the previous measurement
-	* and start a new one.
-	*/
 	virtual void cycle();
 	virtual int	measure();
 	virtual int	collect();
@@ -132,11 +111,6 @@ protected:
 	 * Send a SBS command and read back a two bytes
 	 */
 	int get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading);
-
-	/**
-	 * Get the battery monitor readings
-	 */
-	//int bat_mon_1_measurement(void);
 
 };
 
@@ -156,9 +130,6 @@ Bat_mon_1::measure()
 {
 	/* read the most recent measurement */
 	perf_begin(_sample_perf);
-
-	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
-	//_reports[_next_report].timestamp = hrt_absolute_time();
 
 	struct sensor_bat_mon_s report;
 
@@ -346,18 +317,6 @@ Bat_mon_1::deviceserialnumber()
 	return OK;
 }
 
-#if 0
-void
-Bat_mon_1::print_info()
-{
-	perf_print_counter(_sample_perf);
-	perf_print_counter(_comms_errors);
-	perf_print_counter(_buffer_overflows);
-	printf("poll interval:  %u ticks\n", _measure_ticks);
-	printf("report queue:   %u (%u/%u @ %p)\n",
-	       _num_reports, _oldest_report, _next_report, _reports);
-}
-#endif
 /**
  * Local functions in support of the shell command.
  */

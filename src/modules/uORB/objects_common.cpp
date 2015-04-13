@@ -101,7 +101,6 @@ ORB_DEFINE(sensor_mppt, struct sensor_mppt_s);
 ORB_DEFINE(sensor_power, struct sensor_power_s);
 
 #include "topics/sensor_bat_mon.h"
-ORB_DEFINE(sensor_bat_mon, struct sensor_bat_mon_s);
 ORB_DEFINE(sensor_bat_mon_0, struct sensor_bat_mon_s);
 ORB_DEFINE(sensor_bat_mon_1, struct sensor_bat_mon_s);
 ORB_DEFINE(sensor_bat_mon_2, struct sensor_bat_mon_s);
