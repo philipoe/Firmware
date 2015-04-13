@@ -85,7 +85,7 @@ Bat_mon::Bat_mon(int bus, int address, unsigned conversion_interval, const char*
 	_last_published_sensor_ok(true), /* initialize differently to force publication */
 	_measure_ticks(0),
 	_collect_phase(false),
-	_measurement_phase(false),
+	_measurement_phase(true),
     _temperature(0),
     _voltage(0),
     _current(0),
@@ -148,6 +148,7 @@ Bat_mon::init()
 	_class_instance = register_class_devname(BAT_MON_DEVICE_PATH);
 
 	/* publication init */
+
 	if (_class_instance == CLASS_DEVICE_PRIMARY) {
 
 		/* advertise sensor topic, measure manually to initialize valid report */
@@ -156,10 +157,38 @@ Bat_mon::init()
 		_reports->get(&arp);
 
 		/* measurement will have generated a report, publish */
-		_bat_mon_pub = orb_advertise(ORB_ID(sensor_bat_mon), &arp);
+		_bat_mon_pub_0 = orb_advertise(ORB_ID(sensor_bat_mon_0), &arp);
 
-		if (_bat_mon_pub < 0)
-			warnx("uORB started?");
+		if (_bat_mon_pub_0 < 0)
+			warnx("uORB bat_mon_pub_0 started?");
+	}
+
+	if (_class_instance == CLASS_DEVICE_SECONDARY) {
+
+		/* advertise sensor topic, measure manually to initialize valid report */
+		struct sensor_bat_mon_s arp;
+		measure();
+		_reports->get(&arp);
+
+		/* measurement will have generated a report, publish */
+		_bat_mon_pub_1 = orb_advertise(ORB_ID(sensor_bat_mon_1), &arp);
+
+		if (_bat_mon_pub_1 < 0)
+			warnx("uORB bat_mon_pub_1 started?");
+	}
+
+	if (_class_instance == CLASS_DEVICE_TERTIARY) {
+
+		/* advertise sensor topic, measure manually to initialize valid report */
+		struct sensor_bat_mon_s arp;
+		measure();
+		_reports->get(&arp);
+
+		/* measurement will have generated a report, publish */
+		_bat_mon_pub_2 = orb_advertise(ORB_ID(sensor_bat_mon_2), &arp);
+
+		if (_bat_mon_pub_2 < 0)
+			warnx("uORB bat_mon_pub_2 started?");
 	}
 
 	ret = OK;
@@ -176,7 +205,8 @@ Bat_mon::probe()
 	   needed
 	*/
 	_retries = 4;
-	int ret = measure();
+	//int ret = measure();
+	int ret = deviceserialnumber();
 	_retries = 0;
 	return ret;
 }

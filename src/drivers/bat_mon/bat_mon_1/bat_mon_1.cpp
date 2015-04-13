@@ -32,8 +32,8 @@
  ****************************************************************************/
 
 /**
- * @file bat_mon_0.cpp
- * Driver for the BAT_MON_0 sensor connected via I2C.
+ * @file bat_mon_1.cpp
+ * Driver for the BAT_MON_1 sensor connected via I2C.
  *
  * Author: Amir Melzer  <amir.melzer@mavt.ethz.ch>
  * 		   Lorenz Meier <lm@inf.ethz.ch>
@@ -92,13 +92,14 @@
 #define MEAS_RATE 1
 #define CONVERSION_INTERVAL	(1000000 / MEAS_RATE)	/* microseconds */
 
-#define SERIAL_NUMBER_BAT_MON_0 1
+#define SERIAL_NUMBER_BAT_MON_1 1
 
-class Bat_mon_0 : public Bat_mon
+
+class Bat_mon_1 : public Bat_mon
 {
 public:
-	Bat_mon_0(int bus, int address = (SMBTAR_ADDCONF >> 1), const char *path = BAT_MON_0_DEVICE_PATH);//(int bus);
-	//virtual ~Bat_mon_0();
+	Bat_mon_1(int bus, int address = (SMBTAR_ADDCONF >> 1), const char *path = BAT_MON_1_DEVICE_PATH);//(int bus);
+	//virtual ~Bat_mon_1();
 
 	//virtual int		init();
 
@@ -132,21 +133,26 @@ protected:
 	 */
 	int get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading);
 
+	/**
+	 * Get the battery monitor readings
+	 */
+	//int bat_mon_1_measurement(void);
+
 };
 
 /*
  * Driver 'main' command.
  */
-extern "C" __EXPORT int bat_mon_0_main(int argc, char *argv[]);
+extern "C" __EXPORT int bat_mon_1_main(int argc, char *argv[]);
 
 
-Bat_mon_0::Bat_mon_0(int bus, int address, const char *path) : Bat_mon(bus, address, CONVERSION_INTERVAL, path)
+Bat_mon_1::Bat_mon_1(int bus, int address, const char *path) : Bat_mon(bus, address, CONVERSION_INTERVAL, path)
 {
 }
 
 /* collect Battery monitor measurements: */
 int
-Bat_mon_0::measure()
+Bat_mon_1::measure()
 {
 	/* read the most recent measurement */
 	perf_begin(_sample_perf);
@@ -234,12 +240,12 @@ Bat_mon_0::measure()
 	report.cellvoltage6   	= _cellvoltage6;			/* report in [mv]		*/
 
 
-	//warnx("measurements Bat_mon_0 board sensor: %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d",_temperature, _voltage, _current, _batterystatus, _serialnumber, _hostfetcontrol, _cellvoltage1, _cellvoltage2, _cellvoltage3, _cellvoltage4, _cellvoltage5, _cellvoltage6);
+	//warnx("measurements Bat_mon_1 board sensor: %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d",_temperature, _voltage, _current, _batterystatus, _serialnumber, _hostfetcontrol, _cellvoltage1, _cellvoltage2, _cellvoltage3, _cellvoltage4, _cellvoltage5, _cellvoltage6);
 
 
-	if (_bat_mon_pub_0 > 0 && !(_pub_blocked)) {
+	if (_bat_mon_pub_1 > 0 && !(_pub_blocked)) {
 		/* publish it */
-		orb_publish(ORB_ID(sensor_bat_mon_0), _bat_mon_pub_0, &report);
+		orb_publish(ORB_ID(sensor_bat_mon_1), _bat_mon_pub_1, &report);
 	}
 
 	new_report(report);
@@ -253,13 +259,13 @@ Bat_mon_0::measure()
 }
 
 int
-Bat_mon_0::collect()
+Bat_mon_1::collect()
 {
 	return OK;
 }
 
 void
-Bat_mon_0::cycle()
+Bat_mon_1::cycle()
 {
 
 	/* collection phase? */
@@ -276,7 +282,7 @@ Bat_mon_0::cycle()
 		/* schedule a fresh cycle call when the measurement is done */
 		work_queue(HPWORK,
 			   &_work,
-			   (worker_t)&Bat_mon_0::cycle_trampoline,
+			   (worker_t)&Bat_mon_1::cycle_trampoline,
 			   this,
 			   _measure_ticks);
 	}
@@ -284,7 +290,7 @@ Bat_mon_0::cycle()
 
 /* Single Bytes of SBS command Reading */
 int
-Bat_mon_0::get_OneBytesSBSReading(uint8_t sbscmd, uint8_t sbsreading)
+Bat_mon_1::get_OneBytesSBSReading(uint8_t sbscmd, uint8_t sbsreading)
 {
 	uint8_t data;
 
@@ -301,7 +307,7 @@ return OK;
 
 /* Two Bytes of SBS command Reading */
 int
-Bat_mon_0::get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading)
+Bat_mon_1::get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading)
 {
 	uint8_t data[2];
 	union {
@@ -325,14 +331,14 @@ return OK;
 }
 
 int
-Bat_mon_0::deviceserialnumber()
+Bat_mon_1::deviceserialnumber()
 {
 	if (OK != get_TwoBytesSBSReading(SERIALNUMBER, &_serialnumber)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (_serialnumber == SERIAL_NUMBER_BAT_MON_0)
+	if (_serialnumber == SERIAL_NUMBER_BAT_MON_1)
 		warnx("Bat_mon_0 board sensor serial number: %d", _serialnumber);
 	else
 		return -EIO;
@@ -342,7 +348,7 @@ Bat_mon_0::deviceserialnumber()
 
 #if 0
 void
-Bat_mon_0::print_info()
+Bat_mon_1::print_info()
 {
 	perf_print_counter(_sample_perf);
 	perf_print_counter(_comms_errors);
@@ -355,10 +361,10 @@ Bat_mon_0::print_info()
 /**
  * Local functions in support of the shell command.
  */
-namespace bat_mon_0
+namespace bat_mon_1
 {
 
-Bat_mon_0	*g_dev;
+Bat_mon_1	*g_dev;
 
 void	start(int i2c_bus);
 void	test();
@@ -377,7 +383,7 @@ start(int i2c_bus)
 		errx(1, "already started");
 
 	/* create the driver */   //BAT_MON_0_BUS
-	g_dev = new Bat_mon_0(i2c_bus, (SMBTAR_ADDCONF >> 1), BAT_MON_0_DEVICE_PATH);
+	g_dev = new Bat_mon_1(i2c_bus, (SMBTAR_ADDCONF >> 1), BAT_MON_1_DEVICE_PATH);
 
 	if (g_dev == nullptr)
 		goto fail;
@@ -387,7 +393,7 @@ start(int i2c_bus)
 	}
 
 	/* set the poll rate to default, starts automatic data collection */
-	fd = open(BAT_MON_0_DEVICE_PATH, O_RDONLY);
+	fd = open(BAT_MON_1_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		goto fail;
@@ -404,7 +410,7 @@ fail:
 		g_dev = nullptr;
 	}
 
-	errx(1, "driver bat_mon_0 start failed");
+	errx(1, "driver bat_mon_1 start failed");
 }
 
 void
@@ -414,10 +420,10 @@ test()
 	ssize_t sz;
 	int ret;
 
-	int fd = open(BAT_MON_0_DEVICE_PATH, O_RDONLY);
+	int fd = open(BAT_MON_1_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
-		err(1, "%s open failed (try 'BAT_MON_0 start' if the driver is not running)", BAT_MON_0_DEVICE_PATH);
+		err(1, "%s open failed (try 'BAT_MON_1 start' if the driver is not running)", BAT_MON_1_DEVICE_PATH);
 
 	/* do a simple demand read */
 	sz = read(fd, &report, sizeof(report));
@@ -492,7 +498,7 @@ test()
 void
 reset()
 {
-	int fd = open(BAT_MON_0_DEVICE_PATH, O_RDONLY);
+	int fd = open(BAT_MON_1_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		err(1, "failed ");
@@ -525,9 +531,9 @@ info()
 } // namespace
 
 static void
-bat_mon_0_usage()
+bat_mon_1_usage()
 {
-	warnx("usage: bat_mon_0 command [options]");
+	warnx("usage: bat_mon_1 command [options]");
 	warnx("options:");
 	warnx("\t-b --bus i2cbus (%d)", PX4_I2C_BUS_DEFAULT);
 	warnx("command:");
@@ -535,7 +541,7 @@ bat_mon_0_usage()
 }
 
 int
-bat_mon_0_main(int argc, char *argv[])
+bat_mon_1_main(int argc, char *argv[])
 {
 	int i2c_bus = PX4_I2C_BUS_DEFAULT;
 
@@ -553,28 +559,28 @@ bat_mon_0_main(int argc, char *argv[])
 	 * Start/load the driver.
 	 */
 	if (!strcmp(argv[1], "start"))
-		bat_mon_0::start(i2c_bus);
+		bat_mon_1::start(i2c_bus);
 
 	/*
 	 * Test the driver/device.
 	 */
 	if (!strcmp(argv[1], "test"))
-		bat_mon_0::test();
+		bat_mon_1::test();
 
 	/*
 	 * Reset the driver.
 	 */
 	if (!strcmp(argv[1], "reset"))
-		bat_mon_0::reset();
+		bat_mon_1::reset();
 
 	/*
 	 * Print driver information.
 	 */
 	if (!strcmp(argv[1], "info") || !strcmp(argv[1], "status")) {
-		bat_mon_0::info();
+		bat_mon_1::info();
 	}
 
 	//errx(1, "unrecognised command, try 'start', 'test', 'reset' or 'info'");
-	bat_mon_0_usage();
+	bat_mon_1_usage();
 	exit(0);
 }

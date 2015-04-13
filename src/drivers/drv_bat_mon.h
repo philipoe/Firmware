@@ -46,6 +46,8 @@
 
 #define BAT_MON_DEVICE_PATH	"/dev/bat_mon"
 #define BAT_MON_0_DEVICE_PATH "/dev/bat_mon_0"
+#define BAT_MON_1_DEVICE_PATH "/dev/bat_mon_1"
+#define BAT_MON_2_DEVICE_PATH "/dev/bat_mon_2"
 
 /**
  * Battery monitor sensors report structure.
@@ -72,6 +74,9 @@ struct bat_mon_report {
  */
 ORB_DECLARE(sensor_bat_mon);
 ORB_DECLARE(sensor_bat_mon_0);
+ORB_DECLARE(sensor_bat_mon_1);
+ORB_DECLARE(sensor_bat_mon_2);
+
 
 /*
  * ioctl() definitions
