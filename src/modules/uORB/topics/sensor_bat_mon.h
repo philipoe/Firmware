@@ -96,4 +96,21 @@ struct sensor_bat_mon_s {
 ORB_DECLARE(sensor_bat_mon_0);
 ORB_DECLARE(sensor_bat_mon_1);
 ORB_DECLARE(sensor_bat_mon_2);
+
+static const struct orb_metadata *sensor_bat_mon_orb_id[MAX_NUM_BAT_MON_SENSORS] = {
+	ORB_ID(sensor_bat_mon_0),
+	ORB_ID(sensor_bat_mon_1),
+	ORB_ID(sensor_bat_mon_2),
+};
+
+// This is a hack to quiet an unused-variable warning for when telemetry_status.h is
+// included but telemetry_status_orb_id is not referenced. The inline works if you
+// choose to use it, but you can continue to just directly index into the array as well.
+// If you don't use the inline this ends up being a no-op with no additional code emitted.
+extern inline const struct orb_metadata *sensor_bat_mon_orb_id_lookup(size_t index);
+extern inline const struct orb_metadata *sensor_bat_mon_orb_id_lookup(size_t index)
+{
+	return sensor_bat_mon_orb_id[index];
+}
+
 #endif

@@ -2498,12 +2498,9 @@ private:
 protected:
 	explicit MavlinkStreamSensBatmonData(Mavlink *mavlink) : MavlinkStream(mavlink)
 	{
-		_batmon_data_sub[0]=_mavlink->add_orb_subscription(ORB_ID(sensor_bat_mon_0));
-		_batmon_data_sub[1]=_mavlink->add_orb_subscription(ORB_ID(sensor_bat_mon_1));
-		_batmon_data_sub[2]=_mavlink->add_orb_subscription(ORB_ID(sensor_bat_mon_2));
-
 		for(int i=0;i<MAX_NUM_BAT_MON_SENSORS;i++) {
-			_batmon_data_time[i]=0;
+			_batmon_data_sub[i] = _mavlink->add_orb_subscription(sensor_bat_mon_orb_id[i]);
+			_batmon_data_time[i] = 0;
 		}
 	}
 
