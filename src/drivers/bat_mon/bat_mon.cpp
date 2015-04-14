@@ -81,11 +81,9 @@ Bat_mon::Bat_mon(int bus, int address, unsigned conversion_interval, const char*
 	I2C("Bat_mon", path, bus, address, 100000),
 	_reports(nullptr),
 	_buffer_overflows(perf_alloc(PC_COUNT, "bat_mon_buffer_overflows")),
-	_sensor_ok(false),
-	_last_published_sensor_ok(true), /* initialize differently to force publication */
 	_measure_ticks(0),
 	_collect_phase(false),
-	_measurement_phase(true),
+	_measurement_phase(false),
     _temperature(0),
     _voltage(0),
     _current(0),
@@ -372,6 +370,7 @@ Bat_mon::start()
 {
 	/* reset the report ring and state machine */
 	_collect_phase = false;
+	_measurement_phase = true;
 	_reports->flush();
 
 	/* schedule a cycle to start things */
@@ -385,37 +384,11 @@ Bat_mon::stop()
 }
 
 void
-Bat_mon::update_status()
-{
-	if (_sensor_ok != _last_published_sensor_ok) {
-		/* notify about state change */
-		struct subsystem_info_s info = {
-			true,
-			true,
-			_sensor_ok,
-			SUBSYSTEM_TYPE_MOTORCONTROL					/// add sub system for the bat mon
-		};
-
-		if (_subsys_pub > 0) {
-			orb_publish(ORB_ID(subsystem_info), _subsys_pub, &info);
-		} else {
-			_subsys_pub = orb_advertise(ORB_ID(subsystem_info), &info);
-		}
-
-		_last_published_sensor_ok = _sensor_ok;
-	}
-}
-
-void
 Bat_mon::cycle_trampoline(void *arg)
 {
 	Bat_mon *dev = (Bat_mon *)arg;
 
 	dev->cycle();
-	// XXX we do not know if this is
-	// really helping - do not update the
-	// subsys state right now
-	//dev->update_status();
 }
 
 void

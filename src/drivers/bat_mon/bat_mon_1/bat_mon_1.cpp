@@ -103,14 +103,9 @@ protected:
 	virtual int	deviceserialnumber();
 
 	/**
-	 * Send a SBS command and read back a byte
-	 */
-	int get_OneBytesSBSReading(uint8_t sbscmd, uint8_t sbsreading);
-
-	/**
 	 * Send a SBS command and read back a two bytes
 	 */
-	int get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading);
+	int getTwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading);
 
 };
 
@@ -134,62 +129,62 @@ Bat_mon_1::measure()
 	struct sensor_bat_mon_s report;
 
 
-	if (OK != get_TwoBytesSBSReading(TEMPERATURE, &_temperature)){
+	if (OK != getTwoBytesSBSReading(TEMPERATURE, &_temperature)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(VOLTAGE, &_voltage)){
+	if (OK != getTwoBytesSBSReading(VOLTAGE, &_voltage)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(CURRENT, &_current)){
+	if (OK != getTwoBytesSBSReading(CURRENT, &_current)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(BATTERYSTATUS, &_batterystatus)){
+	if (OK != getTwoBytesSBSReading(BATTERYSTATUS, &_batterystatus)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(SERIALNUMBER, &_serialnumber)){
+	if (OK != getTwoBytesSBSReading(SERIALNUMBER, &_serialnumber)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(HOSTFETCONTROL, &_hostfetcontrol)){
+	if (OK != getTwoBytesSBSReading(HOSTFETCONTROL, &_hostfetcontrol)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE1, &_cellvoltage1)){
+	if (OK != getTwoBytesSBSReading(CELLVOLTAGE1, &_cellvoltage1)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE2, &_cellvoltage2)){
+	if (OK != getTwoBytesSBSReading(CELLVOLTAGE2, &_cellvoltage2)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE3, &_cellvoltage3)){
+	if (OK != getTwoBytesSBSReading(CELLVOLTAGE3, &_cellvoltage3)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE4, &_cellvoltage4)){
+	if (OK != getTwoBytesSBSReading(CELLVOLTAGE4, &_cellvoltage4)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE5, &_cellvoltage5)){
+	if (OK != getTwoBytesSBSReading(CELLVOLTAGE5, &_cellvoltage5)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
 
-	if (OK != get_TwoBytesSBSReading(CELLVOLTAGE6, &_cellvoltage6)){
+	if (OK != getTwoBytesSBSReading(CELLVOLTAGE6, &_cellvoltage6)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
@@ -259,26 +254,9 @@ Bat_mon_1::cycle()
 	}
 }
 
-/* Single Bytes of SBS command Reading */
+/* Two Bytes of SBS command reading */
 int
-Bat_mon_1::get_OneBytesSBSReading(uint8_t sbscmd, uint8_t sbsreading)
-{
-	uint8_t data;
-
-	/* fetch the raw value */
-	if (OK != transfer(&sbscmd, 1, &data, 2)) {
-		perf_count(_comms_errors);
-		return -EIO;
-	}
-
-	sbsreading = data;
-
-return OK;
-}
-
-/* Two Bytes of SBS command Reading */
-int
-Bat_mon_1::get_TwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading)
+Bat_mon_1::getTwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading)
 {
 	uint8_t data[2];
 	union {
@@ -304,7 +282,7 @@ return OK;
 int
 Bat_mon_1::deviceserialnumber()
 {
-	if (OK != get_TwoBytesSBSReading(SERIALNUMBER, &_serialnumber)){
+	if (OK != getTwoBytesSBSReading(SERIALNUMBER, &_serialnumber)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
