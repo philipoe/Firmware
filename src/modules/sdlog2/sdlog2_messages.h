@@ -647,6 +647,27 @@ struct log_POWS_s {					// *** Power sensors log message ***
 	float adc121_cs2_amp;			// board current sensor 2 readings in amps
 };
 
+#define LOG_BAT0_MSG 111
+#define LOG_BAT1_MSG 112
+#define LOG_BAT2_MSG 113
+struct log_BAT_s {					// *** Battery monitor sensors log message ***
+	uint64_t timestamp;					/**< Timestamp in microseconds since boot, of bat monitor 	*/
+
+	uint16_t temperature;				/**< battery monitor sensor temperature report in [0.1 K] 	*/
+	uint16_t voltage;					/**< battery monitor sensor voltage report in [mV] 			*/
+	uint16_t current;					/**< battery monitor sensor current report in [mA] 			*/
+	uint16_t batterystatus;				/**< battery monitor sensor battery status report in Hex 	*/
+	uint16_t serialnumber;				/**< battery monitor sensor serial number report in Hex 	*/
+	uint16_t hostfetcontrol;			/**< battery monitor sensor host FET control report in Hex 	*/
+	uint16_t cellvoltage1;				/**< battery monitor sensor cell 1 voltage  report in [mV] 	*/
+	uint16_t cellvoltage2;				/**< battery monitor sensor cell 2 voltage report in [mV] 	*/
+	uint16_t cellvoltage3;				/**< battery monitor sensor cell 3 voltage report in [mV] 	*/
+	uint16_t cellvoltage4;				/**< battery monitor sensor cell 4 voltage report in [mV] 	*/
+	uint16_t cellvoltage5;				/**< battery monitor sensor cell 5 voltage report in [mV] 	*/
+	uint16_t cellvoltage6;				/**< battery monitor sensor cell 6 voltage report in [mV] 	*/
+
+};
+
 /********** SYSTEM MESSAGES, ID > 0x80 **********/
 
 /* --- TIME - TIME STAMP --- */
@@ -725,6 +746,10 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(EKFV,  "Qffffffffffffffffffff", "t,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20"),
 	LOG_FORMAT(MPPT,  "QffffffHHHBBB", "t,Cur1,Cur2,Cur3,Volt1,Volt2,Volt3,PWM1,PWM2,PWM3,Stat1,Stat2,Stat3"),
 	LOG_FORMAT(POWS, "Qffff", "t,Main_Volt,Main_Cur,Cur1,Cur2"),
+	LOG_FORMAT_S(BAT0, BAT, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT_S(BAT1, BAT, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT_S(BAT2, BAT, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */
 	LOG_FORMAT(TIME, "Q", "StartTime"),
