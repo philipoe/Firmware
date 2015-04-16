@@ -318,7 +318,8 @@ void ASLAutopilot::update()
 
 	//Flaps/Spoilers on CH_FLAPS
 	if((counter%20==0) && (params->ASLC_DEBUG==31)) printf("flap switch: %.3f\n",(double)subs.manual_sp.flaps);
-	if(subs.manual_sp.flaps<-0.5f || ctrldata->bEngageSpoilers) subs.actuators.control[CH_FLAPS]=1.0f;
+	if(subs.manual_sp.flaps > 0.5f || ctrldata->bEngageSpoilers) subs.actuators.control[CH_FLAPS] = 1.0f;
+	else if(subs.manual_sp.flaps < -0.5f) subs.actuators.control[CH_FLAPS] = -1.0f;
 	else subs.actuators.control[CH_FLAPS]=0.0f;
 
 	if(0) {
