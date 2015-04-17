@@ -83,8 +83,8 @@
 # undef ERROR
 #endif
 
-/* Measurement rate is 1Hz */
-#define MEAS_RATE 1
+/* Measurement rate is 2Hz */
+#define MEAS_RATE 2
 #define CONVERSION_INTERVAL	(1000000 / MEAS_RATE)	/* microseconds */
 
 #define SERIAL_NUMBER_BAT_MON_2 1

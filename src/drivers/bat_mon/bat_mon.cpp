@@ -298,7 +298,7 @@ Bat_mon::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 	case SENSORIOCRESET:
 		/* XXX implement this */
-		return -EINVAL;
+		return OK;
 
 	default:
 		/* give it to the superclass */
