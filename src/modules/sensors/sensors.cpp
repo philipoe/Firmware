@@ -1748,7 +1748,8 @@ Sensors::bat_mon_poll(struct bat_mon_s &raw_bat_mon)
 		}
 	}
 
-	if (bat_mon_sensor_updated[0] || bat_mon_sensor_updated[1] || bat_mon_sensor_updated[2]) {
+	//if (bat_mon_sensor_updated[0] || bat_mon_sensor_updated[1] || bat_mon_sensor_updated[2]) {
+	if (bat_mon_sensor_updated[0]) {
 		/* announce the power data if needed just publish else */
 		if (_bat_mon_pub > 0)
 			orb_publish(ORB_ID(sensor_bat_mon), _bat_mon_pub, &raw_bat_mon);

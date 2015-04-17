@@ -650,9 +650,8 @@ struct log_POWS_s {					// *** Power sensors log message ***
 #define LOG_BAT0_MSG 111
 #define LOG_BAT1_MSG 112
 #define LOG_BAT2_MSG 113
-struct log_BAT_s {					// *** Battery monitor sensors log message ***
+struct log_BATM_s {						// *** Battery monitor sensors log message ***
 	uint64_t timestamp;					/**< Timestamp in microseconds since boot, of bat monitor 	*/
-
 	uint16_t temperature;				/**< battery monitor sensor temperature report in [0.1 K] 	*/
 	uint16_t voltage;					/**< battery monitor sensor voltage report in [mV] 			*/
 	uint16_t current;					/**< battery monitor sensor current report in [mA] 			*/
@@ -746,9 +745,9 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(EKFV,  "Qffffffffffffffffffff", "t,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20"),
 	LOG_FORMAT(MPPT,  "QffffffHHHBBB", "t,Cur1,Cur2,Cur3,Volt1,Volt2,Volt3,PWM1,PWM2,PWM3,Stat1,Stat2,Stat3"),
 	LOG_FORMAT(POWS, "Qffff", "t,Main_Volt,Main_Cur,Cur1,Cur2"),
-	LOG_FORMAT_S(BAT0, BAT, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
-	LOG_FORMAT_S(BAT1, BAT, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
-	LOG_FORMAT_S(BAT2, BAT, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT_S(BAT0, BATM, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT_S(BAT1, BATM, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT_S(BAT2, BATM, "QHHHHHHHHHHHH", "t,Temp,V_bat,I_bat,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */
