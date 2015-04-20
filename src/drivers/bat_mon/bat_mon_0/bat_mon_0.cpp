@@ -125,7 +125,7 @@ Bat_mon_0::measure()
 	/* read the most recent measurement */
 	perf_begin(_sample_perf);
 
-	struct sensor_bat_mon_s report;
+	struct bat_mon_s report;
 
 
 	if (OK != getTwoBytesSBSReading(TEMPERATURE, &_temperature)){

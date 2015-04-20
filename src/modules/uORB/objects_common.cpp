@@ -76,6 +76,11 @@ ORB_DEFINE(sensor_adc121_cspb, struct adc121_cspb_report);
 ORB_DEFINE(sensor_adc121_cs1,  struct adc121_cs1_report);
 ORB_DEFINE(sensor_adc121_cs2,  struct adc121_cs2_report);
 
+#include <drivers/drv_bat_mon.h>
+ORB_DEFINE(sensor_bat_mon_0, struct bat_mon_report);
+ORB_DEFINE(sensor_bat_mon_1, struct bat_mon_report);
+ORB_DEFINE(sensor_bat_mon_2, struct bat_mon_report);
+
 #include <drivers/drv_range_finder.h>
 ORB_DEFINE(sensor_range_finder, struct range_finder_report);
 
@@ -101,10 +106,10 @@ ORB_DEFINE(sensor_mppt, struct sensor_mppt_s);
 ORB_DEFINE(sensor_power, struct sensor_power_s);
 
 #include "topics/sensor_bat_mon.h"
-ORB_DEFINE(sensor_bat_mon, struct bat_mon_s);
-ORB_DEFINE(sensor_bat_mon_0, struct sensor_bat_mon_s);
-ORB_DEFINE(sensor_bat_mon_1, struct sensor_bat_mon_s);
-ORB_DEFINE(sensor_bat_mon_2, struct sensor_bat_mon_s);
+ORB_DEFINE(sensor_bat_mon, struct sensor_bat_mon_s);
+
+#include "topics/bat_mon.h"
+ORB_DEFINE(bat_mon, struct bat_mon_s);
 
 #include "topics/vehicle_attitude.h"
 ORB_DEFINE(vehicle_attitude, struct vehicle_attitude_s);

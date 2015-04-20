@@ -2488,43 +2488,41 @@ public:
 	}
 
 private:
-	MavlinkOrbSubscription *_batmon_data_sub[MAX_NUM_BAT_MON_SENSORS];
-	uint64_t _batmon_data_time[MAX_NUM_BAT_MON_SENSORS];
+	MavlinkOrbSubscription *_batmon_data_sub;
+	uint64_t _batmon_data_time;
 
 	/* do not allow top copying this class */
 	MavlinkStreamSensBatmonData(MavlinkStreamSensBatmonData &);
 	MavlinkStreamSensBatmonData& operator = (const MavlinkStreamSensBatmonData &);
 
-protected:
-	explicit MavlinkStreamSensBatmonData(Mavlink *mavlink) : MavlinkStream(mavlink)
-	{
-		for(int i=0;i<MAX_NUM_BAT_MON_SENSORS;i++) {
-			_batmon_data_sub[i] = _mavlink->add_orb_subscription(sensor_bat_mon_orb_id[i]);
-			_batmon_data_time[i] = 0;
-		}
-	}
 
+protected:
+
+	explicit MavlinkStreamSensBatmonData(Mavlink *mavlink) : MavlinkStream(mavlink),
+	_batmon_data_sub(_mavlink->add_orb_subscription(ORB_ID(sensor_bat_mon))),
+	_batmon_data_time(0)
+	{}
 	void send(const hrt_abstime t)
 	{
 		struct sensor_bat_mon_s bat_mon_data;
 
-		for(int i=0;i<MAX_NUM_BAT_MON_SENSORS;i++) {
-			if (_batmon_data_sub[i]->update(&_batmon_data_time[i], &bat_mon_data)) {
+		if (_batmon_data_sub->update(&_batmon_data_time, &bat_mon_data)) {
+			for(int i=0;i<MAX_NUM_BAT_MON_SENSORS;i++) {
 
 				mavlink_sens_batmon_t msg;
 
-				msg.temperature=bat_mon_data.temperature;
-				msg.voltage=bat_mon_data.voltage;
-				msg.current=bat_mon_data.current;
-				msg.batterystatus=bat_mon_data.batterystatus;
-				msg.serialnumber=bat_mon_data.serialnumber;
-				msg.hostfetcontrol=bat_mon_data.hostfetcontrol;
-				msg.cellvoltage1=bat_mon_data.cellvoltage1;
-				msg.cellvoltage2=bat_mon_data.cellvoltage2;
-				msg.cellvoltage3=bat_mon_data.cellvoltage3;
-				msg.cellvoltage4=bat_mon_data.cellvoltage4;
-				msg.cellvoltage5=bat_mon_data.cellvoltage5;
-				msg.cellvoltage6=bat_mon_data.cellvoltage6;
+				msg.temperature=bat_mon_data.temperature[i];
+				msg.voltage=bat_mon_data.voltage[i];
+				msg.current=bat_mon_data.current[i];
+				msg.batterystatus=bat_mon_data.batterystatus[i];
+				msg.serialnumber=bat_mon_data.serialnumber[i];
+				msg.hostfetcontrol=bat_mon_data.hostfetcontrol[i];
+				msg.cellvoltage1=bat_mon_data.cellvoltage1[i];
+				msg.cellvoltage2=bat_mon_data.cellvoltage2[i];
+				msg.cellvoltage3=bat_mon_data.cellvoltage3[i];
+				msg.cellvoltage4=bat_mon_data.cellvoltage4[i];
+				msg.cellvoltage5=bat_mon_data.cellvoltage5[i];
+				msg.cellvoltage6=bat_mon_data.cellvoltage6[i];
 
 				uint8_t component_id = 150+i;
 				_mavlink->send_message(MAVLINK_MSG_ID_SENS_BATMON, &msg,component_id);

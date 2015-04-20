@@ -971,7 +971,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct state_estimator_EKF_parameters_s ekf;
 		struct sensor_mppt_s mppt;
 		struct sensor_power_s power;
-		struct bat_mon_s bat_mon;
+		struct sensor_bat_mon_s bat_mon;
 
 	} buf;
 

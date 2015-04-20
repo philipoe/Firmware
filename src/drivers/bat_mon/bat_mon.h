@@ -72,7 +72,7 @@
 #include <drivers/device/ringbuffer.h>
 
 #include <uORB/uORB.h>
-#include <uORB/topics/sensor_bat_mon.h>
+#include <uORB/topics/bat_mon.h>
 #include <uORB/topics/subsystem_info.h>
 
 /* Default I2C bus */
@@ -195,7 +195,7 @@ protected:
 	/**
 	* add a new report to the reports queue
 	*
-	* @param report		sensor_bat_mon_s report
+	* @param report		bat_mon_s report
 	*/
-	void	new_report(const sensor_bat_mon_s &report);
+	void	new_report(const bat_mon_s &report);
 };

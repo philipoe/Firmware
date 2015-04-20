@@ -72,7 +72,6 @@ struct bat_mon_report {
 /*
  * ObjDev tag for raw voltage and current data.
  */
-ORB_DECLARE(sensor_bat_mon);
 ORB_DECLARE(sensor_bat_mon_0);
 ORB_DECLARE(sensor_bat_mon_1);
 ORB_DECLARE(sensor_bat_mon_2);
@@ -82,11 +81,8 @@ ORB_DECLARE(sensor_bat_mon_2);
  * ioctl() definitions
 */
 
-#define _VOLTAGECURRENTIOCBASE		(0x2e00)
-#define _VOLTAGECURRENTIOC(_n)		(_IOC(_VOLTAGECURRENTIOCBASE, _n))
-
-/** set ... */
-//#define VSPBIOCSSCALE	_VOLTAGECURRENTIOC(0)
+#define _BATMONIOCBASE		(0x2e00)
+#define _BATMONIOC(_n)		(_IOC(_BATMONIOCBASE, _n))
 
 
 #endif /* _DRV_BAT_MON_H */

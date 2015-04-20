@@ -163,6 +163,12 @@
 #endif
 static const int ERROR = -1;
 
+static const struct orb_metadata *sensor_bat_mon_orb_id[MAX_NUM_BAT_MON_SENSORS] = {
+	ORB_ID(sensor_bat_mon_0),
+	ORB_ID(sensor_bat_mon_1),
+	ORB_ID(sensor_bat_mon_2),
+};
+
 //uint32_t last_baro_counter = 0;
 ///
 
@@ -560,7 +566,7 @@ private:
 	 * @param raw_bat_mon			battery monitor sensor data structure into which
 	 *				data should be returned.
 	 */
-	void		bat_mon_poll(struct bat_mon_s &raw_bat_mon);
+	void		bat_mon_poll(struct sensor_bat_mon_s &raw_bat_mon);
 
 	/**
 	 * Poll the differential pressure sensor for updated data.
@@ -1719,13 +1725,11 @@ Sensors::mppt_poll(struct sensor_mppt_s &raw_mppt)
 }
 
 void
-Sensors::bat_mon_poll(struct bat_mon_s &raw_bat_mon)
+Sensors::bat_mon_poll(struct sensor_bat_mon_s &raw_bat_mon)
 {
-	bool bat_mon_sensor_updated[3];
+	bool bat_mon_sensor_updated[MAX_NUM_BAT_MON_SENSORS] = {false,false,false};
 
-	raw_bat_mon.timestamp = hrt_absolute_time();
-
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < MAX_NUM_BAT_MON_SENSORS; i++) {
 		orb_check(_bat_mon_sub[i], &bat_mon_sensor_updated[i]);
 
 		if (bat_mon_sensor_updated[i]) {
@@ -1748,8 +1752,8 @@ Sensors::bat_mon_poll(struct bat_mon_s &raw_bat_mon)
 		}
 	}
 
-	//if (bat_mon_sensor_updated[0] || bat_mon_sensor_updated[1] || bat_mon_sensor_updated[2]) {
 	if (bat_mon_sensor_updated[0]) {
+		raw_bat_mon.timestamp = hrt_absolute_time();
 		/* announce the power data if needed just publish else */
 		if (_bat_mon_pub > 0)
 			orb_publish(ORB_ID(sensor_bat_mon), _bat_mon_pub, &raw_bat_mon);
@@ -2381,7 +2385,7 @@ Sensors::task_main()
 	memset(&raw_mppt, 0, sizeof(raw_mppt));
 	struct sensor_power_s raw_power;
 	memset(&raw_power, 0, sizeof(raw_power));
-	struct bat_mon_s raw_bat_mon;
+	struct sensor_bat_mon_s raw_bat_mon;
 	memset(&raw_bat_mon, 0, sizeof(raw_bat_mon));
 
 	raw.timestamp = hrt_absolute_time();

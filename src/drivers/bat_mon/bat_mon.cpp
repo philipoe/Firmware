@@ -140,7 +140,7 @@ Bat_mon::init()
 		goto out;
 
 	/* allocate basic report buffers */
-	_reports = new RingBuffer(2, sizeof(sensor_bat_mon_s));
+	_reports = new RingBuffer(2, sizeof(bat_mon_s));
 	if (_reports == nullptr)
 		goto out;
 
@@ -152,7 +152,7 @@ Bat_mon::init()
 	if (_class_instance == CLASS_DEVICE_PRIMARY) {
 
 		/* advertise sensor topic, measure manually to initialize valid report */
-		struct sensor_bat_mon_s arp;
+		struct bat_mon_s arp;
 		measure();
 		_reports->get(&arp);
 
@@ -166,7 +166,7 @@ Bat_mon::init()
 	if (_class_instance == CLASS_DEVICE_SECONDARY) {
 
 		/* advertise sensor topic, measure manually to initialize valid report */
-		struct sensor_bat_mon_s arp;
+		struct bat_mon_s arp;
 		measure();
 		_reports->get(&arp);
 
@@ -180,7 +180,7 @@ Bat_mon::init()
 	if (_class_instance == CLASS_DEVICE_TERTIARY) {
 
 		/* advertise sensor topic, measure manually to initialize valid report */
-		struct sensor_bat_mon_s arp;
+		struct bat_mon_s arp;
 		measure();
 		_reports->get(&arp);
 
@@ -309,8 +309,8 @@ Bat_mon::ioctl(struct file *filp, int cmd, unsigned long arg)
 ssize_t
 Bat_mon::read(struct file *filp, char *buffer, size_t buflen)
 {
-	unsigned count = buflen / sizeof(sensor_bat_mon_s);
-	sensor_bat_mon_s *abuf = reinterpret_cast<sensor_bat_mon_s *>(buffer);
+	unsigned count = buflen / sizeof(bat_mon_s);
+	bat_mon_s *abuf = reinterpret_cast<bat_mon_s *>(buffer);
 	int ret = 0;
 
 	/* buffer must be large enough */
@@ -402,7 +402,7 @@ Bat_mon::print_info()
 }
 
 void
-Bat_mon::new_report(const sensor_bat_mon_s &report)
+Bat_mon::new_report(const bat_mon_s &report)
 {
 	if (!_reports->force(&report))
 		perf_count(_buffer_overflows);

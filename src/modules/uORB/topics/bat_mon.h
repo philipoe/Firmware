@@ -34,13 +34,13 @@
  ****************************************************************************/
 
 /**
- * @file sensor_bat_mon.h
+ * @file bat_mon.h
  * Definition of the sensor_power uORB topic. This is for battery monitoring/
  * sensors that extend the PX4-onboard sensors.
  */
 
-#ifndef SENSOR_BAT_MON_H_
-#define SENSOR_BAT_MON_H_
+#ifndef BAT_MON_H_
+#define BAT_MON_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -62,10 +62,7 @@
  *
  */
 
-/* register this as object request broker structure */
-#define MAX_NUM_BAT_MON_SENSORS 3
-
-struct sensor_bat_mon_s {
+struct bat_mon_s {
 
 	/*
 	 * Actual data, this is specific to the type of data which is stored in this struct
@@ -75,18 +72,18 @@ struct sensor_bat_mon_s {
 
 	uint64_t timestamp;					/**< Timestamp in microseconds since boot, of bat monitor 	*/
 
-	uint16_t temperature[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor temperature report in [0.1 K] 	*/
-	uint16_t voltage[MAX_NUM_BAT_MON_SENSORS];					/**< battery monitor sensor voltage report in [mV] 			*/
-	uint16_t current[MAX_NUM_BAT_MON_SENSORS];					/**< battery monitor sensor current report in [mA] 			*/
-	uint16_t batterystatus[MAX_NUM_BAT_MON_SENSORS];			/**< battery monitor sensor battery status report in Hex 	*/
-	uint16_t serialnumber[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor serial number report in Hex 	*/
-	uint16_t hostfetcontrol[MAX_NUM_BAT_MON_SENSORS];			/**< battery monitor sensor host FET control report in Hex 	*/
-	uint16_t cellvoltage1[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor cell 1 voltage  report in [mV] 	*/
-	uint16_t cellvoltage2[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor cell 2 voltage report in [mV] 	*/
-	uint16_t cellvoltage3[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor cell 3 voltage report in [mV] 	*/
-	uint16_t cellvoltage4[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor cell 4 voltage report in [mV] 	*/
-	uint16_t cellvoltage5[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor cell 5 voltage report in [mV] 	*/
-	uint16_t cellvoltage6[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor cell 6 voltage report in [mV] 	*/
+	uint16_t temperature;				/**< battery monitor sensor temperature report in [0.1 K] 	*/
+	uint16_t voltage;					/**< battery monitor sensor voltage report in [mV] 			*/
+	uint16_t current;					/**< battery monitor sensor current report in [mA] 			*/
+	uint16_t batterystatus;				/**< battery monitor sensor battery status report in Hex 	*/
+	uint16_t serialnumber;				/**< battery monitor sensor serial number report in Hex 	*/
+	uint16_t hostfetcontrol;			/**< battery monitor sensor host FET control report in Hex 	*/
+	uint16_t cellvoltage1;				/**< battery monitor sensor cell 1 voltage  report in [mV] 	*/
+	uint16_t cellvoltage2;				/**< battery monitor sensor cell 2 voltage report in [mV] 	*/
+	uint16_t cellvoltage3;				/**< battery monitor sensor cell 3 voltage report in [mV] 	*/
+	uint16_t cellvoltage4;				/**< battery monitor sensor cell 4 voltage report in [mV] 	*/
+	uint16_t cellvoltage5;				/**< battery monitor sensor cell 5 voltage report in [mV] 	*/
+	uint16_t cellvoltage6;				/**< battery monitor sensor cell 6 voltage report in [mV] 	*/
 
 };
 
@@ -94,6 +91,7 @@ struct sensor_bat_mon_s {
  * @}
  */
 
-ORB_DECLARE(sensor_bat_mon);
+
+ORB_DECLARE(bat_mon);
 
 #endif
