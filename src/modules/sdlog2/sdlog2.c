@@ -1931,24 +1931,23 @@ int sdlog2_thread_main(int argc, char *argv[])
 		}
 
 		/* --- Battery monitor sensor data --- */
-			if (copy_if_updated(ORB_ID(sensor_bat_mon), subs.bat_mon_sub, &buf.bat_mon) && pLogEnabler.LOG_BATMON) {
-				for (int i = 0; i < MAX_NUM_BAT_MON_SENSORS; i++) {
-				log_msg.msg_type = LOG_BAT0_MSG+i;
-				log_msg.body.log_BATM.timestamp = buf.bat_mon.timestamp;
-				log_msg.body.log_BATM.temperature = buf.bat_mon.temperature[i];
-				log_msg.body.log_BATM.voltage = buf.bat_mon.voltage[i];
-				log_msg.body.log_BATM.current = buf.bat_mon.current[i];
-				log_msg.body.log_BATM.batterystatus = buf.bat_mon.batterystatus[i];
-				log_msg.body.log_BATM.serialnumber = buf.bat_mon.serialnumber[i];
-				log_msg.body.log_BATM.hostfetcontrol = buf.bat_mon.hostfetcontrol[i];
-				log_msg.body.log_BATM.cellvoltage1 = buf.bat_mon.cellvoltage1[i];
-				log_msg.body.log_BATM.cellvoltage2 = buf.bat_mon.cellvoltage2[i];
-				log_msg.body.log_BATM.cellvoltage3 = buf.bat_mon.cellvoltage3[i];
-				log_msg.body.log_BATM.cellvoltage4 = buf.bat_mon.cellvoltage4[i];
-				log_msg.body.log_BATM.cellvoltage5 = buf.bat_mon.cellvoltage5[i];
-				log_msg.body.log_BATM.cellvoltage6 = buf.bat_mon.cellvoltage6[i];
-				LOGBUFFER_WRITE_AND_COUNT(BATM);
-				//warnx("Bat_mon_%d: %11d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d %6d",i,buf.bat_mon.timestamp, buf.bat_mon.temperature[i],buf.bat_mon.voltage[i],buf.bat_mon.current[i],buf.bat_mon.batterystatus[i],buf.bat_mon.serialnumber[i],buf.bat_mon.hostfetcontrol[i],buf.bat_mon.cellvoltage1[i],buf.bat_mon.cellvoltage2[i],buf.bat_mon.cellvoltage3[i],buf.bat_mon.cellvoltage4[i],buf.bat_mon.cellvoltage5[i],buf.bat_mon.cellvoltage6[i]);
+		if (copy_if_updated(ORB_ID(sensor_bat_mon), subs.bat_mon_sub, &buf.bat_mon) && pLogEnabler.LOG_BATMON) {
+			for (int i = 0; i < MAX_NUM_BAT_MON_SENSORS; i++) {
+			log_msg.msg_type = LOG_BAT0_MSG+i;
+			log_msg.body.log_BATM.timestamp = buf.bat_mon.timestamp;
+			log_msg.body.log_BATM.temperature = buf.bat_mon.temperature[i];
+			log_msg.body.log_BATM.voltage = buf.bat_mon.voltage[i];
+			log_msg.body.log_BATM.current = buf.bat_mon.current[i];
+			log_msg.body.log_BATM.batterystatus = buf.bat_mon.batterystatus[i];
+			log_msg.body.log_BATM.serialnumber = buf.bat_mon.serialnumber[i];
+			log_msg.body.log_BATM.hostfetcontrol = buf.bat_mon.hostfetcontrol[i];
+			log_msg.body.log_BATM.cellvoltage1 = buf.bat_mon.cellvoltage1[i];
+			log_msg.body.log_BATM.cellvoltage2 = buf.bat_mon.cellvoltage2[i];
+			log_msg.body.log_BATM.cellvoltage3 = buf.bat_mon.cellvoltage3[i];
+			log_msg.body.log_BATM.cellvoltage4 = buf.bat_mon.cellvoltage4[i];
+			log_msg.body.log_BATM.cellvoltage5 = buf.bat_mon.cellvoltage5[i];
+			log_msg.body.log_BATM.cellvoltage6 = buf.bat_mon.cellvoltage6[i];
+			LOGBUFFER_WRITE_AND_COUNT(BATM);
 			}
 		}
 

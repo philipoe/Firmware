@@ -73,7 +73,6 @@
 
 #include <uORB/uORB.h>
 #include <uORB/topics/sensor_bat_mon.h>
-#include <uORB/topics/subsystem_info.h>
 
 #include <drivers/bat_mon/bat_mon.h>
 
@@ -205,7 +204,6 @@ Bat_mon::probe()
 	   needed
 	*/
 	_retries = 4;
-	//int ret = measure();
 	int ret = deviceserialnumber();
 	_retries = 0;
 	return ret;

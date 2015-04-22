@@ -130,8 +130,6 @@ protected:
 	//void update_status();
 
 	work_s			_work;
-	//bool			_sensor_ok;
-	//bool			_last_published_sensor_ok;
 	int				_measure_ticks;
 	bool			_collect_phase;
 	bool			_measurement_phase;

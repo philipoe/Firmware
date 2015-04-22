@@ -71,8 +71,6 @@
 
 #include <uORB/uORB.h>
 #include <uORB/topics/sensor_bat_mon.h>
-#include <uORB/topics/subsystem_info.h>
-#include <uORB/topics/system_power.h>
 
 #include <drivers/bat_mon/bat_mon.h>
 
@@ -93,7 +91,7 @@
 class Bat_mon_1 : public Bat_mon
 {
 public:
-	Bat_mon_1(int bus, int address = (SMBTAR_ADDCONF >> 1), const char *path = BAT_MON_1_DEVICE_PATH);//(int bus);
+	Bat_mon_1(int bus, int address = (SMBTAR_ADDCONF >> 1), const char *path = BAT_MON_1_DEVICE_PATH);
 
 protected:
 
@@ -517,7 +515,6 @@ bat_mon_1_main(int argc, char *argv[])
 		bat_mon_1::info();
 	}
 
-	//errx(1, "unrecognised command, try 'start', 'test', 'reset' or 'info'");
 	bat_mon_1_usage();
 	exit(0);
 }

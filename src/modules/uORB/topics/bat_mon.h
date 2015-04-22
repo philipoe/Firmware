@@ -52,26 +52,12 @@
  */
 
 /**
- * Sensor readings in raw and SI-unit form.
- *
- * These values are read from the sensors. Raw values are in sensor-specific units,
- * the scaled values are in SI-units, as visible from the ending of the variable
- * or the comments. The use of the SI fields is in general advised, as these fields
- * are scaled and offset-compensated where possible and do not change with board
- * revisions and sensor updates.
- *
+ * Battery monitor sensor topics
  */
 
 struct bat_mon_s {
 
-	/*
-	 * Actual data, this is specific to the type of data which is stored in this struct
-	 * A line containing L0GME will be added by the Python logging code generator to the
-	 * logged dataset.
-	 */
-
 	uint64_t timestamp;					/**< Timestamp in microseconds since boot, of bat monitor 	*/
-
 	uint16_t temperature;				/**< battery monitor sensor temperature report in [0.1 K] 	*/
 	uint16_t voltage;					/**< battery monitor sensor voltage report in [mV] 			*/
 	uint16_t current;					/**< battery monitor sensor current report in [mA] 			*/
@@ -84,7 +70,6 @@ struct bat_mon_s {
 	uint16_t cellvoltage4;				/**< battery monitor sensor cell 4 voltage report in [mV] 	*/
 	uint16_t cellvoltage5;				/**< battery monitor sensor cell 5 voltage report in [mV] 	*/
 	uint16_t cellvoltage6;				/**< battery monitor sensor cell 6 voltage report in [mV] 	*/
-
 };
 
 /**
