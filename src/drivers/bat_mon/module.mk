@@ -36,5 +36,4 @@
 #
 
 SRCS				= bat_mon.cpp
-#MAXOPTIMIZATION	 	= -Os
-MAXOPTIMIZATION	 	= -O0
+MAXOPTIMIZATION	 	= -Os
