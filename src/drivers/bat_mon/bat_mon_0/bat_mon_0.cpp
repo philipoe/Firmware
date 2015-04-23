@@ -191,8 +191,8 @@ Bat_mon_0::measure()
 	/* generate a new report */
 	report.timestamp 		= hrt_absolute_time();		/* report timestamp		*/
 	report.temperature	  	= _temperature;				/* report in [0.1 K]  	*/
-	report.voltage 		  	= _voltage;					/* report in [mA] 	   	*/
-	report.current 		  	= _current;					/* report in Hex word  	*/
+	report.voltage 		  	= _voltage;					/* report in [mV] 	   	*/
+	report.current 		  	= (int16_t)_current;		/* report in [mA]  		*/
 	report.batterystatus  	= _batterystatus;			/* report in Hex word  	*/
 	report.serialnumber   	= _serialnumber;			/* report in uint word 	*/
 	report.hostfetcontrol 	= _hostfetcontrol;			/* report in Hex word  	*/
