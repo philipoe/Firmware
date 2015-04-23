@@ -56,7 +56,7 @@ struct bat_mon_report {
 	uint64_t  timestamp;
 	uint16_t  temperature;
 	uint16_t  voltage;
-	uint16_t  current;
+	int16_t   current;
 	uint16_t  batterystatus;
 	uint16_t  serialnumber;
 	uint16_t  hostfetcontrol;

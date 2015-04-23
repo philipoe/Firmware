@@ -60,7 +60,7 @@ struct bat_mon_s {
 	uint64_t timestamp;					/**< Timestamp in microseconds since boot, of bat monitor 	*/
 	uint16_t temperature;				/**< battery monitor sensor temperature report in [0.1 K] 	*/
 	uint16_t voltage;					/**< battery monitor sensor voltage report in [mV] 			*/
-	uint16_t current;					/**< battery monitor sensor current report in [mA] 			*/
+	int16_t  current;					/**< battery monitor sensor current report in [mA] 			*/
 	uint16_t batterystatus;				/**< battery monitor sensor battery status report in Hex 	*/
 	uint16_t serialnumber;				/**< battery monitor sensor serial number report in Hex 	*/
 	uint16_t hostfetcontrol;			/**< battery monitor sensor host FET control report in Hex 	*/
