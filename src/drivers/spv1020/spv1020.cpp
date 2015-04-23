@@ -275,7 +275,7 @@ private:
 extern "C" __EXPORT int spv1020_main(int argc, char *argv[]);
 
 SPV1020::SPV1020(int bus) :
-	I2C("SPV1020", SPV1020_DEVICE_PATH, bus, 0, 400000),
+	I2C("SPV1020", SPV1020_DEVICE_PATH, bus, 0, 100000),
 	_measure_ticks(0),
 	_num_reports(0),
 	_next_report(0),

@@ -123,7 +123,7 @@ MS5611_i2c_interface(ms5611::prom_u &prom_buf)
 }
 
 MS5611_I2C::MS5611_I2C(int bus, ms5611::prom_u &prom) :
-	I2C("MS5611_I2C", nullptr, bus, 0, 400000),
+	I2C("MS5611_I2C", nullptr, bus, 0, 100000),
 	_prom(prom)
 {
 }

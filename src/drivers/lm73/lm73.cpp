@@ -220,7 +220,7 @@ extern "C" __EXPORT int lm73_main(int argc, char *argv[]);
 
 
 LM73::LM73(int bus) :
-	I2C("LM73", LM73_DEVICE_PATH, bus, 0, 400000),
+	I2C("LM73", LM73_DEVICE_PATH, bus, 0, 100000),
 	_measure_ticks(0),
 	_num_reports(0),
 	_next_report(0),

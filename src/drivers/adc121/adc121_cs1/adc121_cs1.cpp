@@ -222,7 +222,7 @@ extern "C" __EXPORT int adc121_cs1_main(int argc, char *argv[]);
 
 
 ADC121_CS1::ADC121_CS1(int bus) :
-	I2C("ADC121_CS1", ADC121_CS1_DEVICE_PATH, bus, 0, 400000),							/* set I2C rate to 400KHz */
+	I2C("ADC121_CS1", ADC121_CS1_DEVICE_PATH, bus, 0, 100000),							/* set I2C rate to 100KHz */
 	_measure_ticks(0),
 	_num_reports(0),
 	_next_report(0),
