@@ -2531,6 +2531,65 @@ protected:
 	}
 };
 
+class MavlinkStreamSensAtmosData : public MavlinkStream
+{
+public:
+	const char *get_name() const
+	{
+		return MavlinkStreamSensAtmosData::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "SENS_ATMOS";
+	}
+
+	uint8_t get_id()
+	{
+		return MAVLINK_MSG_ID_SENS_ATMOS;
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamSensAtmosData(mavlink);
+	}
+
+	unsigned get_size()
+	{
+		return MAVLINK_MSG_ID_SENS_ATMOS_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_sens_atmos_data_sub;
+	uint64_t _sens_atmos_data_time;
+
+	/* do not allow top copying this class */
+	MavlinkStreamSensAtmosData(MavlinkStreamSensAtmosData &);
+	MavlinkStreamSensAtmosData& operator = (const MavlinkStreamSensAtmosData &);
+
+protected:
+	explicit MavlinkStreamSensAtmosData(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_sens_atmos_data_sub(_mavlink->add_orb_subscription(ORB_ID(sensor_combined))),
+		_sens_atmos_data_time(0)
+	{}
+
+	void send(const hrt_abstime t)
+	{
+		struct sensor_combined_s sensor_combined_data;
+
+		if (_sens_atmos_data_sub->update(&_sens_atmos_data_time, &sensor_combined_data)) {
+
+			mavlink_sens_atmos_t msg;
+
+			msg.TempAmbient = sensor_combined_data.amb_temp_celcius;
+			msg.Humidity = 0.0f;
+
+			_mavlink->send_message(MAVLINK_MSG_ID_SENS_ATMOS, &msg);
+
+		}
+	}
+};
+
 StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamHeartbeat::new_instance, &MavlinkStreamHeartbeat::get_name_static),
 	new StreamListItem(&MavlinkStreamStatustext::new_instance, &MavlinkStreamStatustext::get_name_static),
@@ -2565,6 +2624,7 @@ StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamAslmpptData::new_instance, &MavlinkStreamAslmpptData::get_name_static),
 	new StreamListItem(&MavlinkStreamAslpowerData::new_instance, &MavlinkStreamAslpowerData::get_name_static),
 	new StreamListItem(&MavlinkStreamSensBatmonData::new_instance, &MavlinkStreamSensBatmonData::get_name_static),
+	new StreamListItem(&MavlinkStreamSensAtmosData::new_instance, &MavlinkStreamSensAtmosData::get_name_static),
 
 	nullptr
 };
