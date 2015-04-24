@@ -90,8 +90,7 @@
 class Bat_mon_0 : public Bat_mon
 {
 public:
-	//Bat_mon_0(int bus, int address = (SMBTAR_ADDR0 >> 1), const char *path = BAT_MON_0_DEVICE_PATH);
-	Bat_mon_0(int bus, int address = (SMBTAR_ADDCONF >> 1), const char *path = BAT_MON_0_DEVICE_PATH);
+	Bat_mon_0(int bus, int address = (SMBTAR_ADDR0 >> 1), const char *path = BAT_MON_0_DEVICE_PATH);
 
 protected:
 
@@ -346,9 +345,7 @@ start(int i2c_bus)
 		errx(1, "already started");
 
 	/* create the driver */
-	//g_dev = new Bat_mon_0(i2c_bus, (SMBTAR_ADDR0 >> 1), BAT_MON_0_DEVICE_PATH);
-	g_dev = new Bat_mon_0(i2c_bus, (SMBTAR_ADDCONF >> 1), BAT_MON_0_DEVICE_PATH);
-
+	g_dev = new Bat_mon_0(i2c_bus, (SMBTAR_ADDR0 >> 1), BAT_MON_0_DEVICE_PATH);
 
 	if (g_dev == nullptr)
 		goto fail;
