@@ -85,7 +85,7 @@
 #define MEAS_RATE 2
 #define CONVERSION_INTERVAL	(1000000 / MEAS_RATE)	/* microseconds */
 
-#define SERIAL_NUMBER_BAT_MON_2 1
+#define SERIAL_NUMBER_BAT_MON_2 2
 
 class Bat_mon_2 : public Bat_mon
 {
