@@ -101,7 +101,12 @@ protected:
 	virtual int	deviceserialnumber();
 
 	/**
-	 * Send a SBS command and read back a two bytes
+	 * Send a SBS command for read back a single byte
+	 */
+	int	getOneBytesSBSReading(uint8_t sbscmd, uint8_t *sbsreading);
+
+	/**
+	 * Send a SBS command for read back a two bytes
 	 */
 	int getTwoBytesSBSReading(uint8_t sbscmd, uint16_t *sbsreading);
 
@@ -138,6 +143,11 @@ Bat_mon_0::measure()
 	}
 
 	if (OK != getTwoBytesSBSReading(CURRENT, &_current)){
+		perf_count(_comms_errors);
+		return -EIO;
+	}
+
+	if (OK != getOneBytesSBSReading(ABSOLUTESTATEOFCHARGE, &_stateofcharge)){
 		perf_count(_comms_errors);
 		return -EIO;
 	}
@@ -193,6 +203,7 @@ Bat_mon_0::measure()
 	report.temperature	  	= _temperature;				/* report in [0.1 K]  	*/
 	report.voltage 		  	= _voltage;					/* report in [mV] 	   	*/
 	report.current 		  	= (int16_t)_current;		/* report in [mA]  		*/
+	report.stateofcharge  	= _stateofcharge;			/* report in uint [%]  	*/
 	report.batterystatus  	= _batterystatus;			/* report in Hex word  	*/
 	report.serialnumber   	= _serialnumber;			/* report in uint word 	*/
 	report.hostfetcontrol 	= _hostfetcontrol;			/* report in Hex word  	*/
@@ -250,6 +261,23 @@ Bat_mon_0::cycle()
 			   this,
 			   _measure_ticks);
 	}
+}
+
+/* Single Bytes of SBS command Reading */
+int
+Bat_mon_0::getOneBytesSBSReading(uint8_t sbscmd, uint8_t *sbsreading)
+{
+	uint8_t data;
+
+	/* fetch the raw value */
+	if (OK != transfer(&sbscmd, 1, &data, 1)) {
+		perf_count(_comms_errors);
+		return -EIO;
+	}
+
+	*sbsreading = data;
+
+return OK;
 }
 
 /* Two Bytes of SBS command reading */
@@ -374,6 +402,7 @@ test()
 	warnx("temperature:      %6d", report.temperature);
 	warnx("voltage:          %6d", report.voltage);
 	warnx("current:   	     %6d", report.current);
+	warnx("stateofcharge:    %6d", report.stateofcharge);
 	warnx("batterystatus:    %4x", report.batterystatus);
 	warnx("host fet control: %4x", report.hostfetcontrol);
 	warnx("cellvoltage1:     %6d", report.cellvoltage1);
@@ -415,6 +444,7 @@ test()
 		warnx("temperature:      %6d", report.temperature);
 		warnx("voltage:          %6d", report.voltage);
 		warnx("current:   	     %6d", report.current);
+		warnx("stateofcharge:    %6d", report.stateofcharge);
 		warnx("batterystatus:    %4x", report.batterystatus);
 		warnx("host fet control: %4x", report.hostfetcontrol);
 		warnx("cellvoltage1:     %6d", report.cellvoltage1);

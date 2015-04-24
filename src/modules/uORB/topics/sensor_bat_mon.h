@@ -78,6 +78,7 @@ struct sensor_bat_mon_s {
 	uint16_t temperature[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor temperature report in [0.1 K] 	*/
 	uint16_t voltage[MAX_NUM_BAT_MON_SENSORS];					/**< battery monitor sensor voltage report in [mV] 			*/
 	int16_t  current[MAX_NUM_BAT_MON_SENSORS];					/**< battery monitor sensor current report in [mA] 			*/
+	uint8_t  stateofcharge[MAX_NUM_BAT_MON_SENSORS];			/**< battery monitor sensor state of charge report in [%] 	*/
 	uint16_t batterystatus[MAX_NUM_BAT_MON_SENSORS];			/**< battery monitor sensor battery status report in Hex 	*/
 	uint16_t serialnumber[MAX_NUM_BAT_MON_SENSORS];				/**< battery monitor sensor serial number report in Hex 	*/
 	uint16_t hostfetcontrol[MAX_NUM_BAT_MON_SENSORS];			/**< battery monitor sensor host FET control report in Hex 	*/

@@ -137,6 +137,7 @@ protected:
 	uint16_t	  	_temperature;
 	uint16_t	  	_voltage;
 	uint16_t	  	_current;
+	uint8_t		  	_stateofcharge;
 	uint16_t	  	_batterystatus;
 	uint16_t	  	_serialnumber;
 	uint16_t	  	_hostfetcontrol;

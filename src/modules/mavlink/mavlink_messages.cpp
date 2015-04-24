@@ -2514,6 +2514,7 @@ protected:
 				msg.temperature=bat_mon_data.temperature[i];
 				msg.voltage=bat_mon_data.voltage[i];
 				msg.current=bat_mon_data.current[i];
+				msg.SoC=bat_mon_data.stateofcharge[i];
 				msg.batterystatus=bat_mon_data.batterystatus[i];
 				msg.serialnumber=bat_mon_data.serialnumber[i];
 				msg.hostfetcontrol=bat_mon_data.hostfetcontrol[i];

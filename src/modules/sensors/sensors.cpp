@@ -1740,6 +1740,7 @@ Sensors::bat_mon_poll(struct sensor_bat_mon_s &raw_bat_mon)
 			raw_bat_mon.temperature[i] 		= bat_mon_report.temperature; 			/* Bat_mon device temperature 		*/
 			raw_bat_mon.voltage[i]   		= bat_mon_report.voltage; 				/* Bat_mon device voltage			*/
 			raw_bat_mon.current[i]    		= bat_mon_report.current; 				/* Bat_mon device current 		    */
+			raw_bat_mon.stateofcharge[i]    = bat_mon_report.stateofcharge; 		/* Bat_mon device state of charge 	*/
 			raw_bat_mon.batterystatus[i]	= bat_mon_report.batterystatus; 		/* Bat_mon device batterystatus		*/
 			raw_bat_mon.serialnumber[i] 	= bat_mon_report.serialnumber; 			/* Bat_mon device serialnumber		*/
 			raw_bat_mon.hostfetcontrol[i]	= bat_mon_report.hostfetcontrol; 		/* Bat_mon device hostfetcontrol	*/

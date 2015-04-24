@@ -1938,6 +1938,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			log_msg.body.log_BATM.temperature = buf.bat_mon.temperature[i];
 			log_msg.body.log_BATM.voltage = buf.bat_mon.voltage[i];
 			log_msg.body.log_BATM.current = buf.bat_mon.current[i];
+			log_msg.body.log_BATM.stateofcharge = buf.bat_mon.stateofcharge[i];
 			log_msg.body.log_BATM.batterystatus = buf.bat_mon.batterystatus[i];
 			log_msg.body.log_BATM.serialnumber = buf.bat_mon.serialnumber[i];
 			log_msg.body.log_BATM.hostfetcontrol = buf.bat_mon.hostfetcontrol[i];
