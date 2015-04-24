@@ -82,6 +82,7 @@
 #include "mavlink_messages.h"
 #include "mavlink_main.h"
 
+#define KELVINTOCELSIUS  -272.15f
 
 static uint16_t cm_uint16_from_m_float(float m);
 static void get_mavlink_mode_state(struct vehicle_status_s *status, struct position_setpoint_triplet_s *pos_sp_triplet,
@@ -2511,7 +2512,7 @@ protected:
 
 				mavlink_sens_batmon_t msg;
 
-				msg.temperature=bat_mon_data.temperature[i];
+				msg.temperature=((float) bat_mon_data.temperature[i])/10 + KELVINTOCELSIUS;
 				msg.voltage=bat_mon_data.voltage[i];
 				msg.current=bat_mon_data.current[i];
 				msg.SoC=bat_mon_data.stateofcharge[i];
