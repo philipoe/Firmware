@@ -109,6 +109,7 @@
 #include <uORB/topics/state_estimator_EKF_parameters.h>
 #include <uORB/topics/sensor_mppt.h>
 #include <uORB/topics/sensor_power.h>
+#include <uORB/topics/sensor_bat_mon.h>
 
 /**
  * Logging rate.
@@ -970,6 +971,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct state_estimator_EKF_parameters_s ekf;
 		struct sensor_mppt_s mppt;
 		struct sensor_power_s power;
+		struct sensor_bat_mon_s bat_mon;
 
 	} buf;
 
@@ -1024,6 +1026,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_EKFV_s log_EKFV;
 			struct log_MPPT_s log_MPPT;
 			struct log_POWS_s log_POWS;
+			struct log_BATM_s log_BATM;
 
 		} body;
 	} log_msg = {
@@ -1068,6 +1071,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int ekf_sub;
 		int mppt_sub;
 		int power_sub;
+		int bat_mon_sub;
 	} subs;
 
 	subs.cmd_sub = orb_subscribe(ORB_ID(vehicle_command));
@@ -1105,6 +1109,8 @@ int sdlog2_thread_main(int argc, char *argv[])
 	subs.ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
 	subs.mppt_sub = orb_subscribe(ORB_ID(sensor_mppt));
 	subs.power_sub = orb_subscribe(ORB_ID(sensor_power));
+	subs.bat_mon_sub = orb_subscribe(ORB_ID(sensor_bat_mon));
+
 
 	for (int i = 0; i < TELEMETRY_STATUS_ORB_ID_NUM; i++) {
 		subs.telemetry_subs[i] = orb_subscribe(telemetry_status_orb_id[i]);
@@ -1922,6 +1928,28 @@ int sdlog2_thread_main(int argc, char *argv[])
 			log_msg.body.log_POWS.adc121_cs1_amp = buf.power.adc121_cs1_amp;
 			log_msg.body.log_POWS.adc121_cs2_amp = buf.power.adc121_cs2_amp;
 			LOGBUFFER_WRITE_AND_COUNT(POWS);
+		}
+
+		/* --- Battery monitor sensor data --- */
+		if (copy_if_updated(ORB_ID(sensor_bat_mon), subs.bat_mon_sub, &buf.bat_mon) && pLogEnabler.LOG_BATMON) {
+			for (int i = 0; i < MAX_NUM_BAT_MON_SENSORS; i++) {
+			log_msg.msg_type = LOG_BAT0_MSG+i;
+			log_msg.body.log_BATM.timestamp = buf.bat_mon.timestamp;
+			log_msg.body.log_BATM.temperature = buf.bat_mon.temperature[i];
+			log_msg.body.log_BATM.voltage = buf.bat_mon.voltage[i];
+			log_msg.body.log_BATM.current = buf.bat_mon.current[i];
+			log_msg.body.log_BATM.stateofcharge = buf.bat_mon.stateofcharge[i];
+			log_msg.body.log_BATM.batterystatus = buf.bat_mon.batterystatus[i];
+			log_msg.body.log_BATM.serialnumber = buf.bat_mon.serialnumber[i];
+			log_msg.body.log_BATM.hostfetcontrol = buf.bat_mon.hostfetcontrol[i];
+			log_msg.body.log_BATM.cellvoltage1 = buf.bat_mon.cellvoltage1[i];
+			log_msg.body.log_BATM.cellvoltage2 = buf.bat_mon.cellvoltage2[i];
+			log_msg.body.log_BATM.cellvoltage3 = buf.bat_mon.cellvoltage3[i];
+			log_msg.body.log_BATM.cellvoltage4 = buf.bat_mon.cellvoltage4[i];
+			log_msg.body.log_BATM.cellvoltage5 = buf.bat_mon.cellvoltage5[i];
+			log_msg.body.log_BATM.cellvoltage6 = buf.bat_mon.cellvoltage6[i];
+			LOGBUFFER_WRITE_AND_COUNT(BATM);
+			}
 		}
 
 		/* --- End of ASL-message writing section */

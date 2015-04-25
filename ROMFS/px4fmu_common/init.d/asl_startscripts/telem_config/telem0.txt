@@ -33,6 +33,7 @@ then
 	mavlink stream -d /dev/ttyS1 -s POSITION_TARGET_GLOBAL_INT -r 0.5
 	mavlink stream -d /dev/ttyS1 -s ASLCTRL_DATA -r 0.5
 	mavlink stream -d /dev/ttyS1 -s ASLCTRL_DEBUG -r 0.5
+	mavlink stream -d /dev/ttyS1 -s SENS_ATMOS -r 0.1
 	
 	# Disable the following streams
 	mavlink stream -d /dev/ttyS1 -s GPS_GLOBAL_ORIGIN -r 0

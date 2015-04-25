@@ -65,6 +65,7 @@
 #include <drivers/drv_amb_temp.h>
 #include <drivers/drv_voltage_current.h>
 #include <drivers/drv_mppt.h>
+#include <drivers/drv_bat_mon.h>
 ////#include <drivers/drv_rc_input.h>
 #include <drivers/drv_adc.h>
 #include <drivers/drv_airspeed.h>
@@ -81,6 +82,7 @@
 #include <uORB/topics/sensor_combined.h>
 #include <uORB/topics/sensor_mppt.h>
 #include <uORB/topics/sensor_power.h>
+#include <uORB/topics/sensor_bat_mon.h>
 #include <uORB/topics/rc_channels.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/actuator_controls.h>
@@ -161,6 +163,12 @@
 #endif
 static const int ERROR = -1;
 
+static const struct orb_metadata *sensor_bat_mon_orb_id[MAX_NUM_BAT_MON_SENSORS] = {
+	ORB_ID(sensor_bat_mon_0),
+	ORB_ID(sensor_bat_mon_1),
+	ORB_ID(sensor_bat_mon_2),
+};
+
 //uint32_t last_baro_counter = 0;
 ///
 
@@ -235,11 +243,13 @@ private:
 	int		_diff_pres_sub;				/**< raw differential pressure subscription */
 	int		_vcontrol_mode_sub;			/**< vehicle control mode subscription */
 	int		_amb_temp_sub;				/**< raw ambient temperature data subscription */
-	int			_adc121_vspb_sub;		/**< voltage sensor power board data subscription */
-	int			_adc121_cspb_sub;		/**< current sensor power board data subscription */
-	int			_adc121_cs1_sub;		/**< current sensor 1 board data subscription */
-	int			_adc121_cs2_sub;		/**< current sensor 2 board data subscription */
-	int			_spv1020_sub;			/**< MPPTs data subscription 					*/
+	int		_adc121_vspb_sub;			/**< voltage sensor power board data subscription */
+	int		_adc121_cspb_sub;			/**< current sensor power board data subscription */
+	int		_adc121_cs1_sub;			/**< current sensor 1 board data subscription */
+	int		_adc121_cs2_sub;			/**< current sensor 2 board data subscription */
+	int		_spv1020_sub;				/**< MPPTs data subscription 					*/
+	int		_bat_mon_sub[3];			/**< battery monitor data subscription 		*/
+
 	int 	_params_sub;				/**< notification of parameter updates */
 	int 	_manual_control_sub;		/**< notification of manual control updates */
 	orb_advert_t	_sensor_pub;				/**< combined sensor data topic */
@@ -251,6 +261,7 @@ private:
 	orb_advert_t	_diff_pres_pub;				/**< differential_pressure */
 	orb_advert_t	_power_pub;					/**< power sensor data topic */
 	orb_advert_t	_mppt_pub;					/**< mppt sensor data topic */
+	orb_advert_t	_bat_mon_pub;				/**< bat mon sensors data topic */
 
 	perf_counter_t	_loop_perf;					/**< loop performance counter */
 
@@ -484,6 +495,11 @@ private:
 	void		mppt_init();
 
 	/**
+	 * Do MPPT -related initialization.
+	 */
+	void		bat_mon_init();
+
+	/**
 	 * Do adc-related initialisation.
 	 */
 	void		adc_init();
@@ -543,6 +559,14 @@ private:
 	 *				data should be returned.
 	 */
 	void		mppt_poll(struct sensor_mppt_s &raw_mppt);
+
+	/**
+	 * Poll the battery monitor data for updated data.
+	 *
+	 * @param raw_bat_mon			battery monitor sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		bat_mon_poll(struct sensor_bat_mon_s &raw_bat_mon);
 
 	/**
 	 * Poll the differential pressure sensor for updated data.
@@ -615,6 +639,7 @@ Sensors::Sensors() :
 	_adc121_cs1_sub(-1),
 	_adc121_cs2_sub(-1),
 	_spv1020_sub(-1),
+	_bat_mon_sub({-1,-1,-1}),
 	_params_sub(-1),
 	_manual_control_sub(-1),
 
@@ -628,6 +653,7 @@ Sensors::Sensors() :
 	_diff_pres_pub(-1),
 	_power_pub(-1),
 	_mppt_pub(-1),
+	_bat_mon_pub(-1),
 
 /* performance counters */
 	_loop_perf(perf_alloc(PC_ELAPSED, "sensor task update")),
@@ -1312,6 +1338,41 @@ Sensors::mppt_init()
 }
 
 void
+Sensors::bat_mon_init()
+{
+	int	fd;
+
+	fd = open(BAT_MON_0_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", BAT_MON_0_DEVICE_PATH);
+		warnx("No bat mon 0 board found, ignoring");
+	}
+
+	/* set the driver to poll at 1Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 1);
+
+	fd = open(BAT_MON_1_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", BAT_MON_1_DEVICE_PATH);
+		warnx("No bat mon 1 board found, ignoring");
+	}
+
+	/* set the driver to poll at 1Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 1);
+
+	fd = open(BAT_MON_2_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", BAT_MON_2_DEVICE_PATH);
+		warnx("No bat mon 2 board found, ignoring");
+	}
+
+	/* set the driver to poll at 1Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 1);
+
+	close(fd);
+}
+
+void
 Sensors::adc_init()
 {
 
@@ -1661,6 +1722,46 @@ Sensors::mppt_poll(struct sensor_mppt_s &raw_mppt)
 			_mppt_pub = orb_advertise(ORB_ID(sensor_mppt), &raw_mppt);
 		}
 	}
+}
+
+void
+Sensors::bat_mon_poll(struct sensor_bat_mon_s &raw_bat_mon)
+{
+	bool bat_mon_sensor_updated[MAX_NUM_BAT_MON_SENSORS] = {false,false,false};
+
+	for (int i = 0; i < MAX_NUM_BAT_MON_SENSORS; i++) {
+		orb_check(_bat_mon_sub[i], &bat_mon_sensor_updated[i]);
+
+		if (bat_mon_sensor_updated[i]) {
+			struct bat_mon_report	bat_mon_report;
+
+			orb_copy(sensor_bat_mon_orb_id[i], _bat_mon_sub[i], &bat_mon_report);
+
+			raw_bat_mon.temperature[i] 		= bat_mon_report.temperature; 			/* Bat_mon device temperature 		*/
+			raw_bat_mon.voltage[i]   		= bat_mon_report.voltage; 				/* Bat_mon device voltage			*/
+			raw_bat_mon.current[i]    		= bat_mon_report.current; 				/* Bat_mon device current 		    */
+			raw_bat_mon.stateofcharge[i]    = bat_mon_report.stateofcharge; 		/* Bat_mon device state of charge 	*/
+			raw_bat_mon.batterystatus[i]	= bat_mon_report.batterystatus; 		/* Bat_mon device batterystatus		*/
+			raw_bat_mon.serialnumber[i] 	= bat_mon_report.serialnumber; 			/* Bat_mon device serialnumber		*/
+			raw_bat_mon.hostfetcontrol[i]	= bat_mon_report.hostfetcontrol; 		/* Bat_mon device hostfetcontrol	*/
+			raw_bat_mon.cellvoltage1[i] 	= bat_mon_report.cellvoltage1; 			/* Bat_mon device cellvoltage1	    */
+			raw_bat_mon.cellvoltage2[i] 	= bat_mon_report.cellvoltage2; 			/* Bat_mon device cellvoltage2	    */
+			raw_bat_mon.cellvoltage3[i] 	= bat_mon_report.cellvoltage3; 			/* Bat_mon device cellvoltage3	    */
+			raw_bat_mon.cellvoltage4[i] 	= bat_mon_report.cellvoltage4; 			/* Bat_mon device cellvoltage4      */
+			raw_bat_mon.cellvoltage5[i] 	= bat_mon_report.cellvoltage5; 			/* Bat_mon device cellvoltage5	    */
+			raw_bat_mon.cellvoltage6[i] 	= bat_mon_report.cellvoltage6; 			/* Bat_mon device cellvoltage6		*/
+		}
+	}
+
+	if (bat_mon_sensor_updated[0]) {
+		raw_bat_mon.timestamp = hrt_absolute_time();
+		/* announce the power data if needed just publish else */
+		if (_bat_mon_pub > 0)
+			orb_publish(ORB_ID(sensor_bat_mon), _bat_mon_pub, &raw_bat_mon);
+		else
+			_bat_mon_pub = orb_advertise(ORB_ID(sensor_bat_mon), &raw_bat_mon);
+	}
+
 }
 
 void
@@ -2239,6 +2340,7 @@ Sensors::task_main()
 	adc121_cs1_init();
 	adc121_cs2_init();
 	mppt_init();
+	bat_mon_init();
 	adc_init();
 
 	/*
@@ -2265,6 +2367,9 @@ Sensors::task_main()
 	_spv1020_sub = orb_subscribe(ORB_ID(sensor_spv1020));
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_manual_control_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+	_bat_mon_sub[0] = orb_subscribe(sensor_bat_mon_orb_id[0]);
+	_bat_mon_sub[1] = orb_subscribe(sensor_bat_mon_orb_id[1]);
+	_bat_mon_sub[2] = orb_subscribe(sensor_bat_mon_orb_id[2]);
 
 	/* rate limit vehicle status updates to 5Hz */
 	orb_set_interval(_vcontrol_mode_sub, 200);
@@ -2281,6 +2386,8 @@ Sensors::task_main()
 	memset(&raw_mppt, 0, sizeof(raw_mppt));
 	struct sensor_power_s raw_power;
 	memset(&raw_power, 0, sizeof(raw_power));
+	struct sensor_bat_mon_s raw_bat_mon;
+	memset(&raw_bat_mon, 0, sizeof(raw_bat_mon));
 
 	raw.timestamp = hrt_absolute_time();
 	raw.adc_voltage_v[0] = 0.0f;
@@ -2303,7 +2410,7 @@ Sensors::task_main()
 	amb_temp_poll(raw);
 	power_poll(raw_power);
 	mppt_poll(raw_mppt);
-
+	bat_mon_poll(raw_bat_mon);
 	parameter_update_poll(true /* forced */);
 
 	/* advertise the sensor_combined topic and make the initial publication */
@@ -2347,6 +2454,7 @@ Sensors::task_main()
 		amb_temp_poll(raw);
 		power_poll(raw_power);
 		mppt_poll(raw_mppt);
+		bat_mon_poll(raw_bat_mon);
 
 		/* check battery voltage */
 		adc_poll(raw);
