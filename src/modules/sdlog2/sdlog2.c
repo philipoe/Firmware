@@ -1027,6 +1027,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_MPPT_s log_MPPT;
 			struct log_POWS_s log_POWS;
 			struct log_BATM_s log_BATM;
+			struct log_ATMO_s log_ATMO;
 
 		} body;
 	} log_msg = {
@@ -1390,6 +1391,12 @@ int sdlog2_thread_main(int argc, char *argv[])
 				log_msg.body.log_IMU.mag_y = buf.sensor.magnetometer2_ga[1];
 				log_msg.body.log_IMU.mag_z = buf.sensor.magnetometer2_ga[2];
 				LOGBUFFER_WRITE_AND_COUNT(IMU);
+			}
+
+			if(pLogEnabler.LOG_ATMO) {
+				log_msg.msg_type = LOG_ATMO_MSG;
+				log_msg.body.log_ATMO.amb_temp_celcius = buf.sensor.amb_temp_celcius;
+				LOGBUFFER_WRITE_AND_COUNT(ATMO);
 			}
 
 		}

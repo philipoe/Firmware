@@ -11,6 +11,7 @@ PARAM_DEFINE_INT32(LOG_POWS, 1);	// " ... Power messages
 PARAM_DEFINE_INT32(LOG_ASLC, 1);
 PARAM_DEFINE_INT32(LOG_ASLD, 1);
 PARAM_DEFINE_INT32(LOG_BATMON, 1);
+PARAM_DEFINE_INT32(LOG_ATMO, 1);
 
 struct log_params {
 	bool LOG_EKF;	//bool is used to save RAM here. The parameters themselves are int32 !
@@ -20,6 +21,7 @@ struct log_params {
 	bool LOG_ASLC;
 	bool LOG_ASLD;
 	bool LOG_BATMON;
+	bool LOG_ATMO;
 } pLogEnabler;
 
 void GetLogEnablerParams(void)
@@ -54,4 +56,8 @@ void GetLogEnablerParams(void)
 	handle = param_find("LOG_BATMON");
 	param_get(handle, &(temp));
 	pLogEnabler.LOG_BATMON=(temp==1 ? true:false);
+
+	handle = param_find("LOG_ATMO");
+	param_get(handle, &(temp));
+	pLogEnabler.LOG_ATMO=(temp==1 ? true:false);
 }

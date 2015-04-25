@@ -668,6 +668,11 @@ struct log_BATM_s {						// *** Battery monitor sensors log message ***
 
 };
 
+#define LOG_ATMO_MSG 114
+struct log_ATMO_s {
+	float amb_temp_celcius;
+};
+
 /********** SYSTEM MESSAGES, ID > 0x80 **********/
 
 /* --- TIME - TIME STAMP --- */
@@ -749,6 +754,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT_S(BAT0, BATM, "QHHhBHHHHHHHHH", "t,Temp,V_bat,I_bat,SoC,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
 	LOG_FORMAT_S(BAT1, BATM, "QHHhBHHHHHHHHH", "t,Temp,V_bat,I_bat,SoC,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
 	LOG_FORMAT_S(BAT2, BATM, "QHHhBHHHHHHHHH", "t,Temp,V_bat,I_bat,SoC,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT(ATMO, "f", "ambTemp"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */
