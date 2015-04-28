@@ -347,12 +347,8 @@ private:
 		float dbaro_Ltube;
 		float dbaro_dy;
 
-		float mppt1_b;
-		float mppt2_b;
-		float mppt3_b;
-		float mppt1_SF;
-		float mppt2_SF;
-		float mppt3_SF;
+		float mppt_b[3];
+		float mppt_SF[3];
 
 		float adc121_vspb_b;
 		float adc121_vspb_sf;
@@ -426,12 +422,8 @@ private:
 		param_t dbaro_Ltube;
 		param_t dbaro_dy;
 
-		param_t mppt1_b;
-		param_t mppt2_b;
-		param_t mppt3_b;
-		param_t mppt1_SF;
-		param_t mppt2_SF;
-		param_t mppt3_SF;
+		param_t mppt_b[3];
+		param_t mppt_SF[3];
 
 		param_t adc121_vspb_b;
 		param_t adc121_vspb_sf;
@@ -783,12 +775,12 @@ Sensors::Sensors() :
 	_parameter_handles.dbaro_Ltube = param_find("SENSA_DBaro_L");
 	_parameter_handles.dbaro_dy = param_find("SENSA_DBaro_dy");
 
-	_parameter_handles.mppt1_b = param_find("SENSA_MPPT1_I_B");
-	_parameter_handles.mppt2_b = param_find("SENSA_MPPT2_I_B");
-	_parameter_handles.mppt3_b = param_find("SENSA_MPPT3_I_B");
-	_parameter_handles.mppt1_SF = param_find("SENSA_MPPT1_I_SF");
-	_parameter_handles.mppt2_SF = param_find("SENSA_MPPT2_I_SF");
-	_parameter_handles.mppt3_SF = param_find("SENSA_MPPT3_I_SF");
+	_parameter_handles.mppt_b[0] = param_find("SENSA_MPPT1_I_B");
+	_parameter_handles.mppt_b[1] = param_find("SENSA_MPPT2_I_B");
+	_parameter_handles.mppt_b[2] = param_find("SENSA_MPPT3_I_B");
+	_parameter_handles.mppt_SF[0] = param_find("SENSA_MPPT1_I_SF");
+	_parameter_handles.mppt_SF[1] = param_find("SENSA_MPPT2_I_SF");
+	_parameter_handles.mppt_SF[2] = param_find("SENSA_MPPT3_I_SF");
 
 	_parameter_handles.adc121_vspb_b  = param_find("SENSA_VSPB_off");
 	_parameter_handles.adc121_vspb_sf = param_find("SENSA_VSPB_scale");
@@ -1020,12 +1012,12 @@ Sensors::parameters_update()
 	param_get(_parameter_handles.dbaro_Ltube, &(_parameters.dbaro_Ltube));
 	param_get(_parameter_handles.dbaro_dy, &(_parameters.dbaro_dy));
 
-	param_get(_parameter_handles.mppt1_b, &(_parameters.mppt1_b));
-	param_get(_parameter_handles.mppt2_b, &(_parameters.mppt2_b));
-	param_get(_parameter_handles.mppt3_b, &(_parameters.mppt3_b));
-	param_get(_parameter_handles.mppt1_SF, &(_parameters.mppt1_SF));
-	param_get(_parameter_handles.mppt2_SF, &(_parameters.mppt2_SF));
-	param_get(_parameter_handles.mppt3_SF, &(_parameters.mppt3_SF));
+	param_get(_parameter_handles.mppt_b[0], &(_parameters.mppt_b[0]));
+	param_get(_parameter_handles.mppt_b[1], &(_parameters.mppt_b[1]));
+	param_get(_parameter_handles.mppt_b[2], &(_parameters.mppt_b[2]));
+	param_get(_parameter_handles.mppt_SF[0], &(_parameters.mppt_SF[0]));
+	param_get(_parameter_handles.mppt_SF[1], &(_parameters.mppt_SF[1]));
+	param_get(_parameter_handles.mppt_SF[2], &(_parameters.mppt_SF[2]));
 
 	param_get(_parameter_handles.adc121_vspb_b, &(_parameters.adc121_vspb_b));
 	param_get(_parameter_handles.adc121_vspb_sf, &(_parameters.adc121_vspb_sf));
@@ -1899,12 +1891,12 @@ Sensors::parameter_update_poll(bool forced)
 
 		if (fd > 0) {
 			struct current_cal_term mpptscale = {
-				_parameters.mppt1_b,
-				_parameters.mppt2_b,
-				_parameters.mppt3_b,
-				_parameters.mppt1_SF,
-				_parameters.mppt2_SF,
-				_parameters.mppt3_SF,
+				_parameters.mppt_b[0],
+				_parameters.mppt_b[1],
+				_parameters.mppt_b[2],
+				_parameters.mppt_SF[0],
+				_parameters.mppt_SF[1],
+				_parameters.mppt_SF[2],
 			};
 
 			if (OK != ioctl(fd, MPPTIOCSSCALE, (long unsigned int)&mpptscale)) {
