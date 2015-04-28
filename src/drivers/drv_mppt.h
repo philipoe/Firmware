@@ -57,10 +57,9 @@ struct spv1020_report {
 	uint64_t timestamp;
 };
 
-struct current_bias_term {
-	float	mppt1;
-	float	mppt2;
-	float	mppt3;
+struct current_cal_term {
+	float	bias[3];
+	float	SF[3];
 };
 
 /*

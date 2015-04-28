@@ -350,6 +350,9 @@ private:
 		float mppt1_b;
 		float mppt2_b;
 		float mppt3_b;
+		float mppt1_SF;
+		float mppt2_SF;
+		float mppt3_SF;
 
 		float adc121_vspb_b;
 		float adc121_vspb_sf;
@@ -426,6 +429,9 @@ private:
 		param_t mppt1_b;
 		param_t mppt2_b;
 		param_t mppt3_b;
+		param_t mppt1_SF;
+		param_t mppt2_SF;
+		param_t mppt3_SF;
 
 		param_t adc121_vspb_b;
 		param_t adc121_vspb_sf;
@@ -777,9 +783,12 @@ Sensors::Sensors() :
 	_parameter_handles.dbaro_Ltube = param_find("SENSA_DBaro_L");
 	_parameter_handles.dbaro_dy = param_find("SENSA_DBaro_dy");
 
-	_parameter_handles.mppt1_b = param_find("SENSA_MPPT1_fI");
-	_parameter_handles.mppt2_b = param_find("SENSA_MPPT2_fI");
-	_parameter_handles.mppt3_b = param_find("SENSA_MPPT3_fI");
+	_parameter_handles.mppt1_b = param_find("SENSA_MPPT1_I_B");
+	_parameter_handles.mppt2_b = param_find("SENSA_MPPT2_I_B");
+	_parameter_handles.mppt3_b = param_find("SENSA_MPPT3_I_B");
+	_parameter_handles.mppt1_SF = param_find("SENSA_MPPT1_I_SF");
+	_parameter_handles.mppt2_SF = param_find("SENSA_MPPT2_I_SF");
+	_parameter_handles.mppt3_SF = param_find("SENSA_MPPT3_I_SF");
 
 	_parameter_handles.adc121_vspb_b  = param_find("SENSA_VSPB_off");
 	_parameter_handles.adc121_vspb_sf = param_find("SENSA_VSPB_scale");
@@ -1014,6 +1023,9 @@ Sensors::parameters_update()
 	param_get(_parameter_handles.mppt1_b, &(_parameters.mppt1_b));
 	param_get(_parameter_handles.mppt2_b, &(_parameters.mppt2_b));
 	param_get(_parameter_handles.mppt3_b, &(_parameters.mppt3_b));
+	param_get(_parameter_handles.mppt1_SF, &(_parameters.mppt1_SF));
+	param_get(_parameter_handles.mppt2_SF, &(_parameters.mppt2_SF));
+	param_get(_parameter_handles.mppt3_SF, &(_parameters.mppt3_SF));
 
 	param_get(_parameter_handles.adc121_vspb_b, &(_parameters.adc121_vspb_b));
 	param_get(_parameter_handles.adc121_vspb_sf, &(_parameters.adc121_vspb_sf));
@@ -1886,10 +1898,13 @@ Sensors::parameter_update_poll(bool forced)
 		fd = open(SPV1020_DEVICE_PATH, 0);
 
 		if (fd > 0) {
-			struct current_bias_term mpptscale = {
+			struct current_cal_term mpptscale = {
 				_parameters.mppt1_b,
 				_parameters.mppt2_b,
 				_parameters.mppt3_b,
+				_parameters.mppt1_SF,
+				_parameters.mppt2_SF,
+				_parameters.mppt3_SF,
 			};
 
 			if (OK != ioctl(fd, MPPTIOCSSCALE, (long unsigned int)&mpptscale)) {

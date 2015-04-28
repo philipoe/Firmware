@@ -119,6 +119,7 @@ private:
 	uint8_t 			mppt_status[3];
 
 	float				mppt_current_bias_term[3];
+	float				mppt_current_SF_term[3];
 
 	orb_advert_t		_mppt_topic;
 
@@ -126,7 +127,7 @@ private:
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
 
-	current_bias_term	_current_bias_term;
+	current_cal_term	_current_cal_term;
 
 	/**
 	 * Test whether the device supported by the driver is present at a
@@ -263,7 +264,6 @@ private:
 #define SPI_CLK_58				0b11	/* Configure SPI clock rate to 58kHz 					   */
 
 #define MPPT_VOLT_COV_FACTOR	0.01876f	/* MPPT_VOLT_COV_FACTOR = (1+R101/R102)*(1.25/2^10) = 0.01876  */
-#define MPPT_CURR_COV_FACTOR	0.00878f	/* MPPT_CURR_COV_FACTOR = (9/2^10) = 0.00878 				   */
 
 #define SPV1020_MAXIMAL_VOLTAGE_RANGE	40.0f
 #define SPV1020_MAXIMAL_CURRENT_RANGE	9.0f
@@ -286,16 +286,20 @@ SPV1020::SPV1020(int bus) :
 	_sample_perf(perf_alloc(PC_ELAPSED, "SPV1020_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "SPV1020_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "SPV1020_buffer_overflows")),
-	_current_bias_term{}
+	_current_cal_term{}
 {
 	_debug_enabled = true;
 
 	// work_cancel in the dtor will explode if we don't do this...
 	memset(&_work, 0, sizeof(_work));
 
-	_current_bias_term.mppt1 = 0.0f;
-	_current_bias_term.mppt2 = 0.0f;
-	_current_bias_term.mppt3 = 0.0f;
+	_current_cal_term.bias[0] = 0.0f;
+	_current_cal_term.bias[1] = 0.0f;
+	_current_cal_term.bias[2] = 0.0f;
+	_current_cal_term.SF[0] = 1.0f;
+	_current_cal_term.SF[1] = 1.0f;
+	_current_cal_term.SF[2] = 1.0f;
+
 }
 
 SPV1020::~SPV1020()
@@ -520,11 +524,10 @@ SPV1020::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 	case MPPTIOCSSCALE: {
 		/* copy mppt bias */
-		struct current_bias_term *s = (struct current_bias_term *) arg;
-		memcpy(&_current_bias_term, s, sizeof(_current_bias_term));
-		mppt_current_bias_term[0] = _current_bias_term.mppt1;
-		mppt_current_bias_term[1] = _current_bias_term.mppt2;
-		mppt_current_bias_term[2] = _current_bias_term.mppt3;
+		struct current_cal_term *s = (struct current_cal_term *) arg;
+		memcpy(&_current_cal_term, s, sizeof(_current_cal_term));
+		memcpy(&mppt_current_bias_term,_current_cal_term.bias,sizeof(_current_cal_term.bias));
+		memcpy(&mppt_current_SF_term,_current_cal_term.SF,sizeof(_current_cal_term.SF));
 		return OK;
 		}
 
@@ -681,11 +684,12 @@ SPV1020::mppt_current_read(uint8_t mppt_device)
 	cvt.b[1] = data[1];
 
 	/* current calculation (10 bit vector), result in amp */
-	//mppt_current[mppt_device] = ((float)((uint16_t)(cvt.w & 0x03ff)))*MPPT_CURR_COV_FACTOR;
 
 	uint16_t mppt_current_bin = (uint16_t)(cvt.w & 0x03ff);
 
 	mppt_current[mppt_device] = ((float)(mppt_current_bin))/55.6f/(1.0f+ 2e-6f * (POW2((float)(mppt_current_bin) - mppt_current_bias_term[mppt_device])));
+
+	mppt_current[mppt_device] *= mppt_current_SF_term[mppt_device];
 
 	if (mppt_current[mppt_device] > SPV1020_MAXIMAL_CURRENT_RANGE) {
 		/* MPPTs current measurement is not stable, range check action is commented out */
