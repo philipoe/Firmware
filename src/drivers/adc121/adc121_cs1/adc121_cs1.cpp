@@ -211,9 +211,9 @@ private:
 /* Measurement definitions: */
 #define CURRENT_MAX				37.5f 	// [A], from datasheet (linear sensing range)
 #define VOLTAGE_MEASUREMENT_RES	4096.0f
-#define AVERAGING_SAMPLES		10
+#define AVERAGING_SAMPLES		10.0f
 #define VOLTAGE_FULLSCALE		3300.0f
-#define CURRENT_CONV_FARTOR		2065.0f
+#define CURRENT_CONV_FARTOR		36.96f
 
 /*
  * Driver 'main' command.
@@ -577,13 +577,15 @@ ADC121_CS1::current_measurement()
 	/* averaging current measurements */
 
 	if (averaging_counter < AVERAGING_SAMPLES) {
-		raw_current += (uint16_t)(cvt.w & 0x0fff);
+		raw_current += cvt.w & 0x0fff;
 		averaging_counter++;
 		return OK;
 	}
 
+	raw_current /= AVERAGING_SAMPLES;
+
 	/* current calculation, result in [A] */
-	_current = (((float)((int16_t) raw_current) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR / AVERAGING_SAMPLES) + _bias_cal_term) * _SF_cal_term;
+	_current = ((( (float) raw_current  - VOLTAGE_MEASUREMENT_RES/2) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR) - _bias_cal_term) * _SF_cal_term;
 
 	raw_current = 0;
 	averaging_counter = 0;
@@ -594,7 +596,6 @@ ADC121_CS1::current_measurement()
 	}
 
 	//warnx("measured current by the ADC121 by the board Sensor 1: %3.2f [A]", (double) _current);  				// remove display!!!!!!!!
-
 
 	/* generate a new report */
 		_reports[_next_report].current = _current;					/* report in [A] */

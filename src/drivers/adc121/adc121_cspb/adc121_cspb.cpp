@@ -213,7 +213,7 @@ private:
 #define AVERAGING_SAMPLES		10
 
 #define VOLTAGE_FULLSCALE		3300.0f
-#define CURRENT_CONV_FARTOR		2065.0f
+#define CURRENT_CONV_FARTOR		36.96f
 
 /*
  * Driver 'main' command.
@@ -579,13 +579,15 @@ ADC121_CSPB::current_measurement()
 	/* averaging current measurements */
 
 	if (averaging_counter < AVERAGING_SAMPLES) {
-		raw_current += (uint16_t)(cvt.w & 0x0fff);
+		raw_current += cvt.w & 0x0fff;
 		averaging_counter++;
 		return OK;
 	}
 
+	raw_current /= AVERAGING_SAMPLES;
+
 	/* current calculation, result in [A] */
-	_current = (((float)((int16_t) raw_current) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR / AVERAGING_SAMPLES) + _bias_cal_term) * _SF_cal_term;
+	_current = ((( (float) raw_current  - VOLTAGE_MEASUREMENT_RES/2) * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES / CURRENT_CONV_FARTOR) - _bias_cal_term) * _SF_cal_term;
 
 	raw_current = 0;
 	averaging_counter = 0;
