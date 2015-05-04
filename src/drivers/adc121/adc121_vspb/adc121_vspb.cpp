@@ -206,7 +206,7 @@ private:
 /* Measurement definitions: */
 
 #define VOLTAGE_MAX				33.0f
-#define VOLTAGE_MIN				0.0f
+#define VOLTAGE_MIN				-10.0f
 #define VOLTAGE_FULLSCALE		3.3f
 #define VOLTAGE_MEASUREMENT_RES	4096.0f
 #define VOLTAGE_SCALLING		10.02654867f
@@ -563,7 +563,7 @@ ADC121_VSPB::voltage_measurement()
 	cvt.b[1] = data[0];
 
 	/* voltage calculation, result in [v] */
-	_voltage = (((float)((uint16_t)(cvt.w & 0x0fff)) * VOLTAGE_SCALLING * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES) + _bias_cal_term) * _SF_cal_term;
+	_voltage = (((float)((uint16_t)(cvt.w & 0x0fff)) * VOLTAGE_SCALLING * VOLTAGE_FULLSCALE / VOLTAGE_MEASUREMENT_RES) - _bias_cal_term) * _SF_cal_term;
 
 	if ( (_voltage > VOLTAGE_MAX) | (_voltage < VOLTAGE_MIN) ) {
 			warnx("ADC121_VSPB: voltage measured by power board is out of range: %3.2f [v]", (double) _voltage);
