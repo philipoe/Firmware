@@ -88,7 +88,6 @@
 
 
 #define CONV_CELSIUS_KELVIN 273.15f
-#define PI 		3.14159265358979323846l
 #define DEG2RAD 0.01745329251994329577l
 #define RAD2DEG 57.2957795130823208767l
 #define UERE_H 1.5f 									/* User Equivalent Range Error (horizontal) */
@@ -147,7 +146,7 @@ static float R_mvel[9]			= {0.25f, 0.0f,  0.0f,
 							   	   0.0f,  0.25f, 0.0f,
 							   	   0.0f,  0.0f,  0.25f};
 
-static double mag_date 			= 2014.6l;							/* Decimal date for calculating the earth's magnetic field */
+static float mag_date 			= 2015.6f;							/* Decimal date for calculating the earth's magnetic field */
 static float TAS[3] 		  	= {0.0f,0.0f,0.0f};					/* True air speed */
 static float B_N[3] 		  	= {0.0f,0.0f,0.0f};					/* Earth's magnetic field vector [nT] */
 
@@ -195,7 +194,7 @@ int state_estimator_main(int argc, char *argv[])
 		state_estimator_task = task_spawn_cmd("state_estimator",
 												SCHED_DEFAULT,
 												SCHED_PRIORITY_MAX - 5,
-												8192,
+												7000,///8192,
 												state_estimator_thread_main,
 												(argv) ? (const char **)&argv[2] : (const char **)NULL);
 		exit(0);
@@ -279,7 +278,7 @@ int state_estimator_thread_main(int argc, char *argv[])
 	parameters_init(&ekf_param_handles);
 	parameters_update(&ekf_param_handles, &ekf_params);									/* Update EKF parameters for the parameter file */
 
-	mag_date   = (double)ekf_params.mag_date_year + ((double)ekf_params.mag_date_month)/10;
+	mag_date   = (float)ekf_params.mag_date_year + ((float)ekf_params.mag_date_month)/10;
 
 	uint64_t last_measurement = 0;
 
@@ -706,7 +705,7 @@ int state_estimator_thread_main(int argc, char *argv[])
 #if 1					/* Temporary commented out. Constant values of B_N were taken (for the position: 47.1909750, 8.9530328, 407.304) */
 
 						/* calculates the Earth's magnetic field and the secular variation */
-						magField(pos_vector,(double) mag_date,B_N);
+						magField(pos_vector, mag_date,B_N);
 #else
 						B_N[0] = 21.571220f;						// B_N of Zurich
 						B_N[1] = 0.70266867f;						// B_N of Zurich
