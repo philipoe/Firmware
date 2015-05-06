@@ -104,7 +104,7 @@ int aslctrl_main(int argc, char *argv[])
 		deamon_task = task_spawn_cmd("aslctrl",
 					 SCHED_DEFAULT,
 					 SCHED_PRIORITY_MAX - 10,
-					 4800,
+					 4500,
 					 aslctrl_thread_main,
 					 (argv) ? (const char **)&argv[2] : (const char **)NULL);
 		exit(0);

@@ -194,7 +194,7 @@ int state_estimator_main(int argc, char *argv[])
 		state_estimator_task = task_spawn_cmd("state_estimator",
 												SCHED_DEFAULT,
 												SCHED_PRIORITY_MAX - 5,
-												7000,///8192,
+												7200,
 												state_estimator_thread_main,
 												(argv) ? (const char **)&argv[2] : (const char **)NULL);
 		exit(0);
