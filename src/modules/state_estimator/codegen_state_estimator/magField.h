@@ -3,7 +3,7 @@
  *
  * Code generation for function 'magField'
  *
- * C source code generated on: Wed May 06 13:59:16 2015
+ * C source code generated on: Wed May 06 16:15:51 2015
  *
  */
 
@@ -29,6 +29,6 @@
 /* Variable Definitions */
 
 /* Function Declarations */
-extern void magField(const real_T p[3], real_T year, real32_T b_N[3]);
+extern void magField(const real_T p[3], real32_T year, real32_T b_N[3]);
 #endif
 /* End of code generation (magField.h) */

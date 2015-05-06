@@ -3,7 +3,7 @@
  *
  * Code generation for function 'magField'
  *
- * C source code generated on: Wed May 06 13:59:16 2015
+ * C source code generated on: Wed May 06 16:15:51 2015
  *
  */
 
@@ -80,7 +80,7 @@ static real_T rt_powd_snf(real_T u0, real_T u1)
   return y;
 }
 
-void magField(const real_T p[3], real_T year, real32_T b_N[3])
+void magField(const real_T p[3], real32_T year, real32_T b_N[3])
 {
   real_T y;
   real32_T factor;
@@ -192,7 +192,7 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
   /*  Interpolate/Extrapolate coefficients if necessary */
   if (igrf11dataNext.minYear - igrf11dataCurrent.minYear == 0.0F) {
     /*  Extrapolation */
-    factor = (real32_T)year - igrf11dataCurrent.minYear;
+    factor = year - igrf11dataCurrent.minYear;
 
     /*  Two orders are equal */
     for (i = 0; i < 195; i++) {
@@ -200,8 +200,8 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
     }
   } else {
     /*  Interpolation */
-    factor = ((real32_T)year - igrf11dataCurrent.minYear) /
-      (igrf11dataNext.minYear - igrf11dataCurrent.minYear);
+    factor = (year - igrf11dataCurrent.minYear) / (igrf11dataNext.minYear -
+      igrf11dataCurrent.minYear);
 
     /*  Two orders must be equal */
     for (i = 0; i < 195; i++) {
