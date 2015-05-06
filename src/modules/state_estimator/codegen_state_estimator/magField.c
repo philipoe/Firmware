@@ -3,7 +3,7 @@
  *
  * Code generation for function 'magField'
  *
- * C source code generated on: Fri Jan 23 17:57:26 2015
+ * C source code generated on: Wed May 06 13:59:16 2015
  *
  */
 
@@ -83,7 +83,7 @@ static real_T rt_powd_snf(real_T u0, real_T u1)
 void magField(const real_T p[3], real_T year, real32_T b_N[3])
 {
   real_T y;
-  real_T factor;
+  real32_T factor;
   real_T gha[195];
   int32_T i;
   real_T sl[14];
@@ -97,6 +97,7 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
   int32_T m;
   real_T elevKM;
   real_T slat_gd;
+  real_T latitudeCrt;
   real_T clat_gd;
   real_T aa;
   real_T bb;
@@ -189,9 +190,9 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
   /*  Interpolate/Extrapolate coefficients */
   /* ========================================================================== */
   /*  Interpolate/Extrapolate coefficients if necessary */
-  if (igrf11dataNext.minYear - igrf11dataCurrent.minYear == 0.0) {
+  if (igrf11dataNext.minYear - igrf11dataCurrent.minYear == 0.0F) {
     /*  Extrapolation */
-    factor = year - igrf11dataCurrent.minYear;
+    factor = (real32_T)year - igrf11dataCurrent.minYear;
 
     /*  Two orders are equal */
     for (i = 0; i < 195; i++) {
@@ -199,8 +200,8 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
     }
   } else {
     /*  Interpolation */
-    factor = (year - igrf11dataCurrent.minYear) / (igrf11dataNext.minYear -
-      igrf11dataCurrent.minYear);
+    factor = ((real32_T)year - igrf11dataCurrent.minYear) /
+      (igrf11dataNext.minYear - igrf11dataCurrent.minYear);
 
     /*  Two orders must be equal */
     for (i = 0; i < 195; i++) {
@@ -237,31 +238,31 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
   slat_gd = sin(y / 180.0 * 3.1415926535897931);
   if (90.0 - y < 0.001) {
     /*   300 ft. from North pole */
-    factor = 89.999;
+    latitudeCrt = 89.999;
   } else if (90.0 + y < 0.001) {
     /*   300 ft. from South pole */
-    factor = -89.999;
+    latitudeCrt = -89.999;
   } else {
-    factor = y;
+    latitudeCrt = y;
   }
 
-  clat_gd = cos(factor / 180.0 * 3.1415926535897931);
-  factor = p[1] * 180.0 / 3.1415926535897931 / 180.0 * 3.1415926535897931;
-  sl[0] = sin(factor);
-  cl[0] = cos(factor);
+  clat_gd = cos(latitudeCrt / 180.0 * 3.1415926535897931);
+  latitudeCrt = p[1] * 180.0 / 3.1415926535897931 / 180.0 * 3.1415926535897931;
+  sl[0] = sin(latitudeCrt);
+  cl[0] = cos(latitudeCrt);
 
   /*  convert from geodetic to geocentric coordinates */
   aa = 4.068063159E+7 * clat_gd * clat_gd;
   bb = 4.040829998E+7 * slat_gd * slat_gd;
   cc = aa + bb;
-  factor = sqrt(cc);
-  r = sqrt(elevKM * (elevKM + 2.0 * factor) + (4.068063159E+7 * aa +
+  latitudeCrt = sqrt(cc);
+  r = sqrt(elevKM * (elevKM + 2.0 * latitudeCrt) + (4.068063159E+7 * aa +
             4.040829998E+7 * bb) / cc);
-  cd = (elevKM + factor) / r;
-  sd = 272331.61000000685 / factor * slat_gd * clat_gd / r;
+  cd = (elevKM + latitudeCrt) / r;
+  sd = 272331.61000000685 / latitudeCrt * slat_gd * clat_gd / r;
   slat = slat_gd * cd - clat_gd * sd;
   clat_gd = clat_gd * cd + slat_gd * sd;
-  factor = 6371.2 / r;
+  latitudeCrt = 6371.2 / r;
   b_p[0] = 2.0 * slat;
   b_p[1] = 2.0 * clat_gd;
   b_p[2] = 4.5 * slat * slat - 1.5;
@@ -276,7 +277,7 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
     if (n < m) {
       m = 0;
       n++;
-      r = rt_powd_snf(factor, (real_T)n + 2.0);
+      r = rt_powd_snf(latitudeCrt, (real_T)n + 2.0);
       fn = n;
     }
 
@@ -326,7 +327,7 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
     m++;
   }
 
-  factor = X * cd + Z * sd;
+  latitudeCrt = X * cd + Z * sd;
 
   /* [X,Y,Z,XTEMP,YTEMP,ZTEMP] = locCalcFieldEml(lat, lon, height, nMax, gha, ghb); */
   /*  Calculate rest of Magnetic Field and Secular Variation */
@@ -340,7 +341,7 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
   /* end */
   if (90.0 - fabs(y) <= 0.001) {
     /*  at geographic poles */
-    factor = rtNaN;
+    latitudeCrt = rtNaN;
     Y = rtNaN;
 
     /* DEC = NaN; */
@@ -351,7 +352,7 @@ void magField(const real_T p[3], real_T year, real32_T b_N[3])
 
   /*  Vectorize Northward, Eastward and Downward components */
   /* DXDYDZ = [DX DY DZ]; */
-  b_X[0] = factor;
+  b_X[0] = latitudeCrt;
   b_X[1] = Y;
   b_X[2] = Z * cd - X * sd;
   for (i = 0; i < 3; i++) {
