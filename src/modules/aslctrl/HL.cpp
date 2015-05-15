@@ -208,7 +208,6 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 	}
 
 	return RET;
-	//TODO: Return reasonable warnings&errors to the User/QGC, not just error codes that nobody knows.
 }
 
 int HL::TECS_Update50Hz(void)

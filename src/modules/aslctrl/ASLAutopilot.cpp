@@ -190,7 +190,7 @@ void ASLAutopilot::update()
 					subs.global_pos.alt, subs.home_pos.alt, ctrldata->hRef_t,ctrldata->AltitudeStatus, ctrldata->bEngageSpoilers,bUseAltitudeRamp, bUseThermalHighEtaMode,bReinit);
 			if(params->ASLC_DEBUG==10) printf("RET:%i\n",RET);
 			if(RET != RET_OK && MavlinkSendOK(2)) {
-				mavlink_log_critical(mavlink_fd, "[aslctrl] ALT_CTRL ERROR/WARNING: CODE %d",RET);
+				mavlink_log_critical(mavlink_fd, "[aslctrl] %s", aslctrl_error_codes[-RET]);
 			}
 		}
 	}
@@ -261,8 +261,8 @@ void ASLAutopilot::update()
 			bool bReinit=(ctrldata->aslctrl_mode-ctrldata->aslctrl_last_mode>0 ? true : false);
 			if(params->ASLC_CtrlType != MPC_STD && params->ASLC_CtrlType != MPC_ROLLMPCONLY) { //Only execute for standard PID controller, not for MPC controller (which does rate-stabilization/control internally)
 				RET = SAScontrol.RateControl(ctrldata->pRef,ctrldata->qRef, ctrldata->rRef, ctrldata->uAil, ctrldata->uElev, ctrldata->uRud, ctrldata->f_GainSch_Q, subs.att.rollspeed,subs.att.pitchspeed,subs.att.yawspeed, ctrldata->RollAngle, ctrldata->RollAngleRef, bReinit);
-				if(RET==-1)	{if(MavlinkSendOK(4)) {mavlink_log_critical(mavlink_fd, "[aslctrl] ERROR in SAS Rate Control. Params != Zero?");}}
-				if(RET==-2) {if(MavlinkSendOK(7)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING, OVERSPEED DETECTED!");}}
+				if(RET==-1)	{if(MavlinkSendOK(4)) {mavlink_log_critical(mavlink_fd, "[aslctrl] ERROR: SAS Rate Control. Params != Zero?");}}
+				if(RET==-2) {if(MavlinkSendOK(7)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: Overspeed detected!");}}
 			}
 		}
 
@@ -303,7 +303,7 @@ void ASLAutopilot::update()
 		ctrldata->uThrot=0.0f;
 		ctrldata->uThrot2=0.0f;
 		if(counter%20==0 && params->ASLC_DEBUG==30) printf("DEBUG: Disabling throttle. uThrot=%.3f\n",(double)ctrldata->uThrot);
-		if(MavlinkSendOK(8)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: Disabling throttle!(OnGround&RC-Loss/Auto-Mode)\n");}
+		if(MavlinkSendOK(8)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: Disabling throttle!(OnGround)\n");}
 	}
 	else {
 		if(counter%20==0 && params->ASLC_DEBUG==30) printf("DEBUG: NOT Disabling throttle. uThrot=%.3f\n",(double)ctrldata->uThrot);
