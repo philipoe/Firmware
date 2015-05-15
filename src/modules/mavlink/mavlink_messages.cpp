@@ -2512,7 +2512,7 @@ protected:
 
 				mavlink_sens_batmon_t msg;
 
-				msg.temperature=((float) bat_mon_data.temperature[i])/10 + KELVINTOCELSIUS;
+				msg.temperature=((float) bat_mon_data.temperature[i])/10.0f + KELVINTOCELSIUS;
 				msg.voltage=bat_mon_data.voltage[i];
 				msg.current=bat_mon_data.current[i];
 				msg.SoC=bat_mon_data.stateofcharge[i];
