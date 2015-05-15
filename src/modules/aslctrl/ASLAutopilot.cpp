@@ -143,7 +143,7 @@ void ASLAutopilot::update()
 	// Run TECS update every time (should be called at >50Hz)
 	HLcontrol.TECS_Update50Hz();
 
-	if(subs.vstatus.main_state==MAIN_STATE_AUTO_MISSION && (counter % params->HL_fMult == 0))
+	if(subs.vstatus.main_state==MAIN_STATE_AUTO_MISSION && (counter % params->HL_fMult == 0) && subs.position_setpoint_triplet.current.valid)
 	{
 		if((counter %20==0) && (params->ASLC_DEBUG==1)) printf("dt_wp:%8.6f\n", double(hrt_absolute_time()-t3_old)/1.0e6);
 		t3_old=hrt_absolute_time();

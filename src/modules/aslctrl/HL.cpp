@@ -143,7 +143,7 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 	//Absolute altitude controller
 	//printf("hRef: %7.4f h:%7.4f h_home: %7.4f velw: %7.4f\n", hRef, h, h_home,velw);
 
-	if(params->ASLC_DEBUG==11) printf("AltCtrl: bModeChanged:%u, bUseRamp:%u, h:%.2f, hRef:%.2f, hRef_t:%.2f\n",bModeChanged,bUseRamp,(double)h,(double)hRef,(double)hRef_t);
+	if(params->ASLC_DEBUG==11) printf("AltCtrl: bModeChanged:%u, bUseRamp:%u, h:%.2f, hRef:%.2f, hRef_t:%.2f, hHome:%.2f\n",bModeChanged,bUseRamp,(double)h,(double)hRef,(double)hRef_t,(double)h_home);
 
 	int RET = 0;
 	//Safety checks. Either
