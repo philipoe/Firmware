@@ -2527,7 +2527,8 @@ protected:
 				msg.cellvoltage6=bat_mon_data.cellvoltage6[i];
 
 				uint8_t component_id = 150+i;
-				_mavlink->send_message(MAVLINK_MSG_ID_SENS_BATMON, &msg,component_id);
+				_mavlink->send_message(MAVLINK_MSG_ID_SENS_BATMON, &msg, component_id);
+				usleep(20000); // Give the mavlink buffer some time to be emptied
 			}
 		}
 	}
