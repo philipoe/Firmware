@@ -175,13 +175,17 @@ private:
 
 	int 		test_ledcnt_communication(void);
 
+	/**
+	 * WD functionality for the LED driver board
+	 *
+	 */
+
+	int 		wd_ledcnt(void);
+
 };
 
 /* helper macro for handling report buffer indices */
 #define INCREMENT(_x, _lim)	do { _x++; if (_x >= _lim) _x = 0; } while(0)
-
-/* helper macro for arithmetic - returns the square of the argument */
-#define POW2(_x)		((_x) * (_x))
 
 /*
  * LEDCNT internal constants and data structures.
@@ -490,11 +494,11 @@ LEDCNT::cycle()
 	/* collection phase? */
 	if (_measurement_phase) {
 #if 1
-		test_ledcnt_communication();					/// temp version only for the 24h AS flight
+		wd_ledcnt();					/// temp version only for the 24h AS flight
 
 #else
 
-		if (OK != test_ledcnt_communication()) {
+		if (OK != wd_ledcnt()) {
 																					// temp commented out for debugging
 
 			log("Led board error, restarting LEDCNT device");
@@ -615,6 +619,20 @@ LEDCNT::get_ledcnt_regs()
 
 int
 LEDCNT::test_ledcnt_communication(void)
+{
+	uint8_t data[2];
+
+	data[1] = 0x55;
+	data[0] = 0x06;
+
+	if (OK != transfer(&data[0],2, nullptr, 0))
+		return -EIO;
+
+	return OK;
+}
+
+int
+LEDCNT::wd_ledcnt(void)
 {
 	uint8_t data[2];
 
