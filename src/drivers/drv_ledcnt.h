@@ -57,7 +57,6 @@ struct ledcnt_report {
 	uint8_t led_power_2;
 	uint8_t led_power_3;
 	uint8_t led_power_4;
-
 	uint64_t timestamp;
 };
 
@@ -70,8 +69,7 @@ ORB_DECLARE(sensor_ledcnt);
  * ioctl() definitions
  */
 
-#define _LEDCNTIOCBASE		(0x2c00)						// check the LEDCNTIOCBASE value of 0x2c00
-#define _LEDCNTIOC(_n)		(_IOC(_AMBTEMPIOCBASE, _n))
-
+#define _LEDCNTIOCBASE		(0x3100)
+#define _LEDCNTIOC(_n)		(_IOC(_LEDCNTIOCBASE, _n))
 
 #endif /* _DRV_LEDCNT_H */

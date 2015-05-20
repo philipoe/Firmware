@@ -85,7 +85,7 @@ class LEDCNT : public device::I2C
 {
 public:
 	LEDCNT(int bus);
-	~LEDCNT();
+	virtual ~LEDCNT();
 
 	virtual int		init();
 
@@ -111,7 +111,6 @@ private:
 	struct ledcnt_report	*_reports;
 
 	bool				_measurement_phase;
-
 
 	orb_advert_t		_ledcnt_topic;
 
@@ -182,6 +181,9 @@ private:
 
 	int 		wd_ledcnt(void);
 
+	/* this class has pointer data members, do not allow copying it */
+	LEDCNT(const LEDCNT&);
+	LEDCNT operator=(const LEDCNT&);
 };
 
 /* helper macro for handling report buffer indices */
@@ -205,7 +207,6 @@ private:
 #define LED_POW_3_REG			0x04	/* Pointer to the address of the led board power register of channel 3  */
 #define LED_POW_4_REG			0x05	/* Pointer to the address of the led board power register of channel 4  */
 
-
 /*
  * Driver 'main' command.
  */
@@ -213,6 +214,7 @@ extern "C" __EXPORT int ledcnt_main(int argc, char *argv[]);
 
 LEDCNT::LEDCNT(int bus) :
 	I2C("LEDCNT", LEDCNT_DEVICE_PATH, bus, 0, 100000),
+	_work{},
 	_measure_ticks(0),
 	_num_reports(0),
 	_next_report(0),
@@ -239,6 +241,11 @@ LEDCNT::~LEDCNT()
 	/* free any existing reports */
 	if (_reports != nullptr)
 		delete[] _reports;
+
+	// free perf counters
+	perf_free(_sample_perf);
+	perf_free(_comms_errors);
+	perf_free(_buffer_overflows);
 }
 
 int
@@ -351,7 +358,6 @@ int
 LEDCNT::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	switch (cmd) {
-
 	case SENSORIOCSPOLLRATE: {
 			switch (arg) {
 
@@ -481,6 +487,7 @@ void
 LEDCNT::cycle_trampoline(void *arg)
 {
 	LEDCNT *dev = (LEDCNT *)arg;
+
 	dev->cycle();
 }
 
@@ -595,7 +602,6 @@ LEDCNT::get_ledcnt_regs()
 	perf_end(_sample_perf);
 
 	return OK;
-
 }
 
 int
