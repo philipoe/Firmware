@@ -191,7 +191,7 @@ private:
  * LEDCNT internal constants and data structures.
  */
 
-/* internal conversion time: 10 ms  */
+/* internal conversion time: 100 ms  */
 #define LEDCNT_CONVERSION_INTERVAL	100000	/* microseconds */
 
 #define LEDCNT_BUS				PX4_I2C_BUS_EXPANSION
@@ -211,9 +211,8 @@ private:
  */
 extern "C" __EXPORT int ledcnt_main(int argc, char *argv[]);
 
-
 LEDCNT::LEDCNT(int bus) :
-	I2C("LEDCNT", LEDCNT_DEVICE_PATH, bus, 0, 400000),
+	I2C("LEDCNT", LEDCNT_DEVICE_PATH, bus, 0, 100000),
 	_measure_ticks(0),
 	_num_reports(0),
 	_next_report(0),
@@ -224,7 +223,6 @@ LEDCNT::LEDCNT(int bus) :
 	_sample_perf(perf_alloc(PC_ELAPSED, "LEDCNT_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "LEDCNT_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "LEDCNT_buffer_overflows"))
-
 {
 	// enable debug() calls
 	_debug_enabled = true;
@@ -483,35 +481,20 @@ void
 LEDCNT::cycle_trampoline(void *arg)
 {
 	LEDCNT *dev = (LEDCNT *)arg;
-
 	dev->cycle();
 }
 
 void
 LEDCNT::cycle()
 {
-
 	/* collection phase? */
 	if (_measurement_phase) {
-#if 1
-		wd_ledcnt();					/// temp version only for the 24h AS flight
-
-#else
 
 		if (OK != wd_ledcnt()) {
-																					// temp commented out for debugging
-
-			log("Led board error, restarting LEDCNT device");
-
-			/* free any existing reports and reset the state machine and try again */
-			if (_reports != nullptr)
-				delete[] _reports;
-			probe();
-
 			start();
 			return;
 		}
-#endif
+
 		/* next phase is measurement */
 		_measurement_phase = true;
 
@@ -520,9 +503,7 @@ LEDCNT::cycle()
 			   &_work,
 			   (worker_t)&LEDCNT::cycle_trampoline,
 			   this,
-			   USEC2TICK(LEDCNT_CONVERSION_INTERVAL));				// temp marked for testing the replacement of LEDCNT_CONVERSION_INTERVAL
-		   	   //_measure_ticks);										// LEDCNT_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
-
+		   	   _measure_ticks);
 	}
 }
 
@@ -531,7 +512,7 @@ int
 LEDCNT::get_ledcnt_regs()
 {
 	uint8_t ptr = LED_STATS_REG;
-	uint8_t data[1];
+	uint8_t data;
 
 	uint8_t led_status  = 0;
 	uint8_t led_blink 	= 0;
@@ -544,47 +525,47 @@ LEDCNT::get_ledcnt_regs()
 	perf_begin(_sample_perf);
 
 
-	if (OK != transfer(&ptr, 1, &data[0], 1)) {
+	if (OK != transfer(&ptr, 1, &data, 1)) {
 		perf_count(_comms_errors);
 		return -EIO;
 	}
-	led_status =  data[0];
+	led_status =  data;
 
 	ptr = LED_BLINK_REG;
-	if (OK != transfer(&ptr, 1, &data[0], 1)) {
+	if (OK != transfer(&ptr, 1, &data, 1)) {
 		perf_count(_comms_errors);
 		return -EIO;
 	}
-	led_blink =  data[0];
+	led_blink =  data;
 
 
 	ptr = LED_POW_1_REG;
-	if (OK != transfer(&ptr, 1, &data[0], 1)) {
+	if (OK != transfer(&ptr, 1, &data, 1)) {
 		perf_count(_comms_errors);
 		return -EIO;
 	}
-	led_power_1 =  data[0];
+	led_power_1 =  data;
 
 	ptr = LED_POW_2_REG;
-	if (OK != transfer(&ptr, 1, &data[0], 1)) {
+	if (OK != transfer(&ptr, 1, &data, 1)) {
 		perf_count(_comms_errors);
 		return -EIO;
 	}
-	led_power_2 =  data[0];
+	led_power_2 =  data;
 
 	ptr = LED_POW_3_REG;
-	if (OK != transfer(&ptr, 1, &data[0], 1)) {
+	if (OK != transfer(&ptr, 1, &data, 1)) {
 		perf_count(_comms_errors);
 		return -EIO;
 	}
-	led_power_3 =  data[0];
+	led_power_3 =  data;
 
 	ptr = LED_POW_4_REG;
-	if (OK != transfer(&ptr, 1, &data[0], 1)) {
+	if (OK != transfer(&ptr, 1, &data, 1)) {
 		perf_count(_comms_errors);
 		return -EIO;
 	}
-	led_power_4 =  data[0];
+	led_power_4 =  data;
 
 
 	/* generate a new report */
