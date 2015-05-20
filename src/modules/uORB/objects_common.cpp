@@ -111,6 +111,9 @@ ORB_DEFINE(sensor_bat_mon, struct sensor_bat_mon_s);
 #include "topics/bat_mon.h"
 ORB_DEFINE(bat_mon, struct bat_mon_s);
 
+#include <drivers/drv_ledcnt.h>
+ORB_DEFINE(sensor_ledcnt, struct ledcnt_report);
+
 #include "topics/vehicle_attitude.h"
 ORB_DEFINE(vehicle_attitude, struct vehicle_attitude_s);
 

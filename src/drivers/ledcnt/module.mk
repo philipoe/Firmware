@@ -32,11 +32,10 @@
 ############################################################################
 
 #
-# LM73 driver
+# LED control driver
 #
 
-MODULE_COMMAND		= lm73
+MODULE_COMMAND		= ledcnt
 MODULE_STACKSIZE	= 1024
-SRCS				= lm73.cpp
+SRCS				= ledcnt.cpp
 EXTRACXXFLAGS		= -Weffc++
-MAXOPTIMIZATION	 	= -Os

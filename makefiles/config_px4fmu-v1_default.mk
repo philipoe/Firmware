@@ -40,7 +40,7 @@ MODULES		+= drivers/spv1020
 MODULES		+= drivers/sdp600
 MODULES		+= drivers/lm73
 MODULES		+= drivers/hdim010
-####MODULES		+= drivers/ledcnt
+MODULES		+= drivers/ledcnt
 ####MODULES		+= modules/aslctrl
 
 #MODULES		+= drivers/blinkm
