@@ -69,6 +69,7 @@
 #include <systemlib/err.h>
 
 #include <drivers/drv_voltage_current.h>
+#include <drivers/device/ringbuffer.h>
 
 
 /* oddly, ERROR is not defined for c++ */
@@ -102,14 +103,17 @@ protected:
 	virtual int		probe();
 
 private:
+	ADC121_VSPB & operator=(const ADC121_VSPB);
+	ADC121_VSPB(const ADC121_VSPB&);
 
 	struct work_s				_work;
 	unsigned					_measure_ticks;
 
-	unsigned					_num_reports;
-	volatile unsigned			_next_report;
-	volatile unsigned			_oldest_report;
-	struct adc121_vspb_report	*_reports;
+	//unsigned					_num_reports;
+	//volatile unsigned			_next_report;
+	//volatile unsigned			_oldest_report;
+	//struct adc121_vspb_report	*_reports;
+	RingBuffer			*_reports;
 
 	bool						_measurement_phase;
 
@@ -147,6 +151,8 @@ private:
 	 * Stop the automatic measurement state machine.
 	 */
 	void			stop();
+
+	void 			reset();
 
 	/**
 	 * Perform a poll cycle; collect from the previous measurement
@@ -219,13 +225,16 @@ extern "C" __EXPORT int adc121_vspb_main(int argc, char *argv[]);
 
 ADC121_VSPB::ADC121_VSPB(int bus) :
 	I2C("ADC121_VSPB", ADC121_VSPB_DEVICE_PATH, bus, 0, 100000),							/* set I2C rate to 100KHz */
+	_work{},
 	_measure_ticks(0),
-	_num_reports(0),
-	_next_report(0),
-	_oldest_report(0),
+	//_num_reports(0),
+	//_next_report(0),
+	//_oldest_report(0),
 	_reports(nullptr),
 	_measurement_phase(false),
 	_voltage(0),
+	_bias_cal_term(0.0f),
+	_SF_cal_term(1.0f),
 	_voltage_sensor_pb_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "ADC121_VSPB_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "ADC121_VSPB_comms_errors")),
@@ -240,8 +249,6 @@ ADC121_VSPB::ADC121_VSPB(int bus) :
 	_adc121_vspb_cal_term.bias = 0.0f;
 	_adc121_vspb_cal_term.SF   = 1.0f;
 
-	_bias_cal_term = 0.0f;
-	_SF_cal_term = 1.0f;
 }
 
 ADC121_VSPB::~ADC121_VSPB()
@@ -251,35 +258,39 @@ ADC121_VSPB::~ADC121_VSPB()
 
 	/* free any existing reports */
 	if (_reports != nullptr)
-		delete[] _reports;
+		//delete[] _reports;
+		delete _reports;
 }
 
 int
 ADC121_VSPB::init()
 {
-	int ret = ERROR;
+	int ret = I2C::init();
 
 	/* do I2C init (and probe) first */
-	if (I2C::init() != OK)
+	if (ret != OK)
 		goto out;
 
 	/* allocate basic report buffers */
-	_num_reports = 2;
-	_reports = new struct adc121_vspb_report[_num_reports];
-
+	//_num_reports = 2;
+	//_reports = new struct adc121_vspb_report[_num_reports];
+	_reports = new RingBuffer(2,sizeof(adc121_vspb_report));
 	if (_reports == nullptr)
 		goto out;
 
-	_oldest_report = _next_report = 0;
+	//_oldest_report = _next_report = 0;
 
 	/* get a publish handle on the adc121_vspb topic */
-	memset(&_reports[0], 0, sizeof(_reports[0]));
-	_voltage_sensor_pb_topic = orb_advertise(ORB_ID(sensor_adc121_vspb), &_reports[0]);
+	//memset(&_reports[0], 0, sizeof(_reports[0]));
+	//_voltage_sensor_pb_topic = orb_advertise(ORB_ID(sensor_adc121_vspb), &_reports[0]);
+	struct adc121_vspb_report trp;
+	_reports->get(&trp);
+	_voltage_sensor_pb_topic = orb_advertise(ORB_ID(sensor_adc121_vspb), &trp);
 
 	if (_voltage_sensor_pb_topic < 0)
 		debug("failed to create sensor_adc121_vspb object");
 
-	ret = OK;
+	//ret = OK;
 out:
 	return ret;
 }
@@ -315,6 +326,7 @@ ssize_t
 ADC121_VSPB::read(struct file *filp, char *buffer, size_t buflen)
 {
 	unsigned count = buflen / sizeof(struct adc121_vspb_report);
+	struct adc121_vspb_report *rbuf = reinterpret_cast<struct adc121_vspb_report *>(buffer);
 	int ret = 0;
 
 	/* buffer must be large enough */
@@ -330,10 +342,9 @@ ADC121_VSPB::read(struct file *filp, char *buffer, size_t buflen)
 		 * we are careful to avoid racing with them.
 		 */
 		while (count--) {
-			if (_oldest_report != _next_report) {
-				memcpy(buffer, _reports + _oldest_report, sizeof(*_reports));
-				ret += sizeof(_reports[0]);
-				INCREMENT(_oldest_report, _num_reports);
+		if (_reports->get(rbuf)) {
+			ret += sizeof(*rbuf);
+			rbuf++;
 			}
 		}
 
@@ -343,8 +354,7 @@ ADC121_VSPB::read(struct file *filp, char *buffer, size_t buflen)
 
 	/* manual measurement - run one conversion */
 	do {
-		_measurement_phase = 0;
-		_oldest_report = _next_report = 0;
+		_reports->flush();
 
 		/* Take a voltage measurement */
 
@@ -354,8 +364,9 @@ ADC121_VSPB::read(struct file *filp, char *buffer, size_t buflen)
 		}
 
 		/* state machine will have generated a report, copy it out */
-		memcpy(buffer, _reports, sizeof(*_reports));
-		ret = sizeof(*_reports);
+		if (_reports->get(rbuf)) {
+			ret = sizeof(*rbuf);
+		}
 
 	} while (0);
 
@@ -431,40 +442,40 @@ ADC121_VSPB::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 	case SENSORIOCSQUEUEDEPTH: {
 			/* add one to account for the sentinel in the ring */
-			arg++;
+			//arg++;
 
 			/* lower bound is mandatory, upper bound is a sanity check */
 			if ((arg < 2) || (arg > 100))
 				return -EINVAL;
 
 			/* allocate new buffer */
-			struct adc121_vspb_report *buf = new struct adc121_vspb_report[arg];
+			//struct adc121_vspb_report *buf = new struct adc121_vspb_report[arg];
 
-			if (nullptr == buf)
-				return -ENOMEM;
+			//if (nullptr == buf)
+			//	return -ENOMEM;
 
 			/* reset the measurement state machine with the new buffer, free the old */
-			stop();
-			delete[] _reports;
-			_num_reports = arg;
-			_reports = buf;
-			start();
+			//stop();
+			//delete[] _reports;
+			//_num_reports = arg;
+			//_reports = buf;
+			//start();
+			irqstate_t flags = irqsave();
+			if (!_reports->resize(arg)) {
+				irqrestore(flags);
+				return -ENOMEM;
+			}
+			irqrestore(flags);
 
 			return OK;
 		}
 
 	case SENSORIOCGQUEUEDEPTH:
-		return _num_reports - 1;
+		return _reports->size();
 
 	case SENSORIOCRESET:
 		/* reset the measurement state machine */
-		stop();
-
-		/* free any existing reports */
-		if (_reports != nullptr)
-			delete[] _reports;
-
-		start();
+		reset();
 		return OK;
 		//return -EINVAL;
 
@@ -478,11 +489,10 @@ ADC121_VSPB::ioctl(struct file *filp, int cmd, unsigned long arg)
 	 	 }
 
 	default:
-		break;
+		/* give it to the superclass */
+		return I2C::ioctl(filp, cmd, arg);
 	}
 
-	/* give it to the superclass */
-	return I2C::ioctl(filp, cmd, arg);
 }
 
 void
@@ -490,7 +500,7 @@ ADC121_VSPB::start()
 {
 	/* reset the report ring and state machine */
 	_measurement_phase = true;
-	_oldest_report = _next_report = 0;
+	_reports->flush();
 
 	/* schedule a cycle to start things */
 	work_queue(HPWORK, &_work, (worker_t)&ADC121_VSPB::cycle_trampoline, this, 1);
@@ -500,6 +510,13 @@ void
 ADC121_VSPB::stop()
 {
 	work_cancel(HPWORK, &_work);
+}
+
+void ADC121_VSPB::reset()
+{
+	stop();
+	_reports->flush();
+	start();
 }
 
 void
@@ -544,12 +561,13 @@ ADC121_VSPB::voltage_measurement()
 		uint8_t	b[2];
 		uint32_t w;
 	} cvt;
+	struct adc121_vspb_report trp;
 
 	/* read the most recent measurement */
 	perf_begin(_sample_perf);
 
 	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
-	_reports[_next_report].timestamp = hrt_absolute_time();
+	trp.timestamp = hrt_absolute_time();
 
 	/* fetch the raw value */
 
@@ -572,18 +590,13 @@ ADC121_VSPB::voltage_measurement()
 	//warnx("measured voltage by the ADC121 by the power board sensor: %3.2f [v]", (double) voltage);  				// remove display!!!!!!!!
 
 	/* generate a new report */
-		_reports[_next_report].voltage = _voltage;					/* report in [v] */
+		trp.voltage = _voltage;					/* report in [v] */
 
 	/* publish it */
-	orb_publish(ORB_ID(sensor_adc121_vspb), _voltage_sensor_pb_topic, &_reports[_next_report]);
+	orb_publish(ORB_ID(sensor_adc121_vspb), _voltage_sensor_pb_topic, &trp);
 
-	/* post a report to the ring - note, not locked */
-	INCREMENT(_next_report, _num_reports);
-
-	/* if we are running up against the oldest report, toss it */
-	if (_next_report == _oldest_report) {
+	if (_reports->force(&trp)) {
 		perf_count(_buffer_overflows);
-		INCREMENT(_oldest_report, _num_reports);
 	}
 
 	/* notify anyone waiting for data */
@@ -591,7 +604,8 @@ ADC121_VSPB::voltage_measurement()
 
 	perf_end(_sample_perf);
 
-return OK;
+	return OK;
+
 }
 
 void
@@ -601,8 +615,7 @@ ADC121_VSPB::print_info()
 	perf_print_counter(_comms_errors);
 	perf_print_counter(_buffer_overflows);
 	printf("poll interval:  %u ticks\n", _measure_ticks);
-	printf("report queue:   %u (%u/%u @ %p)\n",
-	       _num_reports, _oldest_report, _next_report, _reports);
+	_reports->print_info("report queue");
 	printf("voltage:   %10.4f\n", (double)(_voltage));
 }
 

@@ -69,6 +69,7 @@
 #include <systemlib/err.h>
 
 #include <drivers/drv_voltage_current.h>
+#include <drivers/device/ringbuffer.h>
 
 
 /* oddly, ERROR is not defined for c++ */
@@ -102,14 +103,17 @@ protected:
 	virtual int		probe();
 
 private:
+	ADC121_CS2 & operator=(const ADC121_CS2);
+	ADC121_CS2(const ADC121_CS2&);
 
 	struct work_s				_work;
 	unsigned					_measure_ticks;
 
-	unsigned					_num_reports;
-	volatile unsigned			_next_report;
-	volatile unsigned			_oldest_report;
-	struct adc121_cs2_report	*_reports;
+	//unsigned					_num_reports;
+	//volatile unsigned			_next_report;
+	//volatile unsigned			_oldest_report;
+	//struct adc121_cs2_report	*_reports;
+	RingBuffer			*_reports;
 
 	bool						_measurement_phase;
 
@@ -151,6 +155,8 @@ private:
 	 * Stop the automatic measurement state machine.
 	 */
 	void			stop();
+
+	void 			reset();
 
 	/**
 	 * Perform a poll cycle; collect from the previous measurement
@@ -223,13 +229,18 @@ extern "C" __EXPORT int adc121_cs2_main(int argc, char *argv[]);
 
 ADC121_CS2::ADC121_CS2(int bus) :
 	I2C("ADC121_CS2", ADC121_CS2_DEVICE_PATH, bus, 0, 100000),							/* set I2C rate to 100KHz */
+	_work{},
 	_measure_ticks(0),
-	_num_reports(0),
-	_next_report(0),
-	_oldest_report(0),
+	//_num_reports(0),
+	//_next_report(0),
+	//_oldest_report(0),
 	_reports(nullptr),
 	_measurement_phase(false),
 	_current(0),
+	_bias_cal_term(0.0f),
+	_SF_cal_term(1.0f),
+	averaging_counter(0),
+	raw_current(0),
 	_current_sensor_pb_topic(-1),
 	_sample_perf(perf_alloc(PC_ELAPSED, "ADC121_CS2_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "ADC121_CS2_comms_errors")),
@@ -244,8 +255,6 @@ ADC121_CS2::ADC121_CS2(int bus) :
 	_adc121_cs2_cal_term.bias = 0.0f;
 	_adc121_cs2_cal_term.SF   = 1.0f;
 
-	_bias_cal_term = 0.0f;
-	_SF_cal_term = 1.0f;
 }
 
 ADC121_CS2::~ADC121_CS2()
@@ -255,38 +264,42 @@ ADC121_CS2::~ADC121_CS2()
 
 	/* free any existing reports */
 	if (_reports != nullptr)
-		delete[] _reports;
+		//delete[] _reports;
+		delete _reports;
 }
 
 int
 ADC121_CS2::init()
 {
-	int ret = ERROR;
+	int ret = I2C::init();
 
 	/* do I2C init (and probe) first */
-	if (I2C::init() != OK)
+	if (ret != OK)
 		goto out;
-
-	/* allocate basic report buffers */
-	_num_reports = 2;
-	_reports = new struct adc121_cs2_report[_num_reports];
-
-	if (_reports == nullptr)
-		goto out;
-
-	_oldest_report = _next_report = 0;
 
 	averaging_counter = 0;				/* init current averaging */
 	raw_current		  = 0;				/* init current averaging */
 
-	/* get a publish handle on the adc121_cs2 topic */
-	memset(&_reports[0], 0, sizeof(_reports[0]));
-	_current_sensor_pb_topic = orb_advertise(ORB_ID(sensor_adc121_cs2), &_reports[0]);
+	/* allocate basic report buffers */
+	//_num_reports = 2;
+	//_reports = new struct adc121_cs1_report[_num_reports];
+	_reports = new RingBuffer(2,sizeof(adc121_cs2_report));
+	if (_reports == nullptr)
+		goto out;
+
+	//_oldest_report = _next_report = 0;
+
+	/* get a publish handle on the adc121_cs1 topic */
+	//memset(&_reports[0], 0, sizeof(_reports[0]));
+	//_current_sensor_pb_topic = orb_advertise(ORB_ID(sensor_adc121_cs1), &_reports[0]);
+	struct adc121_cs2_report trp;
+	_reports->get(&trp);
+	_current_sensor_pb_topic = orb_advertise(ORB_ID(sensor_adc121_cs2), &trp);
 
 	if (_current_sensor_pb_topic < 0)
-		debug("failed to create sensor_adc121_cs2 object");
+		debug("failed to create sensor_adc121_cs1 object");
 
-	ret = OK;
+	//ret = OK;
 out:
 	return ret;
 }
@@ -323,6 +336,7 @@ ssize_t
 ADC121_CS2::read(struct file *filp, char *buffer, size_t buflen)
 {
 	unsigned count = buflen / sizeof(struct adc121_cs2_report);
+	struct adc121_cs2_report *rbuf = reinterpret_cast<struct adc121_cs2_report *>(buffer);
 	int ret = 0;
 
 	/* buffer must be large enough */
@@ -338,10 +352,9 @@ ADC121_CS2::read(struct file *filp, char *buffer, size_t buflen)
 		 * we are careful to avoid racing with them.
 		 */
 		while (count--) {
-			if (_oldest_report != _next_report) {
-				memcpy(buffer, _reports + _oldest_report, sizeof(*_reports));
-				ret += sizeof(_reports[0]);
-				INCREMENT(_oldest_report, _num_reports);
+			if (_reports->get(rbuf)) {
+				ret += sizeof(*rbuf);
+				rbuf++;
 			}
 		}
 
@@ -351,8 +364,7 @@ ADC121_CS2::read(struct file *filp, char *buffer, size_t buflen)
 
 	/* manual measurement - run one conversion */
 	do {
-		_measurement_phase = 0;
-		_oldest_report = _next_report = 0;
+		_reports->flush();
 
 		/* Take a current measurement */
 
@@ -362,8 +374,9 @@ ADC121_CS2::read(struct file *filp, char *buffer, size_t buflen)
 		}
 
 		/* state machine will have generated a report, copy it out */
-		memcpy(buffer, _reports, sizeof(*_reports));
-		ret = sizeof(*_reports);
+		if (_reports->get(rbuf)) {
+			ret = sizeof(*rbuf);
+		}
 
 	} while (0);
 
@@ -439,40 +452,40 @@ ADC121_CS2::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 	case SENSORIOCSQUEUEDEPTH: {
 			/* add one to account for the sentinel in the ring */
-			arg++;
+			//arg++;
 
 			/* lower bound is mandatory, upper bound is a sanity check */
 			if ((arg < 2) || (arg > 100))
 				return -EINVAL;
 
 			/* allocate new buffer */
-			struct adc121_cs2_report *buf = new struct adc121_cs2_report[arg];
+			//struct adc121_cs2_report *buf = new struct adc121_cs2_report[arg];
 
-			if (nullptr == buf)
-				return -ENOMEM;
+			//if (nullptr == buf)
+			//	return -ENOMEM;
 
 			/* reset the measurement state machine with the new buffer, free the old */
-			stop();
-			delete[] _reports;
-			_num_reports = arg;
-			_reports = buf;
-			start();
+			//stop();
+			//delete[] _reports;
+			//_num_reports = arg;
+			//_reports = buf;
+			//start();
+			irqstate_t flags = irqsave();
+			if (!_reports->resize(arg)) {
+				irqrestore(flags);
+				return -ENOMEM;
+			}
+			irqrestore(flags);
 
 			return OK;
 		}
 
 	case SENSORIOCGQUEUEDEPTH:
-		return _num_reports - 1;
+		return _reports->size();
 
 	case SENSORIOCRESET:
 		/* reset the measurement state machine */
-		stop();
-
-		/* free any existing reports */
-		if (_reports != nullptr)
-			delete[] _reports;
-
-		start();
+		reset();
 		return OK;
 		//return -EINVAL;
 
@@ -486,11 +499,10 @@ ADC121_CS2::ioctl(struct file *filp, int cmd, unsigned long arg)
 	 	 }
 
 	default:
-		break;
+		/* give it to the superclass */
+		return I2C::ioctl(filp, cmd, arg);
 	}
 
-	/* give it to the superclass */
-	return I2C::ioctl(filp, cmd, arg);
 }
 
 void
@@ -498,7 +510,7 @@ ADC121_CS2::start()
 {
 	/* reset the report ring and state machine */
 	_measurement_phase = true;
-	_oldest_report = _next_report = 0;
+	_reports->flush();
 
 	/* schedule a cycle to start things */
 	work_queue(HPWORK, &_work, (worker_t)&ADC121_CS2::cycle_trampoline, this, 1);
@@ -513,6 +525,13 @@ void
 ADC121_CS2::stop()
 {
 	work_cancel(HPWORK, &_work);
+}
+
+void ADC121_CS2::reset()
+{
+	stop();
+	_reports->flush();
+	start();
 }
 
 void
@@ -556,12 +575,13 @@ ADC121_CS2::current_measurement()
 		uint8_t	b[2];
 		uint32_t w;
 	} cvt;
+	struct adc121_cs2_report trp;
 
 	/* read the most recent measurement */
 	perf_begin(_sample_perf);
 
 	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
-	_reports[_next_report].timestamp = hrt_absolute_time();
+	trp.timestamp = hrt_absolute_time();
 
 	/* fetch the raw value */
 
@@ -597,26 +617,21 @@ ADC121_CS2::current_measurement()
 
 	//warnx("measured current by the ADC121 by the board Sensor 2: %3.2f [A]", (double) _current);  				// remove display!!!!!!!!
 
-	/* generate a new report */
-		_reports[_next_report].current = _current;					/* report in [A] */
+	trp.current = _current;
 
 	/* publish it */
-	orb_publish(ORB_ID(sensor_adc121_cs2), _current_sensor_pb_topic, &_reports[_next_report]);
+	orb_publish(ORB_ID(sensor_adc121_cs1), _current_sensor_pb_topic, &trp);
 
-	/* post a report to the ring - note, not locked */
-	INCREMENT(_next_report, _num_reports);
-
-	/* if we are running up against the oldest report, toss it */
-	if (_next_report == _oldest_report) {
+	if (_reports->force(&trp)) {
 		perf_count(_buffer_overflows);
-		INCREMENT(_oldest_report, _num_reports);
 	}
 
 	/* notify anyone waiting for data */
 	poll_notify(POLLIN);
 
 	perf_end(_sample_perf);
-return OK;
+
+	return OK;
 
 }
 
@@ -627,8 +642,7 @@ ADC121_CS2::print_info()
 	perf_print_counter(_comms_errors);
 	perf_print_counter(_buffer_overflows);
 	printf("poll interval:  %u ticks\n", _measure_ticks);
-	printf("report queue:   %u (%u/%u @ %p)\n",
-	       _num_reports, _oldest_report, _next_report, _reports);
+	_reports->print_info("report queue");
 	printf("current:   %10.4f\n", (double)(_current));
 }
 

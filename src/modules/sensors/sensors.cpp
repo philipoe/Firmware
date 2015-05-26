@@ -264,6 +264,7 @@ private:
 	int		_bat_mon_sub[3];			/**< battery monitor data subscription 		*/
 
 	int 	_params_sub;				/**< notification of parameter updates */
+	int		_rc_parameter_map_sub;			/**< rc parameter map subscription */
 	int 	_manual_control_sub;		/**< notification of manual control updates */
 	orb_advert_t	_sensor_pub;				/**< combined sensor data topic */
 	orb_advert_t	_manual_control_pub;		/**< manual control signal topic */
@@ -507,7 +508,7 @@ private:
 	/**
 	 * Do MPPT -related initialization.
 	 */
-	void		bat_mon_init();
+	int		bat_mon_init();
 
 	/**
 	 * Do adc-related initialisation.
@@ -629,12 +630,10 @@ Sensors	*g_sensors = nullptr;
 Sensors::Sensors() :
 	_fd_adc(-1),
 	_last_adc(0),
-
 	_task_should_exit(true),
 	_sensors_task(-1),
 	_hil_enabled(false),
 	_publishing(true),
-
 	/* subscriptions */
 	_gyro_sub(-1),
 	_accel_sub(-1),
@@ -657,11 +656,10 @@ Sensors::Sensors() :
 	_adc121_cs1_sub(-1),
 	_adc121_cs2_sub(-1),
 	_spv1020_sub(-1),
-	_bat_mon_sub({-1,-1,-1}),
+	_bat_mon_sub{-1,-1,-1},
 	_params_sub(-1),
 	_rc_parameter_map_sub(-1),
 	_manual_control_sub(-1),
-
 	/* publications */
 	_sensor_pub(-1),
 	_manual_control_pub(-1),
@@ -673,12 +671,16 @@ Sensors::Sensors() :
 	_power_pub(-1),
 	_mppt_pub(-1),
 	_bat_mon_pub(-1),
-
 	/* performance counters */
 	_loop_perf(perf_alloc(PC_ELAPSED, "sensor task update")),
 	_rc{},
 	_battery_status{},
-
+	_barometer{},
+	_diff_pres{},
+	_airspeed{},
+	_rc_parameter_map{},
+	_board_rotation{},
+	_external_mag_rotation{},
 	_mag_is_external(false),
 	_battery_discharged(0),
 	_battery_current_timestamp(0)
@@ -1382,9 +1384,11 @@ Sensors::bat_mon_init()
 	ioctl(fd, SENSORIOCSPOLLRATE, 1);
 
 	close(fd);
+
+	return OK;
 }
 
-void
+int
 Sensors::adc_init()
 {
 
@@ -2135,12 +2139,12 @@ Sensors::parameter_update_poll(bool forced)
 
 		if (fd > 0) {
 			struct current_cal_term mpptscale = {
-				_parameters.mppt_b[0],
+				{_parameters.mppt_b[0],
 				_parameters.mppt_b[1],
-				_parameters.mppt_b[2],
-				_parameters.mppt_SF[0],
+				_parameters.mppt_b[2]},
+				{_parameters.mppt_SF[0],
 				_parameters.mppt_SF[1],
-				_parameters.mppt_SF[2],
+				_parameters.mppt_SF[2]}
 			};
 
 			if (OK != ioctl(fd, MPPTIOCSSCALE, (long unsigned int)&mpptscale)) {
