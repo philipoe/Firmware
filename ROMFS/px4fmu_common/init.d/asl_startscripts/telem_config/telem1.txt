@@ -1,0 +1,18 @@
+# Start MAVLink Telemetry-1 (to onboard computer)
+# Define as custom stream
+
+# Settings
+set BAUDRATE 230400
+set DATARATE 10000
+set DEVICE /dev/ttyS2
+set MODE custom
+
+# Start instance of MAVLINK app on pixhawk
+mavlink start -d $DEVICE -m $MODE -b $BAUDRATE -r $DATARATE
+
+# Enable the following streams
+
+# Disable the following streams
+
+# Sleep a bit to give Mavlink time to set up
+usleep 100000

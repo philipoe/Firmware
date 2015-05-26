@@ -41,4 +41,22 @@ enum CtrlMode {
 	MODE_RCLOSS_AUTOFAILSAFE=13,
 	MODE_RCLOSS_ERR=14
 };
+
+static const char aslctrl_error_codes[13][45] =
+{
+	"ALL_OK",
+	"ERROR: Home-alt wrong.",
+	"ERROR: Param HL_AlthMax wrong",
+	"WARNING: Ref-alt vs. home-alt bounds",
+	"WARNING: Alt vs. Home-alt bounds",
+	"WARNING: ",
+	"WARNING: Ref-alt exceeds HL_AlthMax",
+	"WARNING: HL_AlthMax below HL_AlthMin",
+	"WARNING: Ref-alt below HL_AlthMin",
+	"WARNING: Alt below HL_AlthMin",
+	"WARNING: TECS_MODE_UNDERSPEED",
+	"WARNING: TECS_MODE_BAD_DESCENT",
+	"WARNING: TECS_MODE_CLIMBOUT"
+};
+
 #endif /*CONSTS_H_*/

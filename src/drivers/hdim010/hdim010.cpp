@@ -112,6 +112,8 @@ protected:
 	virtual int		measure();
 	virtual int		collect();
 
+	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
+
 	math::LowPassFilter2p	_filter;
 	bool 					_probe_phase;
 
@@ -274,6 +276,26 @@ HDIM010::cycle()
 		   (worker_t)&Airspeed::cycle_trampoline,
 		   this,
 		   USEC2TICK(CONVERSION_INTERVAL));
+}
+
+int HDIM010::ioctl(struct file *filp, int cmd, unsigned long arg)
+{
+	switch (cmd) {
+		case AIRSPEEDIOCSCOMPE: {
+			// For this sensor, tube compensation does not have any effect (membrane-based).
+			// Warn the user, but return OK in any case to not confuse the upper airspeed driver layers
+
+			struct airspeed_tube_compensation *s = (struct airspeed_tube_compensation*)arg;
+			if(s->dbaro_Dtube > 0.0001f || s->dbaro_Ltube > 0.0001f) {
+				warnx("WARNING: Tube-correction has no effect for HDIM10 airspeed sensor! Please set these params to zero!\n");
+			}
+			return OK;
+		}
+		default: {
+			/* give it to the superclass */
+			return Airspeed::ioctl(filp, cmd, arg);
+		}
+	}
 }
 
 /**
@@ -512,3 +534,5 @@ hdim010_main(int argc, char *argv[])
 	hdim010_airspeed_usage();
 	exit(0);
 }
+
+

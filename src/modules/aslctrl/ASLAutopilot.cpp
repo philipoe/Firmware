@@ -144,7 +144,7 @@ void ASLAutopilot::update()
 	// Run TECS update every time (should be called at >50Hz)
 	HLcontrol.TECS_Update50Hz();
 
-	if(subs.vstatus.main_state==vehicle_status_s::MAIN_STATE_AUTO_MISSION && (counter % params->HL_fMult == 0))
+	if(subs.vstatus.main_state==vehicle_status_s::MAIN_STATE_AUTO_MISSION && (counter % params->HL_fMult == 0) && subs.position_setpoint_triplet.current.valid)
 	{
 		if((counter %20==0) && (params->ASLC_DEBUG==1)) printf("dt_wp:%8.6f\n", double(hrt_absolute_time()-t3_old)/1.0e6);
 		t3_old=hrt_absolute_time();
@@ -191,7 +191,7 @@ void ASLAutopilot::update()
 					subs.global_pos.alt, subs.home_pos.alt, ctrldata->hRef_t,ctrldata->AltitudeStatus, ctrldata->bEngageSpoilers,bUseAltitudeRamp, bUseThermalHighEtaMode,bReinit);
 			if(params->ASLC_DEBUG==10) printf("RET:%i\n",RET);
 			if(RET != RET_OK && MavlinkSendOK(2)) {
-				mavlink_log_critical(mavlink_fd, "[aslctrl] ALT_CTRL ERROR/WARNING: CODE %d",RET);
+				mavlink_log_critical(mavlink_fd, "[aslctrl] %s", aslctrl_error_codes[-RET]);
 			}
 		}
 	}
@@ -262,8 +262,8 @@ void ASLAutopilot::update()
 			bool bReinit=(ctrldata->aslctrl_mode-ctrldata->aslctrl_last_mode>0 ? true : false);
 			if(params->ASLC_CtrlType != MPC_STD && params->ASLC_CtrlType != MPC_ROLLMPCONLY) { //Only execute for standard PID controller, not for MPC controller (which does rate-stabilization/control internally)
 				RET = SAScontrol.RateControl(ctrldata->pRef,ctrldata->qRef, ctrldata->rRef, ctrldata->uAil, ctrldata->uElev, ctrldata->uRud, ctrldata->f_GainSch_Q, subs.att.rollspeed,subs.att.pitchspeed,subs.att.yawspeed, ctrldata->RollAngle, ctrldata->RollAngleRef, bReinit);
-				if(RET==-1)	{if(MavlinkSendOK(4)) {mavlink_log_critical(mavlink_fd, "[aslctrl] ERROR in SAS Rate Control. Params != Zero?");}}
-				if(RET==-2) {if(MavlinkSendOK(7)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING, OVERSPEED DETECTED!");}}
+				if(RET==-1)	{if(MavlinkSendOK(4)) {mavlink_log_critical(mavlink_fd, "[aslctrl] ERROR: SAS Rate Control. Params != Zero?");}}
+				if(RET==-2) {if(MavlinkSendOK(7)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: Overspeed detected!");}}
 			}
 		}
 
@@ -304,7 +304,7 @@ void ASLAutopilot::update()
 		ctrldata->uThrot=0.0f;
 		ctrldata->uThrot2=0.0f;
 		if(counter%20==0 && params->ASLC_DEBUG==30) printf("DEBUG: Disabling throttle. uThrot=%.3f\n",(double)ctrldata->uThrot);
-		if(MavlinkSendOK(8)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: Disabling throttle!(OnGround&RC-Loss/Auto-Mode)\n");}
+		if(MavlinkSendOK(8)) {mavlink_log_critical(mavlink_fd, "[aslctrl] WARNING: Disabling throttle!(OnGround)\n");}
 	}
 	else {
 		if(counter%20==0 && params->ASLC_DEBUG==30) printf("DEBUG: NOT Disabling throttle. uThrot=%.3f\n",(double)ctrldata->uThrot);
@@ -317,17 +317,16 @@ void ASLAutopilot::update()
 	subs.actuators.control[CH_RDR] = ctrldata->uRud;
 	subs.actuators.control[CH_AIL_L] = ctrldata->uAil;		//Aileron-Differential applied in PX4IO-mixer
 
+	//Flaps/Spoilers on CH_FLAPS
+	if((counter%20==0) && (params->ASLC_DEBUG==31)) printf("flap switch: %.3f\n",(double)subs.manual_sp.flaps);
+	if(subs.manual_sp.flaps > 0.5f || ctrldata->bEngageSpoilers) subs.actuators.control[CH_FLAPS] = 1.0f;
+	else if(subs.manual_sp.flaps < -0.5f) subs.actuators.control[CH_FLAPS] = -1.0f;
+	else subs.actuators.control[CH_FLAPS]=0.0f;
+
 	if(0) {
 		//Throttle channel 2 on AUX
 		subs.actuators.control[CH_AUX] = ctrldata->uThrot2;
 	}
-	else {
-		//Spoilers on AUX
-		if((counter%20==0) && (params->ASLC_DEBUG==31)) printf("flap switch: %.3f\n",(double)subs.manual_sp.flaps);
-		if(subs.manual_sp.flaps<-0.5f || ctrldata->bEngageSpoilers) subs.actuators.control[CH_AUX]=1.0f;
-		else subs.actuators.control[CH_AUX]=0.0f;
-	}
-
 
 	//Debug
 	if ((counter % 20 == 0) && (params->ASLC_DEBUG==1)) {
@@ -346,8 +345,8 @@ void ASLAutopilot::update()
 
 	//Debug
 	if ((counter % 20 == 0) && (params->ASLC_DEBUG==1)) {
-		//printf("MIXED actuators[1-6]: %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f\n",subs.actuators.control[0],subs.actuators.control[1],subs.actuators.control[2],
-		//		subs.actuators.control[3],subs.actuators.control[4],subs.actuators.control[5]);
+		printf("MIXED actuators[1-6]: %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f\n",double(subs.actuators.control[0]),double(subs.actuators.control[1]),double(subs.actuators.control[2]),
+				double(subs.actuators.control[3]),double(subs.actuators.control[4]),double(subs.actuators.control[5]));
 	}
 
 	// update all publications

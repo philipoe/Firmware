@@ -59,9 +59,10 @@ float CAS::PitchControl(float const& pitchRef, float& pitchRefCT, float const& p
 	// First order Taylor-series expansion (cp. [1]) of 1/cos(roll) to avoid steep increase/sensitivity to noise for 1/cos(roll) as roll -> 90°
 	float inv_cosroll = 0.5*pow(roll_lim,2.0f) + 1.0;
 
-	//Bank angle compensation -> apply feed-forward on pitch reference
+	//Bank angle pitch compensation
 	float pitchRef_ff=0.0f;
-	if(params->ASLC_CoordTurn == 5) {
+	if(params->ASLC_CoordTurn == 1) {
+		// PitchReference FeedForward & Integrator
 		//Compute and apply limit for maximum value of the integrator
 		float inv_cosroll_max = 0.5*pow(params->CAS_RollAngleLim,2.0f) + 1.0;
 		float cBankMax=limit2((inv_cosroll-1.0f)/SAFE_ZERO_DIV(inv_cosroll_max-1.0f),1.0f,0.0f);
@@ -69,13 +70,11 @@ float CAS::PitchControl(float const& pitchRef, float& pitchRefCT, float const& p
 
 		//Apply the pitch-angle-ref feedforward
 		pitchRef_ff = PI_PitchTC.step(pitchRef-pitch);
-		float temp=pitchRef_ff;
 		pitchRef_ff += params->CAS_uElevTurnFF*(inv_cosroll-1);
 
 		if(params->ASLC_DEBUG==25) {
-			printf("roll: %.2f cBankMax: %.3f m_int:%.2f PRef_org:%.2f PRef_ff_PI %.2f Pref_ff_FF: %.2f PRef:%.2f P:%.2f \n",
-					(double)roll, (double)cBankMax,(double)PI_PitchTC.m_int,(double)pitchRef, (double)temp,
-					double(pitchRef_ff-temp), double(pitchRef+pitchRef_ff),(double)pitch);
+			printf("roll: %.2f cBankMax: %.3f m_int:%.2f PRef_org:%.2f PRef:%.2f P:%.2f \n",
+				(double)roll, (double)cBankMax,(double)PI_PitchTC.m_int,(double)pitchRef, double(pitchRef+pitchRef_ff),(double)pitch);
 
 		}
 	}
@@ -86,21 +85,8 @@ float CAS::PitchControl(float const& pitchRef, float& pitchRefCT, float const& p
 	PI_PitchAngle.SetPGain(PGain);
 	float qref = PI_PitchAngle.step(pitchRefCT-pitch); // This one is saturated within the PI controller
 
-	// Elevator/Pitch turn compensation
-	if((params->ASLC_CoordTurn == 1 || params->ASLC_CoordTurn == 4) && fabs(roll) < 85.0f*DEG2RAD) {
-		//LIMIT this w.r.t two things:
-		// a) to avoid roll angles close to 90° to avoid the singularity
-		// b) to avoid overwriting the normal PI-Roll-Ctrler command due to a too high turn-compensation feed-forward
-		//TODO1: 1.0 is not correct.
-		float remaining_ctrl_action = 1.0f-fabs(qref);
-		float roll_limTurn = limit1(roll, params->CAS_RollAngleLim);
-		float qref_ff = limit1(params->CAS_uElevTurnFF*fabs(sinf(roll_limTurn)*sinf(roll_limTurn)*inv_cosroll), remaining_ctrl_action);
-		if(params->ASLC_DEBUG==16) printf("roll: %.2f qref:%.2f qref_ff %.2f qref_rem:%.2f \n",(double)roll, (double)qref,(double)qref_ff,(double)remaining_ctrl_action);
-		qref += qref_ff;
-	}
-
 	// Throttle feed forward
-	if(((params->ASLC_CoordTurn == 1 || params->ASLC_CoordTurn >= 4) && aslctrl_mode==MODE_CAS) && fabs(roll) < 85.0f*DEG2RAD) {
+	if((params->ASLC_CoordTurn==1) && (aslctrl_mode==MODE_CAS) && (fabs(roll) < 85.0f*DEG2RAD)) {
 		// Throttle feed forward (necessary due to 1) higher stall speed and 2) higher drag in curve)
 		// Note: This is taken from TECS, and is just a "hack"to have the necessary throttle feed-forward - with the
 		// same behaviour as in TECS - also in a pure CAS mode.
@@ -135,66 +121,6 @@ float CAS::BankControl(float const &bankRef, float const &roll, float & PGain)
 	return pRef;
 }
 
-float CAS::SideslipControl(float const& rollRef, float const& roll, float const& pitch, aslctrl_data_s *ctrldata)
-{
-	// Very basic sideslip controller. Using rudder to control the error in the achieved yaw-rate.
-	float rRef=0.0f;
-
-	if(LP_Airspeed.Get()>1.0f /*bAirspeedValid*/) {
-
-		// Yawrate reference. Calculated from coordinated turn constraint, assuming constant pitch (theta_dot=0)
-		ctrldata->Yawdot_ref = g* tanf(roll)/ LP_Airspeed.Get();
-		// Yawrate. Calculated from body velocities
-		ctrldata->Yawdot = sinf(roll)/cosf(pitch)*subs->att.pitchspeed + cosf(roll)/cosf(pitch)*subs->att.yawspeed;
-
-		rRef = ctrldata->uRud*params->SAS_YawPDir; //Allow feed through from manual input for now
-		rRef += params->SAS_YawCTkP * (ctrldata->Yawdot_ref-ctrldata->Yawdot);
-		rRef = limit1(rRef,params->CAS_YawRateLim);
-
-		return rRef;
-	}
-
-	//Just return zero
-	return 0;
-}
-
-int CAS::CoordinatedTurnControl(const float& roll, const float& pitch, float& qRef, float& rRef, aslctrl_data_s *ctrldata)
-{
-	// Basic coordinated-turn controller. Uses two "additional" p-gains on the errors between the actual
-	// q&r-rates and the desired q&r-rates, as defined through the desired yaw-rate in a coordinated
-	// turn.
-
-	if(LP_Airspeed.Get()>1.0f /*bAirspeedValid*/) {
-
-		// Yawrate reference. Calculated from coordinated turn constraint, assuming constant pitch (theta_dot=0)
-		ctrldata->Yawdot_ref = g * tanf(roll)/ LP_Airspeed.Get();
-		// Yawrate. NOT USED AS A CONTROL INPUT HERE, JUST FOR COMPLETENESS. Calculated from body velocities.
-		ctrldata->Yawdot = sinf(roll)/cosf(pitch)*subs->att.pitchspeed + cosf(roll)/cosf(pitch)*subs->att.yawspeed;
-
-		float q_coordturn_ref = sinf(roll)*ctrldata->Yawdot_ref;
-		float r_coordturn_ref = cosf(roll)*ctrldata->Yawdot_ref;
-
-		//Elevator compensation
-		qRef += params->CAS_uElevTurnFF * (q_coordturn_ref-subs->att.pitchspeed);
-		qRef = limit1(qRef,params->CAS_PitchRateLim);
-
-		//Rudder compensation
-		rRef = -ctrldata->uRud*params->SAS_YawPDir; //TODO: REMOVE LATER, but allow feed through from manual input for now
-		rRef += params->SAS_YawCTkP * (r_coordturn_ref-subs->att.yawspeed);
-		rRef = limit1(rRef,params->CAS_YawRateLim);
-
-		if(params->ASLC_DEBUG==21) printf("roll[°]: %.3f Yawd_r/Yawd: (%.3f/%.3f) qRef/q/uE: (%.3f/%.3f/%.3f) rRef/r: (%.3f/%.3f%.3f)\n",
-				(double)roll, (double)ctrldata->Yawdot_ref,(double)ctrldata->Yawdot,(double)q_coordturn_ref,(double)subs->att.pitchspeed,
-				(double)qRef,(double)r_coordturn_ref, (double)subs->att.yawspeed, (double)rRef);
-
-		return 0;
-	}
-
-	//Just return zero
-	return -1;
-}
-
-
 //*****************************************************************************************
 //*** HIGHER LEVEL CAS CONTROL (HEADING)
 //*****************************************************************************************
@@ -226,19 +152,9 @@ int CAS::CASRollPitchControl(float &pref, float &qref, float& rref, float const 
 	//Controllers
 	pref = BankControl(RollAngleRef,Roll, ctrldata->R_kP_GainSch_E);
 	qref = PitchControl(PitchAngleRef,ctrldata->PitchAngleRefCT,Pitch,RollAngleRef,Roll,ctrldata->P_kP_GainSch_E,ctrldata->uThrot,ctrldata->aslctrl_mode);
-	if(params->ASLC_CoordTurn == 1 || params->ASLC_CoordTurn == 5) {
-		//Option 1: Do coordinated turn control in SAS
+	if(params->ASLC_CoordTurn == 1) {
+		//Do coordinated turn control in SAS
 	}
-	else if(params->ASLC_CoordTurn == 2) {
-		CoordinatedTurnControl(Roll,Pitch,qref,rref,ctrldata);
-	}
-	else if(params->ASLC_CoordTurn == 3) {
-		//Option 3: Use integrator with adjustable limits as a function of roll angle here
-	}
-	else if(params->ASLC_CoordTurn == 4) {
-		rref = SideslipControl(RollAngleRef,Roll,Pitch,ctrldata);
-	}
-
 
 	// Stall protection
 	//STALL PROTECTION: Normal acceleration penalizer

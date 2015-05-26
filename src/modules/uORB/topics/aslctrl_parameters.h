@@ -119,9 +119,6 @@ struct aslctrl_parameters_s {
 	float CAS_PitchIGain;
 	float CAS_RollPGain;
 	float CAS_RollPGainM;
-	float CAS_HeadPGain;
-	float CAS_q2uPGain;
-	float CAS_p2uPGain;
 	//Limiters
 	float CAS_PitchRateLim;
 	float CAS_PitchRateILim;
@@ -166,9 +163,6 @@ struct aslctrl_parameters_s {
 	float roll_throttle_compensation;
 	float speed_weight;
 	float pitch_damping;
-	float airspeed_min;
-	float airspeed_trim;
-	float airspeed_max;
 	float pitch_limit_min;
 	float pitch_limit_max;
 	float throttle_min;

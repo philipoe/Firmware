@@ -1,0 +1,53 @@
+# Start MAVLink instance #0 (to ground control station)
+
+# Settings
+set DEVICE /dev/ttyS1
+
+if [ $HIL == yes ]
+then
+	echo "[MAVLINK] Instance #0 starting in HIL (Mavlink:Normal) mode"
+	set BAUDRATE 230400
+	set DATARATE 10000
+	set MODE normal
+else
+	echo "[MAVLINK] Instance #0 starting in non-HIL (Mavlink:Custom) mode"
+	set BAUDRATE 57600
+	set DATARATE 1000
+	set MODE custom
+fi
+
+# Start instance of MAVLINK app on pixhawk
+mavlink start -d $DEVICE -m $MODE -b $BAUDRATE -r $DATARATE
+
+if [ $MODE == custom ]
+then
+	# Enable the following streams
+	mavlink stream -d /dev/ttyS1 -s SYS_STATUS -r 1.0
+	mavlink stream -d /dev/ttyS1 -s HIGHRES_IMU -r 0.5
+	mavlink stream -d /dev/ttyS1 -s ATTITUDE -r 2.0
+	mavlink stream -d /dev/ttyS1 -s VFR_HUD -r 2.0
+	mavlink stream -d /dev/ttyS1 -s GPS_RAW_INT -r 0.5
+	mavlink stream -d /dev/ttyS1 -s GPS_GLOBAL_ORIGIN -r 0.05
+	mavlink stream -d /dev/ttyS1 -s GLOBAL_POSITION_INT -r 1.0
+	mavlink stream -d /dev/ttyS1 -s RC_CHANNELS_RAW -r 0.5
+	mavlink stream -d /dev/ttyS1 -s POSITION_TARGET_GLOBAL_INT -r 0.5
+	mavlink stream -d /dev/ttyS1 -s ASLCTRL_DATA -r 0.5
+	mavlink stream -d /dev/ttyS1 -s ASLCTRL_DEBUG -r 0.5
+	mavlink stream -d /dev/ttyS1 -s SENS_ATMOS -r 0.1
+	
+	# Disable the following streams
+	mavlink stream -d /dev/ttyS1 -s ATTITUDE_TARGET -r 0
+	mavlink stream -d /dev/ttyS1 -s DISTANCE_SENSOR -r 0
+	mavlink stream -d /dev/ttyS1 -s OPTICAL_FLOW -r 0
+
+else
+	#Just add the following streams to the default/normal ones
+	mavlink stream -d /dev/ttyS1 -s SERVO_OUTPUT_RAW_0 -r 1.0
+	mavlink stream -d /dev/ttyS1 -s MANUAL_CONTROL -r 1.0
+	mavlink stream -d /dev/ttyS1 -s ASLCTRL_DATA -r 10.0
+	mavlink stream -d /dev/ttyS1 -s ASLCTRL_DEBUG -r 10.0
+fi
+
+# Sleep a bit to give Mavlink time to set up
+usleep 100000
+

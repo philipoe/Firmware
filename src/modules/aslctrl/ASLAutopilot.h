@@ -59,7 +59,7 @@ private:
 
 private:
 	//as per standard on PX4IO, correct ordering to spektrum standard is done in mixer.
-	enum {CH_AIL_R, CH_ELV, CH_RDR, CH_THR_1, UNUSED1, CH_AIL_L, CH_AUX, UNUSED2}; //as per standard on PX4IO, correct ordering to
+	enum {CH_AIL_R, CH_ELV, CH_RDR, CH_THR_1, CH_FLAPS, CH_AIL_L, CH_AUX, UNUSED2}; //as per standard on PX4IO, correct ordering to
 
 	bool initialized;
 	bool bRunOnce;

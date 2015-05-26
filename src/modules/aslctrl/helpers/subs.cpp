@@ -244,13 +244,6 @@ int subscriptions::update_aslctrl_params(void)
 	param_get(handle, &(aslctrl_params.CAS_RollPGain));
 	handle=param_find("CAS_RollPGainM");
 	param_get(handle, &(aslctrl_params.CAS_RollPGainM));
-	handle=param_find("CAS_HeadPGain");
-	if(bParamSanityChecksEnabled && Sanitize_param(handle,0.0f, 10.0f) != 0) return -1;
-	param_get(handle, &(aslctrl_params.CAS_HeadPGain));
-	handle=param_find("CAS_q2uPGain");
-	param_get(handle, &(aslctrl_params.CAS_q2uPGain));
-	handle=param_find("CAS_p2uPGain");
-	param_get(handle, &(aslctrl_params.CAS_p2uPGain));
 	handle=param_find("CAS_PRateLim");
 	param_get(handle, &(aslctrl_params.CAS_PitchRateLim));
 	handle=param_find("CAS_PRateILim");
@@ -286,7 +279,7 @@ int subscriptions::update_aslctrl_params(void)
 	handle=param_find("HL_WPL1_P_vMax");
 	param_get(handle, &(aslctrl_params.HL_WPL1_P_vMax));
 	handle=param_find("HL_Vel_vNom");
-	if(bParamSanityChecksEnabled && Sanitize_param(handle, 0.0f, 15.0f) != 0) return -1;
+	if(bParamSanityChecksEnabled && Sanitize_param(handle, 5.0f, 20.0f) != 0) return -1;
 	param_get(handle, &(aslctrl_params.HL_Vel_vNom));
 	handle=param_find("HL_Vel_vMin");
 	param_get(handle, &(aslctrl_params.HL_Vel_vMin));
@@ -307,12 +300,6 @@ int subscriptions::update_aslctrl_params(void)
 	param_get(handle, &(aslctrl_params.HL_vZSink));
 
 	//TECS & HL
-	handle = param_find("HL_Vel_vMin");
-	param_get(handle, &(aslctrl_params.airspeed_min));
-	handle = param_find("HL_Vel_vNom");
-	param_get(handle, &(aslctrl_params.airspeed_trim));
-	handle = param_find("HL_Vel_vMax");
-	param_get(handle, &(aslctrl_params.airspeed_max));
 	handle = param_find("FW_P_LIM_MIN");
 	if(bParamSanityChecksEnabled && Sanitize_param(handle, -60.0f, 0.0f) != 0) return -1;
 	param_get(handle, &(aslctrl_params.pitch_limit_min));

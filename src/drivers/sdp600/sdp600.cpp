@@ -284,7 +284,7 @@ extern "C" __EXPORT int sdp600_main(int argc, char *argv[]);
 
 
 SDP600::SDP600(int bus) :
-	I2C("SDP600", AIRSPEED_BASE_DEVICE_PATH, bus, 0, 400000),
+	I2C("SDP600", AIRSPEED_BASE_DEVICE_PATH, bus, 0, 100000),
 	_work{},
 	_measure_ticks(0),
 	_reports(nullptr),

@@ -1,0 +1,411 @@
+echo "[init] ************************************************************"
+echo "[init] *** PX4_ASL startup script"
+echo "[init] ************************************************************"
+
+################################################ 
+# CONFIGURATION-SPECIFIC PARAMETERS
+################################################
+
+# HIL: If Hardware-In-the-Loop is used (HIL==yes), then the GCS-telemetry link uses high baud rate (-> use a cable for HIL!)
+set HIL no
+
+# AIRPLANE (EasyGlider, Techpod, AtlantikSolar, SenseSoar)
+set AIRPLANE EasyGlider
+
+# Onboard Computer used? If OBC==yes, then a second mavlink instance will be started
+set OBC no
+
+# Just output the current settings
+
+echo "[init] HIL:      " $HIL
+echo "[init] AIRPLANE: " $AIRPLANE 
+echo "[init] OBC:      " $OBC
+echo "[init] ************************************************************"
+
+# Do auto-config based on the above parameters
+
+if [ $AIRPLANE == EasyGlider ]
+then
+	set MIXER ASL_EasyGlider
+	set AIRPLANE_NR_EKF 1
+	param set SENS_BOARD_ROT 12
+fi
+if [ $AIRPLANE == Techpod ]
+then
+	set MIXER ASL_Techpod
+	set AIRPLANE_NR_EKF 3
+	param set SENS_BOARD_ROT 8
+fi
+if [ $AIRPLANE == AtlantikSolar ]
+then
+	set MIXER ASL_AtlantikSolar
+	set AIRPLANE_NR_EKF 2
+	param set SENS_BOARD_ROT 8
+fi
+if [ $AIRPLANE == SenseSoar ]
+then
+	set MIXER ASL_SenseSoar
+	set AIRPLANE_NR_EKF 0
+	param set SENS_BOARD_ROT 12
+fi
+
+if [ $HIL == yes ]
+then
+	# Overwrite mixer for HIL
+	set MIXER ASL_EasyGlider_HIL
+fi
+	
+################################################
+# DEFAULT PARAMETERS
+################################################
+
+set VEHICLE_TYPE fw
+set MAV_TYPE 1
+set PWM_OUTPUTS none
+set PWM_RATE none
+set PWM_DISARMED none
+set PWM_MIN none
+set PWM_MAX none
+set MKBLCTRL_MODE none
+
+set MAVLINK_FLAGS default
+set EXIT_ON_END no
+set GPS yes
+set GPS_FAKE no
+set FAILSAFE none
+
+set DO_AUTOCONFIG no
+set USE_IO yes
+set IO_PRESENT no
+set FMU_MODE serial
+set TTYS1_BUSY no
+
+#
+# Load non-volatile parameters
+#
+set PARAM_FILE /fs/microsd/params
+#if mtd start
+#then
+#	set PARAM_FILE /fs/mtd_params
+#fi
+
+param select $PARAM_FILE
+if param load
+then
+	echo "[param] Loaded: $PARAM_FILE"
+else
+	echo "[param] FAILED loading $PARAM_FILE"
+	if param reset
+	then
+	fi
+fi
+
+#####################################################
+# INITIAL BOOTUP
+#####################################################
+
+#
+# Start CDC/ACM serial driver
+#
+sercon
+
+# Try to get an USB console
+#nshterm /dev/ttyACM0 &
+
+#
+# Start the ORB (first app to start)
+#
+uorb start
+
+#
+# Check if PX4IO present and update firmware if needed
+#
+if [ -f /etc/extras/px4io-v2_default.bin ]
+then
+	set IO_FILE /etc/extras/px4io-v2_default.bin
+else
+	set IO_FILE /etc/extras/px4io-v1_default.bin
+fi
+
+usleep 100000
+
+if px4io checkcrc $IO_FILE
+then
+	echo "[init] PX4IO CRC OK"
+	echo "PX4IO CRC OK" >> $LOG_FILE
+
+	set IO_PRESENT yes
+else
+	echo "[init] Trying to update"
+	echo "PX4IO Trying to update" >> $LOG_FILE
+
+	tone_alarm MLL32CP8MB
+
+	if px4io forceupdate 14662 $IO_FILE
+	then
+		usleep 500000
+		if px4io checkcrc $IO_FILE
+		then
+			echo "[init] PX4IO CRC OK, update successful"
+			echo "PX4IO CRC OK after updating" >> $LOG_FILE
+			tone_alarm MLL8CDE
+
+			set IO_PRESENT yes
+		else
+			echo "[init] ERROR: PX4IO update failed"
+			echo "PX4IO update failed" >> $LOG_FILE
+			tone_alarm $TUNE_OUT_ERROR
+		fi
+	else
+		echo "[init] ERROR: PX4IO update failed"
+		echo "PX4IO update failed" >> $LOG_FILE
+		tone_alarm $TUNE_OUT_ERROR
+	fi
+fi
+
+if [ $IO_PRESENT == no ]
+then
+	echo "[init] ERROR: PX4IO not found"
+	tone_alarm $TUNE_OUT_ERROR
+fi
+
+#
+# Start the datamanager (and do not abort boot if it fails)
+#
+if dataman start
+then
+fi
+
+#
+# Start the Commander (needs to be this early for in-air-restarts)
+#
+commander start
+
+#####################################################
+# OUTPUT (PX4IO & HIL) CONFIGURATION
+#####################################################
+
+if [ $HIL == yes ]
+then
+	set OUTPUT_MODE hil
+else
+	set OUTPUT_MODE io
+fi
+
+#
+# Start HIL if requested
+#
+if [ $OUTPUT_MODE == hil ]
+then
+	echo "[init] Use HIL as primary output"
+	if hil mode_port2_pwm8
+	then
+		echo "[init] HIL output started"
+	else
+		echo "[init] ERROR: HIL output start failed"
+		tone_alarm $TUNE_OUT_ERROR
+	fi
+fi
+
+#
+# Start px4io. Select as primary output if HIL is not active.
+#
+if [ $OUTPUT_MODE == io ]
+then
+	echo "[init] Use PX4IO PWM as primary output"
+fi
+
+if px4io start
+then
+	echo "[init] PX4IO started"
+	sh /etc/init.d/rc.io
+else
+	echo "[init] ERROR: PX4IO start failed"
+	tone_alarm $TUNE_OUT_ERROR
+fi
+
+# Load mixer and configure outputs
+sh /etc/init.d/rc.interface
+
+#set FMU mode
+fmu mode_$FMU_MODE
+
+#####################################################
+# SENSORS
+#####################################################
+
+# start the airspeed sensor:
+if [ $HIL == no ]
+then
+	if sdp600 start
+	then
+	else
+		# start I2C_WD application and hdim010 pressure sensor
+		i2c_wd start
+		usleep 1000000
+		hdim010 start
+	fi
+fi
+
+# start the ambient temperature sensor LM73
+lm73 start
+
+# start static barometer 
+if [ $HIL == no ]
+then
+	ms5611 start
+fi
+
+# start power board voltage sensor
+#adc121_vspb start
+
+# start power board current sensor
+#adc121_cspb start
+
+# start current sensor board 1
+#adc121_cs1 start
+
+# start current sensor board 2
+#adc121_cs2 start
+
+# start MPPTs interface
+#spv1020 start -d 3
+
+# Start IMU and Magnetometer
+if adis16448 start 
+then
+	echo "using adis16448"
+else
+	echo "using MPU6000 and HMC5883L"
+	param set SENS_BOARD_ROT 0
+	
+	if mpu6000 -X start
+	then
+	fi
+
+	if mpu6000 start
+	then
+	fi
+	
+	# MAG selection
+	if param compare SENS_EXT_MAG 2
+	then
+		if hmc5883 -I start
+		then
+		fi
+	else
+		# Use only external as primary
+		if param compare SENS_EXT_MAG 1
+		then
+			if hmc5883 -X start
+			then
+			fi
+		else
+		# auto-detect the primary, prefer external
+			if hmc5883 start
+			then
+			fi
+		fi
+	fi
+fi
+
+adc start
+
+if ver hwcmp PX4FMU_V2
+then
+	if lsm303d -X start
+	then
+	fi
+
+	if lsm303d start
+	then
+	fi
+fi
+
+if [ $GPS == yes ]
+then
+	echo "[init] Start GPS"
+	if [ $GPS_FAKE == yes ]
+	then
+		echo "[init] Faking GPS"
+		gps start -f
+	else
+		gps start
+	fi
+fi
+
+#
+# Start the sensor collection task.
+# IMPORTANT: this also loads param offsets. ALWAYS start this task before the preflight_check.
+#
+if sensors start
+then
+	preflight_check &
+fi
+
+#####################################################
+# MAVLINK
+#####################################################
+
+# Start MAVLink instance #0 (to Ground Control Station) through external script
+if [ -f /fs/microsd/etc/telem_config/telem0.txt ]
+then
+	echo "[MAVLINK] Start MAVLINK instance #0 (to Ground Control Station)"
+	sh /fs/microsd/etc/telem_config/telem0.txt
+fi
+
+# Start MAVLink instance #1 (to Onboard Computer) through external script 
+if [ -f /fs/microsd/etc/telem_config/telem1.txt -a $OBC == yes ]
+then
+	echo "[MAVLINK] Start MAVLINK instance #1 (to Onboard Computer)"
+	sh /fs/microsd/etc/telem_config/telem1.txt
+fi 
+
+#####################################################
+# LOGGING
+#####################################################
+
+if [ -d /fs/microsd ]
+then
+	echo "Start sdlog2"
+	sdlog2 start -r 10 -a -b 4 -t
+fi
+
+#####################################################
+# ESTIMATION AND CONTROL
+#####################################################
+
+#
+# Start state estimator
+#
+#ekf_att_pos_estimator start
+state_estimator start -d $AIRPLANE_NR_EKF
+
+#
+# Start controllers
+#
+aslctrl start
+
+#
+# Start the navigator
+#
+navigator start
+
+
+#####################################################
+# CUSTOM ADDONS
+#####################################################
+
+if [ -f $EXTRAS_FILE ]
+then
+	echo "[init] Starting addons script: $EXTRAS_FILE"
+	sh $EXTRAS_FILE
+else
+	echo "[init] No addons script: $EXTRAS_FILE"
+fi
+
+if [ $EXIT_ON_END == yes ]
+then
+	echo "[init] Exit from nsh"
+	exit
+fi

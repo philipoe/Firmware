@@ -3,7 +3,7 @@
  *
  * Code generation for function 'initStates'
  *
- * C source code generated on: Fri Jan 23 17:57:26 2015
+ * C source code generated on: Wed May 06 16:15:52 2015
  *
  */
 
@@ -130,7 +130,7 @@ void initStates(const real_T pos[3], const real32_T acc_S[3], const real32_T
   /* theta1=0; */
   norm1 = (real32_T)sqrt((rot1[0] * rot1[0] + rot1[1] * rot1[1]) + rot1[2] *
     rot1[2]);
-  if ((real_T)norm1 > 1.0E-13) {
+  if (norm1 > 1.0E-13F) {
     /*  zero division protection */
     for (i = 0; i < 3; i++) {
       rot1[i] /= norm1;
@@ -201,7 +201,7 @@ void initStates(const real_T pos[3], const real32_T acc_S[3], const real32_T
   }
 
   /*  get the sign of the rotaion product of the Azimuth (+/-) */
-  if ((real_T)norm1 > 1.0E-9) {
+  if (norm1 > 1.0E-9F) {
     for (i = 0; i < 3; i++) {
       rot2[i] /= norm1;
     }

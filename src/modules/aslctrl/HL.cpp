@@ -55,8 +55,8 @@ void HL::CopyUpdatedParams(void)
 	tecs.set_roll_throttle_compensation(math::radians(params->roll_throttle_compensation));
 	tecs.set_speed_weight(params->speed_weight);
 	tecs.set_pitch_damping(params->pitch_damping);
-	tecs.set_indicated_airspeed_min(params->airspeed_min);
-	tecs.set_indicated_airspeed_max(params->airspeed_max);
+	tecs.set_indicated_airspeed_min(params->HL_Vel_vMin);
+	tecs.set_indicated_airspeed_max(params->HL_Vel_vMax);
 	tecs.set_max_climb_rate(params->max_climb_rate);
 	tecs.set_heightrate_p(params->heightrate_p);
 	tecs.set_heightrate_ff(params->heightrate_ff);
@@ -145,7 +145,7 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 	//Absolute altitude controller
 	//printf("hRef: %7.4f h:%7.4f h_home: %7.4f velw: %7.4f\n", hRef, h, h_home,velw);
 
-	if(params->ASLC_DEBUG==11) printf("AltCtrl: bModeChanged:%u, bUseRamp:%u, h:%.2f, hRef:%.2f, hRef_t:%.2f\n",bModeChanged,bUseRamp,(double)h,(double)hRef,(double)hRef_t);
+	if(params->ASLC_DEBUG==11) printf("AltCtrl: bModeChanged:%u, bUseRamp:%u, h:%.2f, hRef:%.2f, hRef_t:%.2f, hHome:%.2f\n",bModeChanged,bUseRamp,(double)h,(double)hRef,(double)hRef_t,(double)h_home);
 
 	int RET = 0;
 	//Safety checks. Either
@@ -210,7 +210,6 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 	}
 
 	return RET;
-	//TODO: Return reasonable warnings&errors to the User/QGC, not just error codes that nobody knows.
 }
 
 int HL::TECS_Update50Hz(void)
@@ -258,45 +257,35 @@ int HL::CalcAltitudeRamp(float& hRef_t, const float& hRef, const float& h, const
 	return 0;
 }
 
-const float dh_offset_spoilers = 50.0f;
+const float dh_offset_spoilers = 0.0f;
 const float dh_offset_spoilers_hysteresis = 10.0f;
 const float dh_offset_spdweight_hmax = 20.0f;
 const float dh_offset_spdweight_href = 5.0f;
 
 int HL::CalcThermalModeModifications(const float& h, const float& hRef_t, bool& bEngageSpoilers, bool bUseThermalHighEtaMode)
 {
-	//Set default values if not using thermal mode or if wrong values for AtlhMax were set.
-	if(!bUseThermalHighEtaMode || params->HL_AlthMax<0.1f) {
-		bEngageSpoilers=false;
+	// This function calculates modifications to the altitude control parameters that may
+	// be required when using the thermal high eta (thermal compliance) mode.
+
+	if(bUseThermalHighEtaMode && params->HL_AlthMax>0.1f) {
+		// Set adapted values for thermal high eta mode, i.e. speed-weight ratio and other
+		// parameters for efficient/low-disturbance throttle actuation
+		float dh_rel = limit2((h-params->HL_AlthMax)/dh_offset_spdweight_hmax,1.0f,0.0f);
+		tecs.set_speed_weight(interp1_lin(dh_rel, 2.0f,params->speed_weight));
+		tecs.set_roll_throttle_compensation(0.0f);
+		tecs.set_heightrate_p(0.0f);
+	}
+	else {
+		// Set default values if not using thermal mode or if wrong values for AtlhMax were set.
 		tecs.set_speed_weight(params->speed_weight);
 		tecs.set_roll_throttle_compensation(params->roll_throttle_compensation);
 		tecs.set_heightrate_p(params->heightrate_p);
 	}
 
-	//Set adapted values for altitude control if necessary
-	if(bUseThermalHighEtaMode && params->HL_AlthMax>0.1f) {
-
-		float dh_rel=0.0f, adapted_spd_weight=0.0f;
-		//if(h>params->HL_AlthMax) { //Speed-Weight switching to re-enable the pitch-down at h>hMax.
-			dh_rel = limit2((h-params->HL_AlthMax)/dh_offset_spdweight_hmax,1.0f,0.0f);
-			adapted_spd_weight = interp1_lin(dh_rel, 2.0f,params->speed_weight);
-		//}
-		//else { //Speed-Weight switching to allow some pitch corrections to better keep the altitude around href
-		//	dh_rel = limit2((h-hRef_t)/dh_offset_spdweight_href,1.0f,0.0f);
-		//	adapted_spd_weight = interp1_lin(dh_rel, params->speed_weight,2.0f);
-		//}
-
-		tecs.set_speed_weight(adapted_spd_weight);
-
-		//Also set all other parameters for efficient/low-disturbance throttle actuation
-		tecs.set_roll_throttle_compensation(0.0f);
-		tecs.set_heightrate_p(0.0f);
-
-		// Spoiler activation (With some simple hysteresis)
-		if(h>params->HL_AlthMax+dh_offset_spoilers && bSpoilerAltExceeded==false) bSpoilerAltExceeded=true;
-		if(h<params->HL_AlthMax+dh_offset_spoilers-dh_offset_spoilers_hysteresis && bSpoilerAltExceeded==true) bSpoilerAltExceeded=false;
-		bEngageSpoilers=bSpoilerAltExceeded;
-	}
+	// Spoiler activation (With some simple hysteresis)
+	if(h>params->HL_AlthMax+dh_offset_spoilers && bSpoilerAltExceeded==false) bSpoilerAltExceeded=true;
+	if(h<params->HL_AlthMax+dh_offset_spoilers-dh_offset_spoilers_hysteresis && bSpoilerAltExceeded==true) bSpoilerAltExceeded=false;
+	bEngageSpoilers=bSpoilerAltExceeded;
 
 	if(params->ASLC_DEBUG == 29) printf("h:%.1f hMax:%.1f sw:%.2f bSpoil:%d\n",(double)h,(double)params->HL_AlthMax,(double)tecs.get_speed_weight(),/*(double)tecs.get_roll_throttle_compensation(), (double)tecs.get_heightrate_p(),*/bEngageSpoilers);
 

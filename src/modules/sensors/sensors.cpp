@@ -63,8 +63,9 @@
 #include <drivers/drv_baro.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_amb_temp.h>
-////#include <drivers/drv_voltage_current.h>		// added
-////#include <drivers/drv_mppt.h>					// added
+#include <drivers/drv_voltage_current.h>
+#include <drivers/drv_mppt.h>
+#include <drivers/drv_bat_mon.h>
 ////#include <drivers/drv_rc_input.h>
 #include <drivers/drv_adc.h>
 #include <drivers/drv_airspeed.h>
@@ -80,6 +81,9 @@
 
 #include <uORB/uORB.h>
 #include <uORB/topics/sensor_combined.h>
+#include <uORB/topics/sensor_mppt.h>
+#include <uORB/topics/sensor_power.h>
+#include <uORB/topics/sensor_bat_mon.h>
 #include <uORB/topics/rc_channels.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/actuator_controls.h>
@@ -162,6 +166,12 @@
 static const int ERROR = -1;
 
 #define CAL_FAILED_APPLY_CAL_MSG "FAILED APPLYING SENSOR CAL"
+
+static const struct orb_metadata *sensor_bat_mon_orb_id[MAX_NUM_BAT_MON_SENSORS] = {
+	ORB_ID(sensor_bat_mon_0),
+	ORB_ID(sensor_bat_mon_1),
+	ORB_ID(sensor_bat_mon_2),
+};
 
 //uint32_t last_baro_counter = 0;
 ///
@@ -246,17 +256,25 @@ private:
 	int		_diff_pres_sub;			/**< raw differential pressure subscription */
 	int		_vcontrol_mode_sub;			/**< vehicle control mode subscription */
 	int		_amb_temp_sub;				/**< raw ambient temperature data subscription */
-	int 		_params_sub;			/**< notification of parameter updates */
-	int		_rc_parameter_map_sub;			/**< rc parameter map subscription */
-	int 		_manual_control_sub;			/**< notification of manual control updates */
+	int		_adc121_vspb_sub;			/**< voltage sensor power board data subscription */
+	int		_adc121_cspb_sub;			/**< current sensor power board data subscription */
+	int		_adc121_cs1_sub;			/**< current sensor 1 board data subscription */
+	int		_adc121_cs2_sub;			/**< current sensor 2 board data subscription */
+	int		_spv1020_sub;				/**< MPPTs data subscription 					*/
+	int		_bat_mon_sub[3];			/**< battery monitor data subscription 		*/
 
-	orb_advert_t	_sensor_pub;			/**< combined sensor data topic */
+	int 	_params_sub;				/**< notification of parameter updates */
+	int 	_manual_control_sub;		/**< notification of manual control updates */
+	orb_advert_t	_sensor_pub;				/**< combined sensor data topic */
 	orb_advert_t	_manual_control_pub;		/**< manual control signal topic */
 	orb_advert_t	_actuator_group_3_pub;		/**< manual control as actuator topic */
 	orb_advert_t	_rc_pub;					/**< raw r/c control topic */
 	orb_advert_t	_battery_pub;				/**< battery status */
 	orb_advert_t	_airspeed_pub;				/**< airspeed */
 	orb_advert_t	_diff_pres_pub;				/**< differential_pressure */
+	orb_advert_t	_power_pub;					/**< power sensor data topic */
+	orb_advert_t	_mppt_pub;					/**< mppt sensor data topic */
+	orb_advert_t	_bat_mon_pub;				/**< bat mon sensors data topic */
 
 	perf_counter_t	_loop_perf;					/**< loop performance counter */
 
@@ -340,6 +358,18 @@ private:
 		float dbaro_Ltube;
 		float dbaro_dy;
 
+		float mppt_b[3];
+		float mppt_SF[3];
+
+		float adc121_vspb_b;
+		float adc121_vspb_sf;
+		float adc121_cspb_b;
+		float adc121_cspb_sf;
+		float adc121_cs1_b;
+		float adc121_cs1_sf;
+		float adc121_cs2_b;
+		float adc121_cs2_sf;
+
 	}		_parameters;			/**< local copies of interesting parameters */
 
 	struct {
@@ -404,6 +434,18 @@ private:
 		param_t dbaro_Ltube;
 		param_t dbaro_dy;
 
+		param_t mppt_b[3];
+		param_t mppt_SF[3];
+
+		param_t adc121_vspb_b;
+		param_t adc121_vspb_sf;
+		param_t adc121_cspb_b;
+		param_t adc121_cspb_sf;
+		param_t adc121_cs1_b;
+		param_t adc121_cs1_sf;
+		param_t adc121_cs2_b;
+		param_t adc121_cs2_sf;
+
 	}		_parameter_handles;		/**< handles for interesting parameters */
 
 
@@ -433,34 +475,39 @@ private:
 	int		baro_init();
 
 	/**
-	 * Do ambient temperate sensor-related initialization.				// added
+	 * Do ambient temperate sensor-related initialization.
 	 */
 	int		amb_temp_init();
 
 	/**
-	 * Do power board voltage sensor-related initialization.			// added
+	 * Do power board voltage sensor-related initialization.
 	 */
 	int		adc121_vspb_init();
 
 	/**
-	 * Do power board current sensor-related initialization.			// added
+	 * Do power board current sensor-related initialization.
 	 */
 	int		adc121_cspb_init();
 
 	/**
-	 * Do board current sensor 1 -related initialization.				// added
+	 * Do board current sensor 1 -related initialization.
 	 */
 	int		adc121_cs1_init();
 
 	/**
-	 * Do board current sensor 2 -related initialization.				// added
+	 * Do board current sensor 2 -related initialization.
 	 */
 	int		adc121_cs2_init();
 
 	/**
-	 * Do MPPT -related initialization.									// added
+	 * Do MPPT -related initialization.
 	 */
 	int		mppt_init();
+
+	/**
+	 * Do MPPT -related initialization.
+	 */
+	void		bat_mon_init();
 
 	/**
 	 * Do adc-related initialisation.
@@ -507,45 +554,29 @@ private:
 	 */
 	void		amb_temp_poll(struct sensor_combined_s &raw);
 
-	/**																		// added
-	 * Poll the voltage sensor power board for updated data.
+	/**
+	 * Poll the power sensor boards for updated data.
 	 *
-	 * @param raw			Combined sensor data structure into which
+	 * @param raw_power 	Combined sensor data structure into which
 	 *				data should be returned.
 	 */
-	void		adc121_vspb_poll(struct sensor_combined_s &raw);
+	void		power_poll(struct sensor_power_s &raw_power);
 
-	/**																		// added
-	 * Poll the current sensor power board for updated data.
-	 *
-	 * @param raw			Combined sensor data structure into which
-	 *				data should be returned.
-	 */
-	void		adc121_cspb_poll(struct sensor_combined_s &raw);
-
-	/**																		// added
-	 * Poll the current sensor 1 board for updated data.
-	 *
-	 * @param raw			Combined sensor data structure into which
-	 *				data should be returned.
-	 */
-	void		adc121_cs1_poll(struct sensor_combined_s &raw);
-
-	/**																		// added
-	 * Poll the current sensor 2 board for updated data.
-	 *
-	 * @param raw			Combined sensor data structure into which
-	 *				data should be returned.
-	 */
-	void		adc121_cs2_poll(struct sensor_combined_s &raw);
-
-	/**																		// added
+	/**
 	 * Poll the MPPTs data for updated data.
 	 *
-	 * @param raw			Combined sensor data structure into which
+	 * @param raw_mppt			MPPT sensor data structure into which
 	 *				data should be returned.
 	 */
-	void		mppt_poll(struct sensor_combined_s &raw);
+	void		mppt_poll(struct sensor_mppt_s &raw_mppt);
+
+	/**
+	 * Poll the battery monitor data for updated data.
+	 *
+	 * @param raw_bat_mon			battery monitor sensor data structure into which
+	 *				data should be returned.
+	 */
+	void		bat_mon_poll(struct sensor_bat_mon_s &raw_bat_mon);
 
 	/**
 	 * Poll the differential pressure sensor for updated data.
@@ -621,11 +652,12 @@ Sensors::Sensors() :
 	_diff_pres_sub(-1),
 	_vcontrol_mode_sub(-1),
 	_amb_temp_sub(-1),
-	////_adc121_vspb_sub(-1),										// added
-	////_adc121_cspb_sub(-1),										// added
-	////_adc121_cs1_sub(-1),										// added
-	////_adc121_cs2_sub(-1),										// added
-	////_mppt_sub(-1),												// added
+	_adc121_vspb_sub(-1),
+	_adc121_cspb_sub(-1),
+	_adc121_cs1_sub(-1),
+	_adc121_cs2_sub(-1),
+	_spv1020_sub(-1),
+	_bat_mon_sub({-1,-1,-1}),
 	_params_sub(-1),
 	_rc_parameter_map_sub(-1),
 	_manual_control_sub(-1),
@@ -638,6 +670,9 @@ Sensors::Sensors() :
 	_battery_pub(-1),
 	_airspeed_pub(-1),
 	_diff_pres_pub(-1),
+	_power_pub(-1),
+	_mppt_pub(-1),
+	_bat_mon_pub(-1),
 
 	/* performance counters */
 	_loop_perf(perf_alloc(PC_ELAPSED, "sensor task update")),
@@ -748,6 +783,21 @@ Sensors::Sensors() :
 	_parameter_handles.dbaro_Ltube = param_find("SENSA_DBaro_L");
 	_parameter_handles.dbaro_dy = param_find("SENSA_DBaro_dy");
 
+	_parameter_handles.mppt_b[0] = param_find("SENSA_MPPT1_I_B");
+	_parameter_handles.mppt_b[1] = param_find("SENSA_MPPT2_I_B");
+	_parameter_handles.mppt_b[2] = param_find("SENSA_MPPT3_I_B");
+	_parameter_handles.mppt_SF[0] = param_find("SENSA_MPPT1_I_SF");
+	_parameter_handles.mppt_SF[1] = param_find("SENSA_MPPT2_I_SF");
+	_parameter_handles.mppt_SF[2] = param_find("SENSA_MPPT3_I_SF");
+
+	_parameter_handles.adc121_vspb_b  = param_find("SENSA_VSPB_off");
+	_parameter_handles.adc121_vspb_sf = param_find("SENSA_VSPB_scale");
+	_parameter_handles.adc121_cspb_b  = param_find("SENSA_CSPB_off");
+	_parameter_handles.adc121_cspb_sf = param_find("SENSA_CSPB_scale");
+	_parameter_handles.adc121_cs1_b    = param_find("SENSA_CS1_off");
+	_parameter_handles.adc121_cs1_sf   = param_find("SENSA_CS1_scale");
+	_parameter_handles.adc121_cs2_b    = param_find("SENSA_CS2_off");
+	_parameter_handles.adc121_cs2_sf   = param_find("SENSA_CS2_scale");
 	/* fetch initial parameter values */
 	parameters_update();
 }
@@ -971,6 +1021,23 @@ Sensors::parameters_update()
 	param_get(_parameter_handles.dbaro_Ltube, &(_parameters.dbaro_Ltube));
 	param_get(_parameter_handles.dbaro_dy, &(_parameters.dbaro_dy));
 
+	param_get(_parameter_handles.mppt_b[0], &(_parameters.mppt_b[0]));
+	param_get(_parameter_handles.mppt_b[1], &(_parameters.mppt_b[1]));
+	param_get(_parameter_handles.mppt_b[2], &(_parameters.mppt_b[2]));
+	param_get(_parameter_handles.mppt_SF[0], &(_parameters.mppt_SF[0]));
+	param_get(_parameter_handles.mppt_SF[1], &(_parameters.mppt_SF[1]));
+	param_get(_parameter_handles.mppt_SF[2], &(_parameters.mppt_SF[2]));
+
+	param_get(_parameter_handles.adc121_vspb_b, &(_parameters.adc121_vspb_b));
+	param_get(_parameter_handles.adc121_vspb_sf, &(_parameters.adc121_vspb_sf));
+
+	param_get(_parameter_handles.adc121_cspb_b, &(_parameters.adc121_cspb_b));
+	param_get(_parameter_handles.adc121_cspb_sf, &(_parameters.adc121_cspb_sf));
+	param_get(_parameter_handles.adc121_cs1_b, &(_parameters.adc121_cs1_b));
+	param_get(_parameter_handles.adc121_cs1_sf, &(_parameters.adc121_cs1_sf));
+	param_get(_parameter_handles.adc121_cs2_b, &(_parameters.adc121_cs2_b));
+	param_get(_parameter_handles.adc121_cs2_sf, &(_parameters.adc121_cs2_sf));
+
 	/** fine tune board offset on parameter update **/
 	math::Matrix<3, 3> board_rotation_offset;
 	board_rotation_offset.from_euler(M_DEG_TO_RAD_F * _parameters.board_offset[0],
@@ -1182,9 +1249,6 @@ Sensors::amb_temp_init()
 	return ret;
 }
 
-#if 0
-/////
-///// added
 int
 Sensors::adc121_vspb_init()
 {
@@ -1197,15 +1261,14 @@ Sensors::adc121_vspb_init()
 		return ERROR;
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 10);			// Reduced to 10Hz
+	/* set the driver to poll at 2Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 2);
 
 	close(fd);
 
 	return OK;
 }
-/////
-///// added
+
 int
 Sensors::adc121_cspb_init()
 {
@@ -1218,15 +1281,14 @@ Sensors::adc121_cspb_init()
 		return ERROR;
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz  (set poll rate to 20 Hz (and then average 10 samples))
+	/* set the driver to poll at 20Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);
 
 	close(fd);
 
 	return OK;
 }
-/////
-///// added
+
 int
 Sensors::adc121_cs1_init()
 {
@@ -1239,15 +1301,14 @@ Sensors::adc121_cs1_init()
 		return ERROR;
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 20);			// Reduced to 20Hz  (set poll rate to 10 Hz (and then average 10 samples))
+	/* set the driver to poll at 20Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);
 
 	close(fd);
 
 	return OK;
 }
-/////
-///// added
+
 int
 Sensors::adc121_cs2_init()
 {
@@ -1260,15 +1321,14 @@ Sensors::adc121_cs2_init()
 		return ERROR;
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 20);		// Reduced to 20Hz  (set poll rate to 10 Hz (and then average 10 samples))
+	/* set the driver to poll at 20Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 20);
 
 	close(fd);
 
 	return OK;
 }
-/////
-///// added
+
 int
 Sensors::mppt_init()
 {
@@ -1277,20 +1337,54 @@ Sensors::mppt_init()
 	fd = open(SPV1020_DEVICE_PATH, 0);
 	if (fd < 0) {
 		warn("%s", SPV1020_DEVICE_PATH);
-		warnx("No board MPPT found, ignoring");
+		warnx("No MPPT board found, ignoring");
 		return ERROR;
 	}
 
-	/* set the driver to poll at 150Hz */
-	ioctl(fd, SENSORIOCSPOLLRATE, 10);		// Reduced to 10Hz
+	/* set the driver to poll at 10Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 10);
 
 	close(fd);
 
 	return OK;
 }
-/////
-#endif
+
 int
+Sensors::bat_mon_init()
+{
+	int	fd;
+
+	fd = open(BAT_MON_0_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", BAT_MON_0_DEVICE_PATH);
+		warnx("No bat mon 0 board found, ignoring");
+	}
+
+	/* set the driver to poll at 1Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 1);
+
+	fd = open(BAT_MON_1_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", BAT_MON_1_DEVICE_PATH);
+		warnx("No bat mon 1 board found, ignoring");
+	}
+
+	/* set the driver to poll at 1Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 1);
+
+	fd = open(BAT_MON_2_DEVICE_PATH, 0);
+	if (fd < 0) {
+		warn("%s", BAT_MON_2_DEVICE_PATH);
+		warnx("No bat mon 2 board found, ignoring");
+	}
+
+	/* set the driver to poll at 1Hz */
+	ioctl(fd, SENSORIOCSPOLLRATE, 1);
+
+	close(fd);
+}
+
+void
 Sensors::adc_init()
 {
 
@@ -1619,11 +1713,17 @@ Sensors::amb_temp_poll(struct sensor_combined_s &raw)
 		//raw.amb_temp_counter++;
 	}
 }
-#if 0
+
 void
-Sensors::adc121_vspb_poll(struct sensor_combined_s &raw)
+Sensors::power_poll(struct sensor_power_s &raw_power)
 {
 	bool adc121_vspb_updated;
+	bool adc121_cspb_updated;
+	bool adc121_cs1_updated;
+	bool adc121_cs2_updated;
+
+	raw_power.timestamp = hrt_absolute_time();
+
 	orb_check(_adc121_vspb_sub, &adc121_vspb_updated);
 
 	if (adc121_vspb_updated) {
@@ -1631,15 +1731,9 @@ Sensors::adc121_vspb_poll(struct sensor_combined_s &raw)
 
 		orb_copy(ORB_ID(sensor_adc121_vspb), _adc121_vspb_sub, &adc121_vspb_report);
 
-		raw.adc121_vspb_volt = adc121_vspb_report.voltage; 			// power board voltage sensor readings in volts
-
-		raw.adc121_vspb_counter++;
+		raw_power.adc121_vspb_volt = adc121_vspb_report.voltage;
 	}
-}
-void
-Sensors::adc121_cspb_poll(struct sensor_combined_s &raw)
-{
-	bool adc121_cspb_updated;
+
 	orb_check(_adc121_cspb_sub, &adc121_cspb_updated);
 
 	if (adc121_cspb_updated) {
@@ -1647,15 +1741,9 @@ Sensors::adc121_cspb_poll(struct sensor_combined_s &raw)
 
 		orb_copy(ORB_ID(sensor_adc121_cspb), _adc121_cspb_sub, &adc121_cspb_report);
 
-		raw.adc121_cspb_amp = adc121_cspb_report.current; 			// power board current sensor readings in amperes
-
-		raw.adc121_cspb_counter++;
+		raw_power.adc121_cspb_amp = adc121_cspb_report.current;
 	}
-}
-void
-Sensors::adc121_cs1_poll(struct sensor_combined_s &raw)
-{
-	bool adc121_cs1_updated;
+
 	orb_check(_adc121_cs1_sub, &adc121_cs1_updated);
 
 	if (adc121_cs1_updated) {
@@ -1663,15 +1751,9 @@ Sensors::adc121_cs1_poll(struct sensor_combined_s &raw)
 
 		orb_copy(ORB_ID(sensor_adc121_cs1), _adc121_cs1_sub, &adc121_cs1_report);
 
-		raw.adc121_cs1_amp = adc121_cs1_report.current; 			//  board current sensor 1 readings in amperes
-
-		raw.adc121_cs1_counter++;
+		raw_power.adc121_cs1_amp = adc121_cs1_report.current;
 	}
-}
-void
-Sensors::adc121_cs2_poll(struct sensor_combined_s &raw)
-{
-	bool adc121_cs2_updated;
+
 	orb_check(_adc121_cs2_sub, &adc121_cs2_updated);
 
 	if (adc121_cs2_updated) {
@@ -1679,44 +1761,97 @@ Sensors::adc121_cs2_poll(struct sensor_combined_s &raw)
 
 		orb_copy(ORB_ID(sensor_adc121_cs2), _adc121_cs2_sub, &adc121_cs2_report);
 
-		raw.adc121_cs2_amp = adc121_cs2_report.current; 			//  board current sensor 2 readings in amperes
+		raw_power.adc121_cs2_amp = adc121_cs2_report.current;
+	}
 
-		raw.adc121_cs2_counter++;
+
+	if (adc121_vspb_updated || adc121_cspb_updated || adc121_cs1_updated || adc121_cs2_updated) {
+		/* announce the power data if needed just publish else */
+		if (_power_pub > 0)
+			orb_publish(ORB_ID(sensor_power), _power_pub, &raw_power);
+		else
+			_power_pub = orb_advertise(ORB_ID(sensor_power), &raw_power);
 	}
 }
+
 void
-Sensors::mppt_poll(struct sensor_combined_s &raw)
+Sensors::mppt_poll(struct sensor_mppt_s &raw_mppt)
 {
 	bool mppt_updated;
-	orb_check(_mppt_sub, &mppt_updated);
+	orb_check(_spv1020_sub, &mppt_updated);
 
 	if (mppt_updated) {
 		struct spv1020_report	spv1020_report;
 
-		orb_copy(ORB_ID(sensor_spv1020), _mppt_sub, &spv1020_report);
+		orb_copy(ORB_ID(sensor_spv1020), _spv1020_sub, &spv1020_report);
 
-		raw.mppt_timestamp = spv1020_report.timestamp;
+		raw_mppt.timestamp		= spv1020_report.timestamp;
 
-		raw.mppt_amp[0]    = spv1020_report.current[0]; 				/* MPPT device 0 current in amp */
-		raw.mppt_volt[0]   = spv1020_report.voltage[0]; 				/* MPPT device 0 voltage in volt*/
-		raw.mppt_pwm[0]    = spv1020_report.pwm[0]; 					/* MPPT device 0 pwm 		    */
-		raw.mppt_status[0] = spv1020_report.status[0]; 					/* MPPT device 0 status		    */
+		raw_mppt.mppt_amp[0] 	= spv1020_report.current[0]; 				/* MPPT device 0 current in amp  */
+		raw_mppt.mppt_volt[0]   = spv1020_report.voltage[0]; 				/* MPPT device 0 voltage in volt */
+		raw_mppt.mppt_pwm[0]    = spv1020_report.pwm[0]; 					/* MPPT device 0 pwm 		     */
+		raw_mppt.mppt_status[0] = spv1020_report.status[0]; 				/* MPPT device 0 status		     */
 
-		raw.mppt_amp[1]    = spv1020_report.current[1]; 				/* MPPT device 1 current in amp */
-		raw.mppt_volt[1]   = spv1020_report.voltage[1]; 				/* MPPT device 1 voltage in volt*/
-		raw.mppt_pwm[1]    = spv1020_report.pwm[1]; 					/* MPPT device 1 pwm 		    */
-		raw.mppt_status[1] = spv1020_report.status[1]; 					/* MPPT device 1 status		    */
+		raw_mppt.mppt_amp[1]    = spv1020_report.current[1]; 				/* MPPT device 1 current in amp  */
+		raw_mppt.mppt_volt[1]   = spv1020_report.voltage[1]; 				/* MPPT device 1 voltage in volt */
+		raw_mppt.mppt_pwm[1]    = spv1020_report.pwm[1]; 					/* MPPT device 1 pwm 		     */
+		raw_mppt.mppt_status[1] = spv1020_report.status[1]; 				/* MPPT device 1 status		     */
 
-		raw.mppt_amp[2]    = spv1020_report.current[2]; 				/* MPPT device 2 current in amp */
-		raw.mppt_volt[2]   = spv1020_report.voltage[2]; 				/* MPPT device 2 voltage in volt*/
-		raw.mppt_pwm[2]    = spv1020_report.pwm[2]; 					/* MPPT device 2 pwm 		    */
-		raw.mppt_status[2] = spv1020_report.status[2]; 					/* MPPT device 2 status		    */
+		raw_mppt.mppt_amp[2]    = spv1020_report.current[2]; 				/* MPPT device 2 current in amp  */
+		raw_mppt.mppt_volt[2]   = spv1020_report.voltage[2]; 				/* MPPT device 2 voltage in volt */
+		raw_mppt.mppt_pwm[2]    = spv1020_report.pwm[2]; 					/* MPPT device 2 pwm 		     */
+		raw_mppt.mppt_status[2] = spv1020_report.status[2]; 				/* MPPT device 2 status		     */
 
-		raw.mppt_counter++;
+		/* announce the MPPT data if needed just publish else */
+		if (_mppt_pub > 0) {
+			orb_publish(ORB_ID(sensor_mppt), _mppt_pub, &raw_mppt);
+
+		} else {
+			_mppt_pub = orb_advertise(ORB_ID(sensor_mppt), &raw_mppt);
+		}
 	}
 }
-#endif
-//////
+
+void
+Sensors::bat_mon_poll(struct sensor_bat_mon_s &raw_bat_mon)
+{
+	bool bat_mon_sensor_updated[MAX_NUM_BAT_MON_SENSORS] = {false,false,false};
+
+	for (int i = 0; i < MAX_NUM_BAT_MON_SENSORS; i++) {
+		orb_check(_bat_mon_sub[i], &bat_mon_sensor_updated[i]);
+
+		if (bat_mon_sensor_updated[i]) {
+			struct bat_mon_report	bat_mon_report;
+
+			orb_copy(sensor_bat_mon_orb_id[i], _bat_mon_sub[i], &bat_mon_report);
+
+			raw_bat_mon.temperature[i] 		= bat_mon_report.temperature; 			/* Bat_mon device temperature 		*/
+			raw_bat_mon.voltage[i]   		= bat_mon_report.voltage; 				/* Bat_mon device voltage			*/
+			raw_bat_mon.current[i]    		= bat_mon_report.current; 				/* Bat_mon device current 		    */
+			raw_bat_mon.stateofcharge[i]    = bat_mon_report.stateofcharge; 		/* Bat_mon device state of charge 	*/
+			raw_bat_mon.batterystatus[i]	= bat_mon_report.batterystatus; 		/* Bat_mon device batterystatus		*/
+			raw_bat_mon.serialnumber[i] 	= bat_mon_report.serialnumber; 			/* Bat_mon device serialnumber		*/
+			raw_bat_mon.hostfetcontrol[i]	= bat_mon_report.hostfetcontrol; 		/* Bat_mon device hostfetcontrol	*/
+			raw_bat_mon.cellvoltage1[i] 	= bat_mon_report.cellvoltage1; 			/* Bat_mon device cellvoltage1	    */
+			raw_bat_mon.cellvoltage2[i] 	= bat_mon_report.cellvoltage2; 			/* Bat_mon device cellvoltage2	    */
+			raw_bat_mon.cellvoltage3[i] 	= bat_mon_report.cellvoltage3; 			/* Bat_mon device cellvoltage3	    */
+			raw_bat_mon.cellvoltage4[i] 	= bat_mon_report.cellvoltage4; 			/* Bat_mon device cellvoltage4      */
+			raw_bat_mon.cellvoltage5[i] 	= bat_mon_report.cellvoltage5; 			/* Bat_mon device cellvoltage5	    */
+			raw_bat_mon.cellvoltage6[i] 	= bat_mon_report.cellvoltage6; 			/* Bat_mon device cellvoltage6		*/
+		}
+	}
+
+	if (bat_mon_sensor_updated[0]) {
+		raw_bat_mon.timestamp = hrt_absolute_time();
+		/* announce the power data if needed just publish else */
+		if (_bat_mon_pub > 0)
+			orb_publish(ORB_ID(sensor_bat_mon), _bat_mon_pub, &raw_bat_mon);
+		else
+			_bat_mon_pub = orb_advertise(ORB_ID(sensor_bat_mon), &raw_bat_mon);
+	}
+
+}
+
 void
 Sensors::vehicle_control_mode_poll()
 {
@@ -1996,6 +2131,93 @@ Sensors::parameter_update_poll(bool forced)
 			close(fd);
 		}
 
+		fd = open(SPV1020_DEVICE_PATH, 0);
+
+		if (fd > 0) {
+			struct current_cal_term mpptscale = {
+				_parameters.mppt_b[0],
+				_parameters.mppt_b[1],
+				_parameters.mppt_b[2],
+				_parameters.mppt_SF[0],
+				_parameters.mppt_SF[1],
+				_parameters.mppt_SF[2],
+			};
+
+			if (OK != ioctl(fd, MPPTIOCSSCALE, (long unsigned int)&mpptscale)) {
+				warn("WARNING: failed to set offsets for mppts");
+			}
+		}
+
+		close(fd);
+
+		fd = open(ADC121_VSPB_DEVICE_PATH, 0);
+
+		if (fd > 0) {
+			struct adc121_cal_term adc121_vspb_scale = {
+				_parameters.adc121_vspb_b,
+				_parameters.adc121_vspb_sf,
+			};
+
+			if (OK != ioctl(fd, VSPBIOCSSCALE, (long unsigned int)&adc121_vspb_scale)) {
+				warn("WARNING: failed to set offsets and scale factor for the adc121_vspb");
+			}
+		}
+
+		close(fd);
+
+		fd = open(ADC121_CSPB_DEVICE_PATH, 0);
+
+		if (fd > 0) {
+			struct adc121_cal_term adc121_cspb_scale = {
+				_parameters.adc121_cspb_b,
+				_parameters.adc121_cspb_sf,
+			};
+
+			if (OK != ioctl(fd, CSPBIOCSSCALE, (long unsigned int)&adc121_cspb_scale)) {
+				warn("WARNING: failed to set offsets and scale factor for the adc121_cspb");
+			}
+		}
+
+		close(fd);
+
+		fd = open(ADC121_CS1_DEVICE_PATH, 0);
+
+		if (fd > 0) {
+			struct adc121_cal_term adc121_cs1_scale = {
+				_parameters.adc121_cs1_b,
+				_parameters.adc121_cs1_sf,
+			};
+
+			if (OK != ioctl(fd, CS1IOCSSCALE, (long unsigned int)&adc121_cs1_scale)) {
+				warn("WARNING: failed to set offsets and scale factor for the adc121_cs1");
+			}
+		}
+
+		close(fd);
+
+		fd = open(ADC121_CS2_DEVICE_PATH, 0);
+
+		if (fd > 0) {
+			struct adc121_cal_term adc121_cs2_scale = {
+				_parameters.adc121_cs2_b,
+				_parameters.adc121_cs2_sf,
+			};
+
+			if (OK != ioctl(fd, CS2IOCSSCALE, (long unsigned int)&adc121_cs2_scale)) {
+				warn("WARNING: failed to set offsets and scale factor for the adc121_cs2");
+			}
+		}
+
+		close(fd);
+
+
+#if 0
+		printf("CH0: RAW MAX: %d MIN %d S: %d MID: %d FUNC: %d\n", (int)_parameters.max[0], (int)_parameters.min[0], (int)(_rc.channels[0].scaling_factor * 10000), (int)(_rc.channels[0].mid), (int)_rc.function[0]);
+		printf("CH1: RAW MAX: %d MIN %d S: %d MID: %d FUNC: %d\n", (int)_parameters.max[1], (int)_parameters.min[1], (int)(_rc.channels[1].scaling_factor * 10000), (int)(_rc.channels[1].mid), (int)_rc.function[1]);
+		printf("MAN: %d %d\n", (int)(_rc.channels[0] * 100), (int)(_rc.channels[1] * 100));
+		fflush(stdout);
+		usleep(5000);
+#endif
 		warnx("config: %u gyros, %u mags, %u accels", gyro_count, mag_count, accel_count);
 	}
 }
@@ -2471,11 +2693,12 @@ Sensors::task_main()
 	}
 	////dbaro_init();					// added
 	amb_temp_init();
-	////adc121_vspb_init();				// added
-	////adc121_cspb_init();				// added
-	////adc121_cs1_init();				// added
-	////adc121_cs2_init();				// added
-	////mppt_init();					// added
+	adc121_vspb_init();
+	adc121_cspb_init();
+	adc121_cs1_init();
+	adc121_cs2_init();
+	mppt_init();
+	bat_mon_init();
 	/*
 	 * do subscriptions
 	 */
@@ -2494,14 +2717,17 @@ Sensors::task_main()
 	_diff_pres_sub = orb_subscribe(ORB_ID(differential_pressure));
 	_vcontrol_mode_sub = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_amb_temp_sub = orb_subscribe(ORB_ID(sensor_lm73));
-	////_adc121_vspb_sub = orb_subscribe(ORB_ID(sensor_adc121_vspb));				// added
-	////_adc121_cspb_sub = orb_subscribe(ORB_ID(sensor_adc121_cspb));				// added
-	////_adc121_cs1_sub = orb_subscribe(ORB_ID(sensor_adc121_cs1));					// added
-	////_adc121_cs2_sub = orb_subscribe(ORB_ID(sensor_adc121_cs2));					// added
-	////_mppt_sub = orb_subscribe(ORB_ID(sensor_spv1020));							// added
+	_adc121_vspb_sub = orb_subscribe(ORB_ID(sensor_adc121_vspb));
+	_adc121_cspb_sub = orb_subscribe(ORB_ID(sensor_adc121_cspb));
+	_adc121_cs1_sub = orb_subscribe(ORB_ID(sensor_adc121_cs1));
+	_adc121_cs2_sub = orb_subscribe(ORB_ID(sensor_adc121_cs2));
+	_spv1020_sub = orb_subscribe(ORB_ID(sensor_spv1020));
 	_params_sub = orb_subscribe(ORB_ID(parameter_update));
 	_rc_parameter_map_sub = orb_subscribe(ORB_ID(rc_parameter_map));
 	_manual_control_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
+	_bat_mon_sub[0] = orb_subscribe(sensor_bat_mon_orb_id[0]);
+	_bat_mon_sub[1] = orb_subscribe(sensor_bat_mon_orb_id[1]);
+	_bat_mon_sub[2] = orb_subscribe(sensor_bat_mon_orb_id[2]);
 
 	/* rate limit vehicle status updates to 5Hz */
 	orb_set_interval(_vcontrol_mode_sub, 200);
@@ -2514,6 +2740,13 @@ Sensors::task_main()
 	 */
 	struct sensor_combined_s raw;
 	memset(&raw, 0, sizeof(raw));
+	struct sensor_mppt_s raw_mppt;
+	memset(&raw_mppt, 0, sizeof(raw_mppt));
+	struct sensor_power_s raw_power;
+	memset(&raw_power, 0, sizeof(raw_power));
+	struct sensor_bat_mon_s raw_bat_mon;
+	memset(&raw_bat_mon, 0, sizeof(raw_bat_mon));
+
 	raw.timestamp = hrt_absolute_time();
 	raw.adc_voltage_v[0] = 0.0f;
 	raw.adc_voltage_v[1] = 0.0f;
@@ -2548,12 +2781,9 @@ Sensors::task_main()
 	baro_poll(raw);
 	diff_pres_poll(raw);
 	amb_temp_poll(raw);
-	////adc121_vspb_poll(raw);								// added
-	////adc121_cspb_poll(raw);								// added
-	////adc121_cs1_poll(raw);								// added
-	////adc121_cs2_poll(raw);								// added
-	////mppt_poll(raw);										// added
-
+	power_poll(raw_power);
+	mppt_poll(raw_mppt);
+	bat_mon_poll(raw_bat_mon);
 	parameter_update_poll(true /* forced */);
 	rc_parameter_map_poll(true /* forced */);
 
@@ -2601,11 +2831,9 @@ Sensors::task_main()
 		mag_poll(raw);
 		baro_poll(raw);
 		amb_temp_poll(raw);
-		////adc121_vspb_poll(raw);												// added
-		////adc121_cspb_poll(raw);												// added
-		////adc121_cs1_poll(raw);												// added
-		////adc121_cs2_poll(raw);												// added
-		////mppt_poll(raw);														// added
+		power_poll(raw_power);
+		mppt_poll(raw_mppt);
+		bat_mon_poll(raw_bat_mon);
 
 		/* work out if main gyro timed out and fail over to alternate gyro */
 		if (hrt_elapsed_time(&raw.timestamp) > 20 * 1000) {

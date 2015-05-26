@@ -113,10 +113,13 @@
 
 #define PX4_EPOCH_SECS 1234567890ULL
 
-//Added (ASL/PhilippOe)
 #include "logenabler.h"
 #include <uORB/topics/aslctrl_parameters.h>
 #include <uORB/topics/aslctrl_data.h>
+#include <uORB/topics/state_estimator_EKF_parameters.h>
+#include <uORB/topics/sensor_mppt.h>
+#include <uORB/topics/sensor_power.h>
+#include <uORB/topics/sensor_bat_mon.h>
 
 /**
  * Logging rate.
@@ -970,7 +973,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 		errx(1, "can't allocate log buffer, exiting");
 	}
 
-	//Added (ASL/PhilippOe)
 	GetLogEnablerParams();
 
 	struct vehicle_status_s buf_status;
@@ -1015,9 +1017,13 @@ int sdlog2_thread_main(int argc, char *argv[])
 		struct encoders_s encoders;
 		struct vtol_vehicle_status_s vtol_status;
 
-		//added (ASL/PhilippOe)
 		struct aslctrl_parameters_s aslctrl_params;
 		struct aslctrl_data_s aslctrl_data;
+		struct state_estimator_EKF_parameters_s ekf;
+		struct sensor_mppt_s mppt;
+		struct sensor_power_s power;
+		struct sensor_bat_mon_s bat_mon;
+
 	} buf;
 
 	memset(&buf, 0, sizeof(buf));
@@ -1062,12 +1068,19 @@ int sdlog2_thread_main(int argc, char *argv[])
 			struct log_TECS_s log_TECS;
 			struct log_WIND_s log_WIND;
 			struct log_ENCD_s log_ENCD;
-			//Added(ASL/PhilippOe)
 			struct log_ASLC_s log_ASLC;
 			struct log_ASAS_s log_ASAS;
 			struct log_ACAS_s log_ACAS;
-			struct log_AHL_s log_AHL;
+			struct log_AHL1_s log_AHL1;
+			struct log_AHL2_s log_AHL2;
 			struct log_ASLD_s log_ASLD;
+			struct log_EKFS_s log_EKFS;
+			struct log_EKFV_s log_EKFV;
+			struct log_MPPT_s log_MPPT;
+			struct log_POWS_s log_POWS;
+			struct log_BATM_s log_BATM;
+			struct log_ATMO_s log_ATMO;
+
 		} body;
 	} log_msg = {
 		LOG_PACKET_HEADER_INIT(0)
@@ -1108,9 +1121,12 @@ int sdlog2_thread_main(int argc, char *argv[])
 		int servorail_status_sub;
 		int wind_sub;
 		int encoders_sub;
-		//Added (ASL/PhilippOe)
 		int aslctrl_params_sub;
 		int aslctrl_data_sub;
+		int ekf_sub;
+		int mppt_sub;
+		int power_sub;
+		int bat_mon_sub;
 	} subs;
 
 	subs.cmd_sub = orb_subscribe(ORB_ID(vehicle_command));
@@ -1146,12 +1162,13 @@ int sdlog2_thread_main(int argc, char *argv[])
 	/* we need to rate-limit wind, as we do not need the full update rate */
 	orb_set_interval(subs.wind_sub, 90);
 	subs.encoders_sub = orb_subscribe(ORB_ID(encoders));
-
-	/* add new topics HERE */
-	//Added(ASL/PhilippOe)
 	subs.aslctrl_params_sub = orb_subscribe(ORB_ID(aslctrl_parameters));
 	subs.aslctrl_data_sub = orb_subscribe(ORB_ID(aslctrl_data));
-	orb_set_interval(subs.aslctrl_data_sub, 25);	//Limit rate of updates / logging
+	subs.ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
+	subs.mppt_sub = orb_subscribe(ORB_ID(sensor_mppt));
+	subs.power_sub = orb_subscribe(ORB_ID(sensor_power));
+	subs.bat_mon_sub = orb_subscribe(ORB_ID(sensor_bat_mon));
+
 
 	for (int i = 0; i < TELEMETRY_STATUS_ORB_ID_NUM; i++) {
 		subs.telemetry_subs[i] = orb_subscribe(telemetry_status_orb_id[i]);
@@ -1458,6 +1475,12 @@ int sdlog2_thread_main(int argc, char *argv[])
 				log_msg.body.log_IMU.mag_y = buf.sensor.magnetometer2_ga[1];
 				log_msg.body.log_IMU.mag_z = buf.sensor.magnetometer2_ga[2];
 				LOGBUFFER_WRITE_AND_COUNT(IMU);
+			}
+
+			if(pLogEnabler.LOG_ATMO) {
+				log_msg.msg_type = LOG_ATMO_MSG;
+				log_msg.body.log_ATMO.amb_temp_celcius = buf.sensor.amb_temp_celcius;
+				LOGBUFFER_WRITE_AND_COUNT(ATMO);
 			}
 
 		}
@@ -1811,7 +1834,7 @@ int sdlog2_thread_main(int argc, char *argv[])
 		}
 
 		/* ------------------------------------------------------------- */
-		/* Logging of ASL-messages (added by ASL/PhilippOe & AmirMelzer) */
+		/* Logging of ASL-messages										 */
 		/* ------------------------------------------------------------- */
 		/* --- ASLCTRL parameters --- */
 		if (copy_if_updated(ORB_ID(aslctrl_parameters), subs.aslctrl_params_sub, &buf.aslctrl_params) && pLogEnabler.LOG_ASLC) {
@@ -1832,105 +1855,99 @@ int sdlog2_thread_main(int argc, char *argv[])
 
 			//MSG2: ASAS
 			log_msg.msg_type = LOG_ASAS_MSG;
-			log_msg.body.log_ASAS.SAS_tSample = (float) buf.aslctrl_params.SAS_tSample;
-			log_msg.body.log_ASAS.SAS_RollPGain = (float) buf.aslctrl_params.SAS_RollPGain;
-			log_msg.body.log_ASAS.SAS_PitchPGain = (float) buf.aslctrl_params.SAS_PitchPGain;
-			log_msg.body.log_ASAS.SAS_YawPGain = (float) buf.aslctrl_params.SAS_YawPGain;
-			log_msg.body.log_ASAS.SAS_RollPDir = (float) buf.aslctrl_params.SAS_RollPDir;
-			log_msg.body.log_ASAS.SAS_PitchPDir = (float) buf.aslctrl_params.SAS_PitchPDir;
-			log_msg.body.log_ASAS.SAS_YawPDir = (float) buf.aslctrl_params.SAS_YawPDir;
-			log_msg.body.log_ASAS.SAS_RollYawDecoupleKari = (float) buf.aslctrl_params.SAS_RollYawDecoupleKari;
-			log_msg.body.log_ASAS.SAS_YawCTFF = (float) buf.aslctrl_params.SAS_YawCTFF;
-			log_msg.body.log_ASAS.SAS_YawCTkP = (float) buf.aslctrl_params.SAS_YawCTkP;
-			log_msg.body.log_ASAS.SAS_RollYawDecoupleKari = (float) buf.aslctrl_params.SAS_RollYawDecoupleKari;
-			log_msg.body.log_ASAS.SAS_RCtrlLim = (float) buf.aslctrl_params.SAS_RCtrlLim;
-			log_msg.body.log_ASAS.SAS_PCtrlLim = (float) buf.aslctrl_params.SAS_PCtrlLim;
-			log_msg.body.log_ASAS.SAS_YCtrlLim = (float) buf.aslctrl_params.SAS_YCtrlLim;
-			log_msg.body.log_ASAS.SAS_YawHighPassOmega = (float) buf.aslctrl_params.SAS_YawHighPassOmega;
-			log_msg.body.log_ASAS.SAS_PitchLowPassOmega = (float) buf.aslctrl_params.SAS_PitchLowPassOmega;
-			log_msg.body.log_ASAS.SAS_RollLowPassOmega = (float) buf.aslctrl_params.SAS_RollLowPassOmega;
-			log_msg.body.log_ASAS.SAS_vScaleLimF = (float) buf.aslctrl_params.SAS_vScaleLimF;
-			log_msg.body.log_ASAS.SAS_vScaleExp = (float) buf.aslctrl_params.SAS_vScaleExp;
-			log_msg.body.log_ASAS.SAS_TrimAilvNom = (float) buf.aslctrl_params.SAS_TrimAilvNom;
-			log_msg.body.log_ASAS.SAS_TrimAilvMin = (float) buf.aslctrl_params.SAS_TrimAilvMin;
-			log_msg.body.log_ASAS.SAS_TrimAilvMax = (float) buf.aslctrl_params.SAS_TrimAilvMax;
-			log_msg.body.log_ASAS.SAS_TrimElevNom = (float) buf.aslctrl_params.SAS_TrimElevNom;
-			log_msg.body.log_ASAS.SAS_TrimElevMin = (float) buf.aslctrl_params.SAS_TrimElevMin;
-			log_msg.body.log_ASAS.SAS_TrimElevMax = (float) buf.aslctrl_params.SAS_TrimElevMax;
-			log_msg.body.log_ASAS.SAS_TrimRudvNom = (float) buf.aslctrl_params.SAS_TrimRudvNom;
-			log_msg.body.log_ASAS.SAS_TrimRudvMin = (float) buf.aslctrl_params.SAS_TrimRudvMin;
-			log_msg.body.log_ASAS.SAS_TrimRudvMax = (float) buf.aslctrl_params.SAS_TrimRudvMax;
+			log_msg.body.log_ASAS.SAS_tSample = buf.aslctrl_params.SAS_tSample;
+			log_msg.body.log_ASAS.SAS_RollPGain = buf.aslctrl_params.SAS_RollPGain;
+			log_msg.body.log_ASAS.SAS_PitchPGain = buf.aslctrl_params.SAS_PitchPGain;
+			log_msg.body.log_ASAS.SAS_YawPGain = buf.aslctrl_params.SAS_YawPGain;
+			log_msg.body.log_ASAS.SAS_RollPDir = buf.aslctrl_params.SAS_RollPDir;
+			log_msg.body.log_ASAS.SAS_PitchPDir = buf.aslctrl_params.SAS_PitchPDir;
+			log_msg.body.log_ASAS.SAS_YawPDir = buf.aslctrl_params.SAS_YawPDir;
+			log_msg.body.log_ASAS.SAS_RollYawDecoupleKari = buf.aslctrl_params.SAS_RollYawDecoupleKari;
+			log_msg.body.log_ASAS.SAS_YawCTFF = buf.aslctrl_params.SAS_YawCTFF;
+			log_msg.body.log_ASAS.SAS_YawCTkP = buf.aslctrl_params.SAS_YawCTkP;
+			log_msg.body.log_ASAS.SAS_RollYawDecoupleKari = buf.aslctrl_params.SAS_RollYawDecoupleKari;
+			log_msg.body.log_ASAS.SAS_RCtrlLim = buf.aslctrl_params.SAS_RCtrlLim;
+			log_msg.body.log_ASAS.SAS_PCtrlLim = buf.aslctrl_params.SAS_PCtrlLim;
+			log_msg.body.log_ASAS.SAS_YCtrlLim = buf.aslctrl_params.SAS_YCtrlLim;
+			log_msg.body.log_ASAS.SAS_YawHighPassOmega = buf.aslctrl_params.SAS_YawHighPassOmega;
+			log_msg.body.log_ASAS.SAS_PitchLowPassOmega = buf.aslctrl_params.SAS_PitchLowPassOmega;
+			log_msg.body.log_ASAS.SAS_RollLowPassOmega = buf.aslctrl_params.SAS_RollLowPassOmega;
+			log_msg.body.log_ASAS.SAS_vScaleLimF = buf.aslctrl_params.SAS_vScaleLimF;
+			log_msg.body.log_ASAS.SAS_vScaleExp = buf.aslctrl_params.SAS_vScaleExp;
+			log_msg.body.log_ASAS.SAS_TrimAilvNom = buf.aslctrl_params.SAS_TrimAilvNom;
+			log_msg.body.log_ASAS.SAS_TrimAilvMin = buf.aslctrl_params.SAS_TrimAilvMin;
+			log_msg.body.log_ASAS.SAS_TrimAilvMax = buf.aslctrl_params.SAS_TrimAilvMax;
+			log_msg.body.log_ASAS.SAS_TrimElevNom = buf.aslctrl_params.SAS_TrimElevNom;
+			log_msg.body.log_ASAS.SAS_TrimElevMin = buf.aslctrl_params.SAS_TrimElevMin;
+			log_msg.body.log_ASAS.SAS_TrimElevMax = buf.aslctrl_params.SAS_TrimElevMax;
+			log_msg.body.log_ASAS.SAS_TrimRudvNom = buf.aslctrl_params.SAS_TrimRudvNom;
+			log_msg.body.log_ASAS.SAS_TrimRudvMin = buf.aslctrl_params.SAS_TrimRudvMin;
+			log_msg.body.log_ASAS.SAS_TrimRudvMax = buf.aslctrl_params.SAS_TrimRudvMax;
 			LOGBUFFER_WRITE_AND_COUNT(ASAS);
 
 			//MSG3: ACAS
 			log_msg.msg_type = LOG_ACAS_MSG;
 			log_msg.body.log_ACAS.CAS_fMult = buf.aslctrl_params.CAS_fMult;
-			log_msg.body.log_ACAS.CAS_PitchPGain = (float) buf.aslctrl_params.CAS_PitchPGain;
-			log_msg.body.log_ACAS.CAS_PitchPGainM = (float) buf.aslctrl_params.CAS_PitchPGainM;
-			log_msg.body.log_ACAS.CAS_PitchIGain = (float) buf.aslctrl_params.CAS_PitchIGain;
-			log_msg.body.log_ACAS.CAS_RollPGain = (float) buf.aslctrl_params.CAS_RollPGain;
-			log_msg.body.log_ACAS.CAS_RollPGainM = (float) buf.aslctrl_params.CAS_RollPGainM;
-			log_msg.body.log_ACAS.CAS_HeadPGain = (float) buf.aslctrl_params.CAS_HeadPGain;
-			log_msg.body.log_ACAS.CAS_q2uPGain = (float) buf.aslctrl_params.CAS_q2uPGain;
-			log_msg.body.log_ACAS.CAS_p2uPGain = (float) buf.aslctrl_params.CAS_p2uPGain;
-			log_msg.body.log_ACAS.CAS_PitchRateLim = (float) buf.aslctrl_params.CAS_PitchRateLim;
-			log_msg.body.log_ACAS.CAS_PitchRateILim = (float) buf.aslctrl_params.CAS_PitchRateILim;
-			log_msg.body.log_ACAS.CAS_PitchTCkI = (float) buf.aslctrl_params.CAS_PitchTCkI;
-			log_msg.body.log_ACAS.CAS_PitchTCILim = (float) buf.aslctrl_params.CAS_PitchTCILim;
-			log_msg.body.log_ACAS.CAS_RollRateLim = (float) buf.aslctrl_params.CAS_RollRateLim;
-			log_msg.body.log_ACAS.CAS_YawRateLim = (float) buf.aslctrl_params.CAS_YawRateLim;
-			log_msg.body.log_ACAS.CAS_PitchAngleLim = (float) buf.aslctrl_params.CAS_PitchAngleLim;
-			log_msg.body.log_ACAS.CAS_RollAngleLim = (float) buf.aslctrl_params.CAS_RollAngleLim;
-			log_msg.body.log_ACAS.CAS_uElevTurnFF = (float) buf.aslctrl_params.CAS_uElevTurnFF;
-			log_msg.body.log_ACAS.CAS_YawLowPassOmega = (float) buf.aslctrl_params.CAS_YawLowPassOmega;
+			log_msg.body.log_ACAS.CAS_PitchPGain = buf.aslctrl_params.CAS_PitchPGain;
+			log_msg.body.log_ACAS.CAS_PitchPGainM = buf.aslctrl_params.CAS_PitchPGainM;
+			log_msg.body.log_ACAS.CAS_PitchIGain = buf.aslctrl_params.CAS_PitchIGain;
+			log_msg.body.log_ACAS.CAS_RollPGain = buf.aslctrl_params.CAS_RollPGain;
+			log_msg.body.log_ACAS.CAS_RollPGainM = buf.aslctrl_params.CAS_RollPGainM;
+			log_msg.body.log_ACAS.CAS_PitchRateLim = buf.aslctrl_params.CAS_PitchRateLim;
+			log_msg.body.log_ACAS.CAS_PitchRateILim = buf.aslctrl_params.CAS_PitchRateILim;
+			log_msg.body.log_ACAS.CAS_PitchTCkI = buf.aslctrl_params.CAS_PitchTCkI;
+			log_msg.body.log_ACAS.CAS_PitchTCILim = buf.aslctrl_params.CAS_PitchTCILim;
+			log_msg.body.log_ACAS.CAS_RollRateLim = buf.aslctrl_params.CAS_RollRateLim;
+			log_msg.body.log_ACAS.CAS_YawRateLim = buf.aslctrl_params.CAS_YawRateLim;
+			log_msg.body.log_ACAS.CAS_PitchAngleLim = buf.aslctrl_params.CAS_PitchAngleLim;
+			log_msg.body.log_ACAS.CAS_RollAngleLim = buf.aslctrl_params.CAS_RollAngleLim;
+			log_msg.body.log_ACAS.CAS_uElevTurnFF = buf.aslctrl_params.CAS_uElevTurnFF;
+			log_msg.body.log_ACAS.CAS_YawLowPassOmega = buf.aslctrl_params.CAS_YawLowPassOmega;
 			LOGBUFFER_WRITE_AND_COUNT(ACAS);
 
-			//MSG4: AHL
-			log_msg.msg_type = LOG_AHL_MSG;
-			log_msg.body.log_AHL.HL_fMult = buf.aslctrl_params.HL_fMult;
-			log_msg.body.log_AHL.HL_WPL1_Damping = (float) buf.aslctrl_params.HL_WPL1_Damping;
-			log_msg.body.log_AHL.HL_WPL1_P_vMin = (float) buf.aslctrl_params.HL_WPL1_P_vMin;
-			log_msg.body.log_AHL.HL_WPL1_P_vNom = (float) buf.aslctrl_params.HL_WPL1_P_vNom;
-			log_msg.body.log_AHL.HL_WPL1_P_vMax = (float) buf.aslctrl_params.HL_WPL1_P_vMax;
-			log_msg.body.log_AHL.HL_Vel_vNom = (float) buf.aslctrl_params.HL_Vel_vNom;
-			log_msg.body.log_AHL.HL_Vel_vMin = (float) buf.aslctrl_params.HL_Vel_vMin;
-			log_msg.body.log_AHL.HL_Vel_vMax = (float) buf.aslctrl_params.HL_Vel_vMax;
+			//MSG4: AHL1
+			log_msg.msg_type = LOG_AHL1_MSG;
+			log_msg.body.log_AHL1.HL_fMult = buf.aslctrl_params.HL_fMult;
+			log_msg.body.log_AHL1.HL_WPL1_Damping = buf.aslctrl_params.HL_WPL1_Damping;
+			log_msg.body.log_AHL1.HL_WPL1_P_vMin = buf.aslctrl_params.HL_WPL1_P_vMin;
+			log_msg.body.log_AHL1.HL_WPL1_P_vNom = buf.aslctrl_params.HL_WPL1_P_vNom;
+			log_msg.body.log_AHL1.HL_WPL1_P_vMax = buf.aslctrl_params.HL_WPL1_P_vMax;
+			log_msg.body.log_AHL1.HL_Vel_vNom = buf.aslctrl_params.HL_Vel_vNom;
+			log_msg.body.log_AHL1.HL_Vel_vMin = buf.aslctrl_params.HL_Vel_vMin;
+			log_msg.body.log_AHL1.HL_Vel_vMax = buf.aslctrl_params.HL_Vel_vMax;
 			//Old altitude controller
-			log_msg.body.log_AHL.HL_AlthMax = (float) buf.aslctrl_params.HL_AlthMax;
-			log_msg.body.log_AHL.HL_AlthMin = (float) buf.aslctrl_params.HL_AlthMin;
-			log_msg.body.log_AHL.HL_vZClimb = (float) buf.aslctrl_params.HL_vZClimb;
-			log_msg.body.log_AHL.HL_vZSink = (float) buf.aslctrl_params.HL_vZSink;
-			log_msg.body.log_AHL.HL_AltLowPassOmega = (float) buf.aslctrl_params.HL_AltLowPassOmega;
+			log_msg.body.log_AHL1.HL_AlthMax = buf.aslctrl_params.HL_AlthMax;
+			log_msg.body.log_AHL1.HL_AlthMin = buf.aslctrl_params.HL_AlthMin;
+			log_msg.body.log_AHL1.HL_vZClimb = buf.aslctrl_params.HL_vZClimb;
+			log_msg.body.log_AHL1.HL_vZSink = buf.aslctrl_params.HL_vZSink;
+			log_msg.body.log_AHL1.HL_AltLowPassOmega = buf.aslctrl_params.HL_AltLowPassOmega;
+			LOGBUFFER_WRITE_AND_COUNT(AHL1);
 
-			//TECS
-			//---TECS--------------------
-			log_msg.body.log_AHL.time_const = buf.aslctrl_params.time_const;
-			log_msg.body.log_AHL.time_const_throt = buf.aslctrl_params.time_const_throt;
-			log_msg.body.log_AHL.min_sink_rate = buf.aslctrl_params.min_sink_rate;
-			log_msg.body.log_AHL.max_sink_rate = buf.aslctrl_params.max_sink_rate;
-			log_msg.body.log_AHL.max_climb_rate = buf.aslctrl_params.max_climb_rate;
-			log_msg.body.log_AHL.throttle_damp = buf.aslctrl_params.throttle_damp;
-			log_msg.body.log_AHL.integrator_gain = buf.aslctrl_params.integrator_gain;
-			log_msg.body.log_AHL.throttle_ILim = buf.aslctrl_params.throttle_ILim;
-			log_msg.body.log_AHL.vertical_accel_limit = buf.aslctrl_params.vertical_accel_limit;
-			log_msg.body.log_AHL.height_comp_filter_omega = buf.aslctrl_params.height_comp_filter_omega;
-			log_msg.body.log_AHL.speed_comp_filter_omega = buf.aslctrl_params.speed_comp_filter_omega;
-			log_msg.body.log_AHL.roll_throttle_compensation = buf.aslctrl_params.roll_throttle_compensation;
-			log_msg.body.log_AHL.speed_weight = buf.aslctrl_params.speed_weight;
-			log_msg.body.log_AHL.pitch_damping = buf.aslctrl_params.pitch_damping;
-			log_msg.body.log_AHL.airspeed_min = buf.aslctrl_params.airspeed_min;
-			log_msg.body.log_AHL.airspeed_trim = buf.aslctrl_params.airspeed_trim;
-			log_msg.body.log_AHL.airspeed_max = buf.aslctrl_params.airspeed_max;
-			log_msg.body.log_AHL.pitch_limit_min = buf.aslctrl_params.pitch_limit_min;
-			log_msg.body.log_AHL.pitch_limit_max = buf.aslctrl_params.pitch_limit_max;
-			log_msg.body.log_AHL.throttle_min = buf.aslctrl_params.throttle_min;
-			log_msg.body.log_AHL.throttle_max = buf.aslctrl_params.throttle_max;
-			log_msg.body.log_AHL.throttle_cruise = buf.aslctrl_params.throttle_cruise;
-			log_msg.body.log_AHL.heightrate_p = buf.aslctrl_params.heightrate_p;
-			log_msg.body.log_AHL.speedrate_p = buf.aslctrl_params.speedrate_p;
-			log_msg.body.log_AHL.throttle_slewrate = buf.aslctrl_params.throttle_slewrate;
-
-			LOGBUFFER_WRITE_AND_COUNT(AHL);
+			//MSG5: AHL2/TECS
+			log_msg.msg_type = LOG_AHL2_MSG;
+			log_msg.body.log_AHL2.time_const = buf.aslctrl_params.time_const;
+			log_msg.body.log_AHL2.time_const_throt = buf.aslctrl_params.time_const_throt;
+			log_msg.body.log_AHL2.min_sink_rate = buf.aslctrl_params.min_sink_rate;
+			log_msg.body.log_AHL2.max_sink_rate = buf.aslctrl_params.max_sink_rate;
+			log_msg.body.log_AHL2.max_climb_rate = buf.aslctrl_params.max_climb_rate;
+			log_msg.body.log_AHL2.throttle_damp = buf.aslctrl_params.throttle_damp;
+			log_msg.body.log_AHL2.integrator_gain = buf.aslctrl_params.integrator_gain;
+			log_msg.body.log_AHL2.throttle_ILim = buf.aslctrl_params.throttle_ILim;
+			log_msg.body.log_AHL2.vertical_accel_limit = buf.aslctrl_params.vertical_accel_limit;
+			log_msg.body.log_AHL2.height_comp_filter_omega = buf.aslctrl_params.height_comp_filter_omega;
+			log_msg.body.log_AHL2.speed_comp_filter_omega = buf.aslctrl_params.speed_comp_filter_omega;
+			log_msg.body.log_AHL2.roll_throttle_compensation = buf.aslctrl_params.roll_throttle_compensation;
+			log_msg.body.log_AHL2.speed_weight = buf.aslctrl_params.speed_weight;
+			log_msg.body.log_AHL2.pitch_damping = buf.aslctrl_params.pitch_damping;
+			log_msg.body.log_AHL2.pitch_limit_min = buf.aslctrl_params.pitch_limit_min;
+			log_msg.body.log_AHL2.pitch_limit_max = buf.aslctrl_params.pitch_limit_max;
+			log_msg.body.log_AHL2.throttle_min = buf.aslctrl_params.throttle_min;
+			log_msg.body.log_AHL2.throttle_max = buf.aslctrl_params.throttle_max;
+			log_msg.body.log_AHL2.throttle_cruise = buf.aslctrl_params.throttle_cruise;
+			log_msg.body.log_AHL2.heightrate_p = buf.aslctrl_params.heightrate_p;
+			log_msg.body.log_AHL2.speedrate_p = buf.aslctrl_params.speedrate_p;
+			log_msg.body.log_AHL2.throttle_slewrate = buf.aslctrl_params.throttle_slewrate;
+			LOGBUFFER_WRITE_AND_COUNT(AHL2);
 		}
 
 		/* --- ASLD --- */
@@ -1976,6 +1993,78 @@ int sdlog2_thread_main(int argc, char *argv[])
 
 			LOGBUFFER_WRITE_AND_COUNT(ASLD);
 		}
+		/* --- ASLD --- */
+		if (copy_if_updated(ORB_ID(state_estimator_EKF_parameters), subs.ekf_sub, &buf.ekf) && true) {//pLogEnabler.LOG_EKF) {
+
+			//EKF-States Message
+			log_msg.msg_type = LOG_EKFS_MSG;
+			log_msg.body.log_EKFS.timestamp= buf.ekf.timestamp;
+			log_msg.body.log_EKFS.state_p[0] = (float) buf.ekf.x_p[0];
+			log_msg.body.log_EKFS.state_p[1] = (float) buf.ekf.x_p[1];
+			log_msg.body.log_EKFS.state_p[2] = (float) buf.ekf.x_p[2];
+			memcpy(log_msg.body.log_EKFS.state_q_NS, buf.ekf.x_q_NS, sizeof(log_msg.body.log_EKFS.state_q_NS));
+			memcpy(log_msg.body.log_EKFS.state_v_N, buf.ekf.x_v_N, sizeof(log_msg.body.log_EKFS.state_v_N));
+			memcpy(log_msg.body.log_EKFS.state_b_g, buf.ekf.x_b_g, sizeof(log_msg.body.log_EKFS.state_b_g));
+			memcpy(log_msg.body.log_EKFS.state_b_a, buf.ekf.x_b_a, sizeof(log_msg.body.log_EKFS.state_b_a));
+			memcpy(log_msg.body.log_EKFS.state_w, buf.ekf.x_w, sizeof(log_msg.body.log_EKFS.state_w));
+			log_msg.body.log_EKFS.state_QFF = buf.ekf.x_QFF;
+			log_msg.body.log_EKFS.state_K = buf.ekf.x_K;
+			log_msg.body.log_EKFS.alpha = buf.ekf.alpha;
+			log_msg.body.log_EKFS.beta = buf.ekf.beta;
+			log_msg.body.log_EKFS.airspeed = buf.ekf.airspeed;
+			LOGBUFFER_WRITE_AND_COUNT(EKFS);
+
+			//EKF-Variances Message
+			log_msg.msg_type = LOG_EKFV_MSG;
+			log_msg.body.log_EKFV.timestamp= buf.ekf.timestamp;
+			memcpy(log_msg.body.log_EKFV.state_P_var_vect, buf.ekf.P_var_vect, sizeof(log_msg.body.log_EKFV.state_P_var_vect));
+			LOGBUFFER_WRITE_AND_COUNT(EKFV);
+		}
+
+		/* --- MPPT data --- */
+		if (copy_if_updated(ORB_ID(sensor_mppt), subs.mppt_sub, &buf.mppt) && pLogEnabler.LOG_MPPT) {
+			log_msg.msg_type = LOG_MPPT_MSG;
+			log_msg.body.log_MPPT.timestamp = buf.mppt.timestamp;
+			memcpy(log_msg.body.log_MPPT.mppt_amp, buf.mppt.mppt_amp, sizeof(log_msg.body.log_MPPT.mppt_amp));
+			memcpy(log_msg.body.log_MPPT.mppt_volt, buf.mppt.mppt_volt, sizeof(log_msg.body.log_MPPT.mppt_volt));
+			memcpy(log_msg.body.log_MPPT.mppt_pwm, buf.mppt.mppt_pwm, sizeof(log_msg.body.log_MPPT.mppt_pwm));
+			memcpy(log_msg.body.log_MPPT.mppt_status, buf.mppt.mppt_status, sizeof(log_msg.body.log_MPPT.mppt_status));
+			LOGBUFFER_WRITE_AND_COUNT(MPPT);
+		}
+
+		/* --- Power sensor data --- */
+		if (copy_if_updated(ORB_ID(sensor_power), subs.power_sub, &buf.power) && pLogEnabler.LOG_POWS) {
+			log_msg.msg_type = LOG_POWS_MSG;
+			log_msg.body.log_POWS.timestamp = buf.power.timestamp;
+			log_msg.body.log_POWS.adc121_vspb_volt = buf.power.adc121_vspb_volt;
+			log_msg.body.log_POWS.adc121_cspb_amp = buf.power.adc121_cspb_amp;
+			log_msg.body.log_POWS.adc121_cs1_amp = buf.power.adc121_cs1_amp;
+			log_msg.body.log_POWS.adc121_cs2_amp = buf.power.adc121_cs2_amp;
+			LOGBUFFER_WRITE_AND_COUNT(POWS);
+		}
+
+		/* --- Battery monitor sensor data --- */
+		if (copy_if_updated(ORB_ID(sensor_bat_mon), subs.bat_mon_sub, &buf.bat_mon) && pLogEnabler.LOG_BATMON) {
+			for (int i = 0; i < MAX_NUM_BAT_MON_SENSORS; i++) {
+			log_msg.msg_type = LOG_BAT0_MSG+i;
+			log_msg.body.log_BATM.timestamp = buf.bat_mon.timestamp;
+			log_msg.body.log_BATM.temperature = buf.bat_mon.temperature[i];
+			log_msg.body.log_BATM.voltage = buf.bat_mon.voltage[i];
+			log_msg.body.log_BATM.current = buf.bat_mon.current[i];
+			log_msg.body.log_BATM.stateofcharge = buf.bat_mon.stateofcharge[i];
+			log_msg.body.log_BATM.batterystatus = buf.bat_mon.batterystatus[i];
+			log_msg.body.log_BATM.serialnumber = buf.bat_mon.serialnumber[i];
+			log_msg.body.log_BATM.hostfetcontrol = buf.bat_mon.hostfetcontrol[i];
+			log_msg.body.log_BATM.cellvoltage1 = buf.bat_mon.cellvoltage1[i];
+			log_msg.body.log_BATM.cellvoltage2 = buf.bat_mon.cellvoltage2[i];
+			log_msg.body.log_BATM.cellvoltage3 = buf.bat_mon.cellvoltage3[i];
+			log_msg.body.log_BATM.cellvoltage4 = buf.bat_mon.cellvoltage4[i];
+			log_msg.body.log_BATM.cellvoltage5 = buf.bat_mon.cellvoltage5[i];
+			log_msg.body.log_BATM.cellvoltage6 = buf.bat_mon.cellvoltage6[i];
+			LOGBUFFER_WRITE_AND_COUNT(BATM);
+			}
+		}
+
 		/* --- End of ASL-message writing section */
 
 		/* signal the other thread new data, but not yet unlock */

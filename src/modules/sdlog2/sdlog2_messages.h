@@ -444,11 +444,12 @@ struct log_VTOL_s {
 /********** ASL-MESSAGES, ID > 100 **************/
 
 /* --- ASLCTRL - ASLC parameter state --- (ASL/PhilippOe) */
-// Abbreviations:
-// A/ASLC=ASLC, S=SAS, C=CAS, HL=HL
-// R=RollAngle/RRate=RollRate, P=Pitch, Y=Yaw
-// kP = P-Gain, kI=I-Gain, L=Lim, IL=Integral-Limit, LP=Low Pass, HP=HighPass, T=Trim,
-// GS=GainScheduling, SP=StallProtection, tS=tSample
+// Abbreviations used to save labeling-space:
+//    Category: A/ASLC=ASLC, S=SAS, C=CAS, HL=HL
+//    Orientation: R=RollAngle/RRate=RollRate, P=Pitch, Y=Yaw
+//    Type of data: kP = P-Gain, kI=I-Gain, L=Limit, IL=Integral-Limit, LP=Low Pass, HP=HighPass, T=Trim, R=Reference, FF=FeedForward
+//    Specifier: N=Nominal, Ma=Max, Mi=Min
+//    GS=GainScheduling, SP=StallProtection, tS=tSample, CT=CoordinatedTurn
 
 #define LOG_ASLC_MSG 101
 struct log_ASLC_s {
@@ -516,9 +517,6 @@ struct log_ACAS_s {
 	float CAS_PitchIGain;
 	float CAS_RollPGain;
 	float CAS_RollPGainM;
-	float CAS_HeadPGain;
-	float CAS_q2uPGain;
-	float CAS_p2uPGain;
 
 	//Limiters
 	float CAS_PitchRateLim;
@@ -537,8 +535,8 @@ struct log_ACAS_s {
 	float CAS_YawLowPassOmega;
 };
 
-#define LOG_AHL_MSG 104
-struct log_AHL_s {
+#define LOG_AHL1_MSG 104
+struct log_AHL1_s {
 	//---WP following ------------------
 	uint8_t HL_fMult;
 	float HL_WPL1_Damping;
@@ -554,6 +552,10 @@ struct log_AHL_s {
 	float HL_vZClimb;
 	float HL_vZSink;
 	float HL_AltLowPassOmega;
+};
+
+#define LOG_AHL2_MSG 105
+struct log_AHL2_s {
 	//---TECS--------------------
 	float time_const;
 	float time_const_throt;
@@ -569,9 +571,6 @@ struct log_AHL_s {
 	float roll_throttle_compensation;
 	float speed_weight;
 	float pitch_damping;
-	float airspeed_min;
-	float airspeed_trim;
-	float airspeed_max;
 	float pitch_limit_min;
 	float pitch_limit_max;
 	float throttle_min;
@@ -582,7 +581,8 @@ struct log_AHL_s {
 	float throttle_slewrate;
 };
 
-#define LOG_ASLD_MSG 105
+
+#define LOG_ASLD_MSG 106
 struct log_ASLD_s {
 	/* --- ASLD - ASLD data state --- */
 	uint64_t timestamp;      /**< in microseconds since system start          */
@@ -628,9 +628,74 @@ struct log_ASLD_s {
 	uint8_t AltitudeStatus;
 	uint8_t AirspeedCtrlStatus;
 };
-///////////////////////////////
 
-///////////////////////////////
+#define LOG_EKFS_MSG 107
+struct log_EKFS_s {					// *** EKF-States log message ***
+	uint64_t timestamp;      		// in microseconds since system start
+	float state_p[3];				// position states for latitude, loglitude, altitude (above elipsoid)
+	float state_q_NS[4]; 			// angular states for q1, q2, q3, q4
+	float state_v_N[3];	 			// velocity states for vel_n, vel_e, vel_d
+	float state_b_g[3];	 			// gyroscope offset states
+	float state_b_a[3];				// accelerometer offset states
+	float state_QFF;				// QFF states
+	float state_w[3];				// wind states
+	float state_K;					// dynamic states
+
+	float alpha;					// Estimated angle of attack [rad]
+	float beta;						// Estimated sideslip angle [rad]
+	float airspeed;					// Filtered/estimated airspeed [m/s]. Safer than using raw airspeed-sensor data.
+};
+
+
+#define LOG_EKFV_MSG 108
+struct log_EKFV_s {					// *** EKF-Variances log message ***
+	uint64_t timestamp;      		// in microseconds since system start
+	float state_P_var_vect[20];		// variance vector
+};
+
+#define LOG_MPPT_MSG 109
+struct log_MPPT_s {					// *** MPPT log message ***
+	uint64_t timestamp;      		// in microseconds since system start
+	float mppt_amp[3];				// MPPT current readings in amps
+	float mppt_volt[3];				// MPPT voltage readings in volts
+	uint16_t mppt_pwm[3];			// MPPT pwm readings
+	uint8_t mppt_status[3];			// MPPT status readings
+};
+
+#define LOG_POWS_MSG 110
+struct log_POWS_s {					// *** Power sensors log message ***
+	uint64_t timestamp;      		// in microseconds since system start
+	float adc121_vspb_volt;			// power board voltage sensor readings in volts
+	float adc121_cspb_amp;			// power board current sensor readings in amps
+	float adc121_cs1_amp;			// board current sensor 1 readings in amps
+	float adc121_cs2_amp;			// board current sensor 2 readings in amps
+};
+
+#define LOG_BAT0_MSG 111
+#define LOG_BAT1_MSG 112
+#define LOG_BAT2_MSG 113
+struct log_BATM_s {						// *** Battery monitor sensors log message ***
+	uint64_t timestamp;					/**< Timestamp in microseconds since boot, of bat monitor 	*/
+	uint16_t temperature;				/**< battery monitor sensor temperature report in [0.1 K] 	*/
+	uint16_t voltage;					/**< battery monitor sensor voltage report in [mV] 			*/
+	int16_t  current;					/**< battery monitor sensor current report in [mA] 			*/
+	uint8_t  stateofcharge;				/**< battery monitor sensor state of charge report in [%] 	*/
+	uint16_t batterystatus;				/**< battery monitor sensor battery status report in Hex 	*/
+	uint16_t serialnumber;				/**< battery monitor sensor serial number report in Hex 	*/
+	uint16_t hostfetcontrol;			/**< battery monitor sensor host FET control report in Hex 	*/
+	uint16_t cellvoltage1;				/**< battery monitor sensor cell 1 voltage  report in [mV] 	*/
+	uint16_t cellvoltage2;				/**< battery monitor sensor cell 2 voltage report in [mV] 	*/
+	uint16_t cellvoltage3;				/**< battery monitor sensor cell 3 voltage report in [mV] 	*/
+	uint16_t cellvoltage4;				/**< battery monitor sensor cell 4 voltage report in [mV] 	*/
+	uint16_t cellvoltage5;				/**< battery monitor sensor cell 5 voltage report in [mV] 	*/
+	uint16_t cellvoltage6;				/**< battery monitor sensor cell 6 voltage report in [mV] 	*/
+
+};
+
+#define LOG_ATMO_MSG 114
+struct log_ATMO_s {
+	float amb_temp_celcius;
+};
 
 /********** SYSTEM MESSAGES, ID > 0x80 **********/
 
@@ -703,11 +768,21 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(ENCD, "qfqf",	"cnt0,vel0,cnt1,vel1"),
 
 	/* ASL messages, ID >= 100(0x64) */
-	LOG_FORMAT(ASLC, "QBBBBBBBB","timestamp,CtrlType,GainSch_E,GainSch_Q,StallProt,VelCtrl,OnRCLoss,OvSpdProt,CoordTurn"),
-	LOG_FORMAT(ASAS, "fffffffffffffffffffffffffff","tSample,R_kP,P_kP,Y_kP,R_PDir,P_PDir,Y_PDir,RYDec_kari,Y_TurnFF,Y_TurnkP,R_Lim,P_Lim,Y_Lim,Y_LPw,P_LPw,R_LPw,vScaleLimF,vScaleExp,R_T_vNom,R_T_vMin,R_T_vMax,P_T_vNom,P_T_vMin,P_T_vMax,Y_T_vNom,Y_T_vMin,Y_T_vMax"),
-	LOG_FORMAT(ACAS, "Bffffffffffffffffff","fMult,P_kP,P_kP_M,P_kI,R_kP,R_kP_M,Head_kP,q2u_kP,p2u_kP,PRate_Lim,PRate_ILim,PTCkI,PTCILim,RRate_Lim,YRate_Lim,P_Lim,R_Lim,uElevTurnFF,Y_LPw"),
-	LOG_FORMAT(AHL,  "Bfffffffffffffffffffffffffffffffffffff","fMult,L1_Damp,L1_P_vMin,L1_P_vNom,L1_P_vMax,v_vNom,v_vMi,v_vMa,hMax,hMin,h_vZcl,h_vZsi,h_LPw,tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,ami,at,ama,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
-	LOG_FORMAT(ASLD, "QIBfffffffffffffBffffffffffffffffBBB", "timestamp,dt,mode,h,hRef,hRef_t,Pitch,PitchRef,PitchRefCT,q,qRef,uElev,uThrot,uThrot2,aZ,AirspeedRef,bSpoilers,Yaw,YawRef,Roll,RollRef,p,pRef,r,rRef,uAil,uRud,Yawdot_ref,Yawdot,f_GS_Q,P_kP_GS_E,R_kP_GS_E,qmax,StallStat,AltStat,vStat"),
+	// Note: Message labeling abbreviations are given above
+	LOG_FORMAT(ASLC, "QBBBBBBBB","t,CtrlType,GainSch_E,GainSch_Q,StallProt,VelCtrl,OnRCLoss,OvSpdProt,CoordTurn"),
+	LOG_FORMAT(ASAS, "fffffffffffffffffffffffffff","tS,R_kP,P_kP,Y_kP,RDi,PDi,YDi,RYDe,Y_CTFF,Y_CTkP,R_L,P_L,Y_L,Y_LPw,P_LPw,R_LPw,vSL,vSE,RTN,RTMi,RTMa,PTN,PTMi,PTMa,YTN,YTMi,YTMa"),
+	LOG_FORMAT(ACAS, "Bfffffffffffffff","fM,P_kP,P_kP_M,P_kI,R_kP,R_kP_M,PRate_Lim,PRate_ILim,PTCkI,PTCILim,RRate_Lim,YRate_Lim,P_Lim,R_Lim,uElevTurnFF,Y_LPw"),
+	LOG_FORMAT(AHL1,  "Bffffffffffff","fM,L1_D,L1_P_vMi,L1_P_vN,L1_P_vMa,v_N,v_Mi,v_Ma,hMa,hMi,h_vZcl,h_vZsi,h_LPw"),
+	LOG_FORMAT(AHL2,  "ffffffffffffffffffffff","tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
+	LOG_FORMAT(ASLD,  "QIBfffffffffffffBffffffffffffffffBBB", "t,dt,mode,h,hR,hR_t,P,PR,PR_CT,q,qR,uE,uT,uT2,aZ,TAS_R,bSpoil,Y,YR,R,RR,p,pR,r,rR,uA,uR,Yd_R,Yd,GS_Q,P_kPE,R_kPE,qMax,SP,AltS,vS"),
+	LOG_FORMAT(EKFS,  "Qffffffffffffffffffffffff", "t,p1,p2,p3,q1,q2,q3,q4,v1,v2,v3,bg1,bg2,bg3,ba1,ba2,ba3,qff,w1,w2,w3,k,alpha,beta,TAS"),
+	LOG_FORMAT(EKFV,  "Qffffffffffffffffffff", "t,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20"),
+	LOG_FORMAT(MPPT,  "QffffffHHHBBB", "t,Cur1,Cur2,Cur3,Volt1,Volt2,Volt3,PWM1,PWM2,PWM3,Stat1,Stat2,Stat3"),
+	LOG_FORMAT(POWS, "Qffff", "t,Main_Volt,Main_Cur,Cur1,Cur2"),
+	LOG_FORMAT_S(BAT0, BATM, "QHHhBHHHHHHHHH", "t,Temp,V_bat,I_bat,SoC,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT_S(BAT1, BATM, "QHHhBHHHHHHHHH", "t,Temp,V_bat,I_bat,SoC,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT_S(BAT2, BATM, "QHHhBHHHHHHHHH", "t,Temp,V_bat,I_bat,SoC,status,SN,hostfetctrl,V_1,V_2,V_3,V_4,V_5,V_6"),
+	LOG_FORMAT(ATMO, "f", "ambTemp"),
 
 	/* system-level messages, ID >= 0x80 */
 	/* FMT: don't write format of format message, it's useless */

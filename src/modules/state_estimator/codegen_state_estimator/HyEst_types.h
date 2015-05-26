@@ -3,7 +3,7 @@
  *
  * Code generation for function 'propagate'
  *
- * C source code generated on: Fri Jan 23 17:57:25 2015
+ * C source code generated on: Wed May 06 16:15:51 2015
  *
  */
 
@@ -33,18 +33,18 @@ typedef struct
 #define typedef_b_struct_T
 typedef struct
 {
-    char_T MODEL[8];
-    real_T Epoch;
-    real_T MAXORD;
-    real_T Max2;
-    real_T Max3;
-    real_T minYear;
-    real_T maxYear;
-    real_T minAlt;
-    real_T maxAlt;
-    real_T gh[195];
-    real_T max2;
-    real_T sv[195];
+    real32_T MODEL[8];
+    real32_T Epoch;
+    real32_T MAXORD;
+    real32_T Max2;
+    real32_T Max3;
+    real32_T minYear;
+    real32_T maxYear;
+    real32_T minAlt;
+    real32_T maxAlt;
+    real32_T gh[195];
+    real32_T max2;
+    real32_T sv[195];
 } b_struct_T;
 #endif /*typedef_b_struct_T*/
 #ifndef struct_emxArray__common

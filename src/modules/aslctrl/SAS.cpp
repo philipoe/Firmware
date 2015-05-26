@@ -100,7 +100,7 @@ void SAS::CoordinatedTurn_YawDamper(float &uRudCmd, float const &r, float& rRef,
 	//LP filter to smooth outputs to servos, but do not HP filter because we'll compare this to rRef in any case.
 	float rFilt = LP_Yaw.update(r);
 
-	if(LP_Airspeed.Get()>1.0f /*bAirspeedValid*/) {
+	if(LP_Airspeed.Get()>5.0f /*bAirspeedValid*/) {
 		// Recalculate reference body-yawrate (i.e. r-rate) necessary for a coordinated turn
 		rRef = g * sinf(roll) / LP_Airspeed.Get();
 
@@ -189,14 +189,9 @@ int SAS::RateControl(const float pRef, const float qRef, float& rRef, float &uAi
 	//Convert reference rates to u commands
 	switch(params->ASLC_CtrlType) {
 		case PID_GAINSDECOUPLED:
+		default:
 			uAilCmd = -pRef*params->SAS_RollPDir;
 			uElevCmd = -qRef*params->SAS_PitchPDir;
-			uRudCmd = -rRef*params->SAS_YawPDir;
-			break;
-		case PID_STD:
-		default:
-			uAilCmd = -pRef*params->CAS_p2uPGain*params->SAS_RollPDir*params->SAS_RollPGain;
-			uElevCmd = -qRef*params->CAS_q2uPGain*params->SAS_PitchPDir*params->SAS_PitchPGain;
 			uRudCmd = -rRef*params->SAS_YawPDir;
 			break;
 	}
@@ -204,7 +199,7 @@ int SAS::RateControl(const float pRef, const float qRef, float& rRef, float &uAi
 	//Apply dampers
 	RollDamper(uAilCmd, p, fGainSchedQ, fGainSchedQ);
 	PitchDamper(uElevCmd, q, fGainSchedQ, fGainSchedQ);
-	if(params->ASLC_CoordTurn == 1 || params->ASLC_CoordTurn == 5) CoordinatedTurn_YawDamper(uRudCmd, r, rRef, roll, rollRef, fGainSchedQ, fGainSchedQ);
+	if(params->ASLC_CoordTurn == 1) CoordinatedTurn_YawDamper(uRudCmd, r, rRef, roll, rollRef, fGainSchedQ, fGainSchedQ);
 	else YawDamper(uRudCmd, r, 1.0f, fGainSchedQ);
 
 	//Decoupling
@@ -214,7 +209,7 @@ int SAS::RateControl(const float pRef, const float qRef, float& rRef, float &uAi
 			(double)temp1,(double)uAilCmd,(double)temp2,(double)uElevCmd,(double)temp3,(double)uRudCmd);
 
 	// Return codes
-	if(fabs(params->SAS_RollPGain) <1.0E-5f || fabs(params->SAS_PitchPGain) <1.0E-5f) {
+	if((fabs(params->SAS_RollPGain) <1.0E-5f || fabs(params->SAS_PitchPGain) <1.0E-5f) && params->ASLC_CtrlType==0) {
 		return -1; //Let the user know that the gains were accidentally set to zero, so there is no control authority!
 	}
 	else if(bOvSpdProt_Protecting) return -2;
