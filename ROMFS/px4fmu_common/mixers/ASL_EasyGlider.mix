@@ -1,5 +1,5 @@
-Passthrough mixer for PX4IO
-============================
+ASL EasyGlider mixer for PX4IO
+==============================
 
 This file defines passthrough mixers suitable for testing.
 
