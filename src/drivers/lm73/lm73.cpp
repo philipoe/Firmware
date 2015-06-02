@@ -107,10 +107,6 @@ private:
 	work_s				_work;
 	unsigned			_measure_ticks;
 
-	//unsigned			_num_reports;
-	//volatile unsigned	_next_report;
-	//volatile unsigned	_oldest_report;
-	//struct lm73_report	*_reports;
 	RingBuffer			*_reports;
 
 	bool				_measurement_phase;
@@ -184,6 +180,12 @@ private:
 	 */
 	int 			res_change(uint8_t res);
 
+	/**
+	 * Get identification registers of the LM73.
+	 *
+	 */
+	int				identification_reg();
+
 };
 
 /* helper macro for handling report buffer indices */
@@ -215,8 +217,7 @@ private:
 #define TEMP_RES_13bit				0x10	/* 12 bits temperature measurement resolution 			   */
 #define TEMP_RES_14bit				0x11	/* 13 bits temperature measurement resolution 			   */
 
-#define LM73_MAXIMAL_ERROR_COUNTER	10	/* Added for the LM73 reset (number of error required for the I2C reset) */    //// <<<--- checkb
-
+#define LM73_IDENTIFICATION_WORD 	0x0190 /* LM73 identification word								   */
 /*
  * Driver 'main' command.
  */
@@ -227,9 +228,6 @@ LM73::LM73(int bus) :
 	I2C("LM73", LM73_DEVICE_PATH, bus, 0, 100000),
 	_work{},
 	_measure_ticks(0),
-	//_num_reports(0),
-	//_next_report(0),
-	//_oldest_report(0),
 	_reports(nullptr),
 	_measurement_phase(false),
 	temperature(-273.15),
@@ -253,7 +251,6 @@ LM73::~LM73()
 	/* free any existing reports */
 	if (_reports != nullptr)
 	{
-		//delete[] _reports;
 		delete _reports;
 	}
 }
@@ -264,30 +261,44 @@ LM73::init()
 	int ret = I2C::init();
 
 	/* do I2C init (and probe) first */
-	if (ret != OK)
+	if (ret != OK) {
+		debug("CDev init failed");
 		goto out;
+	}
 
 	/* allocate basic report buffers */
-	//_num_reports = 2;
-	//_reports = new struct lm73_report[_num_reports];
 	_reports = new RingBuffer(2,sizeof(lm73_report));
-	if (_reports == nullptr)
+
+	if (_reports == nullptr) {
+		debug("can't get memory for reports");
+		ret = -ENOMEM;
 		goto out;
+	};
 
-	//_oldest_report = _next_report = 0;
-
-	/* get a publish handle on the lm73 topic */
-	//memset(&_reports[0], 0, sizeof(_reports[0]));
-	//_ambient_temperature_topic = orb_advertise(ORB_ID(sensor_lm73), &_reports[0]);
 	struct lm73_report trp;
-	temp_measurement();
-	_reports->get(&trp);
-	_ambient_temperature_topic = orb_advertise(ORB_ID(sensor_lm73), &trp);
 
-	if (_ambient_temperature_topic < 0)
-		debug("failed to create sensor_lm73 object");
+	_reports->flush();
 
-	//ret = OK;
+	do {
+		/* do temperature first */
+		if (OK != temp_measurement()) {
+			ret = -EIO;
+			break;
+		}
+
+		/* state machine will have generated a report, copy it out */
+		_reports->get(&trp);
+
+		ret = OK;
+
+		_ambient_temperature_topic = orb_advertise(ORB_ID(sensor_lm73), &trp);
+
+		if (_ambient_temperature_topic < 0) {
+			warnx("failed to create sensor_lm73 publication");
+		}
+
+	} while (0);
+
 out:
 	return ret;
 }
@@ -310,13 +321,13 @@ LM73::probe_address(uint8_t address)
 {
 	set_address(address);
 
-	/* send reset command */
-	if (OK != temp_measurement())
+	/* Get lm3 identification register value */
+	if (OK != identification_reg())
 		return -EIO;
 
-	/* Initialization functions: */
-
-	res_change(TEMP_RES_12bit);  				/* Set the temperature measurement resolution */
+	/* Set the temperature measurement resolution */
+	if (OK != res_change(TEMP_RES_12bit))
+		return -EIO;
 
 	return OK;
 }
@@ -354,8 +365,6 @@ LM73::read(struct file *filp, char *buffer, size_t buflen)
 	/* manual measurement - run one conversion */
 	do {
 		_reports->flush();
-		//_measurement_phase = 0;
-		//_oldest_report = _next_report = 0;
 
 		/* Take a temperature measurement */
 
@@ -446,25 +455,10 @@ LM73::ioctl(struct file *filp, int cmd, unsigned long arg)
 		return (1000 / _measure_ticks);
 
 	case SENSORIOCSQUEUEDEPTH: {
-			/* add one to account for the sentinel in the ring */
-			//arg++;
-
 			/* lower bound is mandatory, upper bound is a sanity check */
 			if ((arg < 1) || (arg > 100))
 				return -EINVAL;
 
-			/* allocate new buffer */
-			//struct lm73_report *buf = new struct lm73_report[arg];
-
-			//if (nullptr == buf)
-			//	return -ENOMEM;
-
-			/* reset the measurement state machine with the new buffer, free the old */
-			//stop();
-			//delete[] _reports;
-			//_num_reports = arg;
-			//_reports = buf;
-			//start();
 			irqstate_t flags = irqsave();
 			if (!_reports->resize(arg)) {
 				irqrestore(flags);
@@ -482,7 +476,6 @@ LM73::ioctl(struct file *filp, int cmd, unsigned long arg)
 		/* reset the measurement state machine */
 		reset();
 		return OK;
-		//return -EINVAL;
 	default:
 		/* give it to the superclass */
 		return I2C::ioctl(filp, cmd, arg);
@@ -531,16 +524,6 @@ LM73::cycle()
 	if (_measurement_phase) {
 		/* perform temperature measurement */
 		if (OK != temp_measurement()) {
-#if 0																					// temp commented out for debugging
-
-			log("ambient temperature measurement error, restarting LM73 device");
-
-			/* free any existing reports and reset the state machine and try again */
-			if (_reports != nullptr)
-				delete[] _reports;
-			probe();
-#endif
-
 			start();
 			return;
 		}
@@ -554,7 +537,6 @@ LM73::cycle()
 			   (worker_t)&LM73::cycle_trampoline,
 			   this,
 			   USEC2TICK(LM73_CONVERSION_INTERVAL));
-		   	   //_measure_ticks);										// LM73_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
 	}
 }
 
@@ -643,6 +625,29 @@ LM73::res_change(uint8_t res)
 				perf_count(_comms_errors);
 				return -EIO;
 			}
+	return OK;
+}
+
+int
+LM73::identification_reg()
+{
+	/*Get identification register*/
+
+	uint8_t ptr = IDENT_REG_ADD;
+	uint8_t data[2];
+	uint16_t reg_data = 0;
+
+
+	if (OK != transfer(&ptr,1, &data[0], 2)) {
+			perf_count(_comms_errors);
+			return -EIO;
+		}
+
+	reg_data = (data[0] << 8) | data[1];
+
+	if (reg_data != LM73_IDENTIFICATION_WORD)
+		return -EIO;
+
 	return OK;
 }
 
