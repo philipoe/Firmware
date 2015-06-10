@@ -434,7 +434,8 @@ void TECS::_update_pitch(void)
 	{
 		temp += _PITCHminf * gainInv;
 	}
-	_integ7_state = constrain(_integ7_state, (gainInv * (_PITCHminf - 0.0783f)) - temp, (gainInv * (_PITCHmaxf + 0.0783f)) - temp);
+	_integ7_state = constrain(_integ7_state, gainInv * _PITCHminf * 0.3f, gainInv * _PITCHmaxf * 0.3f);
+	//_integ7_state = constrain(_integ7_state, (gainInv * (_PITCHminf - 0.0783f)) - temp, (gainInv * (_PITCHmaxf + 0.0783f)) - temp);
 
 
 	// Calculate pitch demand from specific energy balance signals
