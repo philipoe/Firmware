@@ -22,6 +22,14 @@ echo "[init] AIRPLANE: " $AIRPLANE
 echo "[init] OBC:      " $OBC
 echo "[init] ************************************************************"
 
+echo ""
+echo "*******************************************************************"
+ver git
+ver bdate
+echo "*******************************************************************"
+echo ""
+
+
 # Do auto-config based on the above parameters
 
 if [ $AIRPLANE == EasyGlider ]
