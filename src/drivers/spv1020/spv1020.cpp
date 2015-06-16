@@ -519,10 +519,6 @@ SPV1020::ioctl(struct file *filp, int cmd, unsigned long arg)
 		/* reset the measurement state machine */
 		stop();
 
-		/* free any existing reports */
-		if (_reports != nullptr)
-			delete[] _reports;
-
 		start();
 		return OK;
 
