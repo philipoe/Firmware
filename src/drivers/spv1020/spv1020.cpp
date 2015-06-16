@@ -545,6 +545,11 @@ SPV1020::ioctl(struct file *filp, int cmd, unsigned long arg)
 		return OK;
 	}
 
+	case MPPTSETCOMBRIDGE: {
+		conf_I2C_SPI_bridge();
+		return OK;
+	}
+
 	default:
 		break;
 	}
@@ -1024,6 +1029,9 @@ reset()
 
 	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
 		err(1, "driver poll restart failed");
+
+	if (ioctl(fd, MPPTSETCOMBRIDGE, 0) < 0)
+		err(1, "driver set com bridge failed");
 
 	exit(0);
 }
