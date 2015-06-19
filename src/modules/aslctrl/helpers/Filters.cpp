@@ -12,7 +12,7 @@ HighPass::~HighPass(void)
 {
 }
 
-float const HighPass::update(float const input)
+float HighPass::update(float const input)
 {
 	float const output(m_gain*(input + m_oldValue));
 	m_oldValue = output-input;
@@ -33,7 +33,7 @@ LowPass::LowPass(float const tSample, float const omega)
 {
 }
 
-float const LowPass::update(float const input)
+float LowPass::update(float const input)
 {
 	float const output(m_gain*(m_oldOutput+m_gainInput*input));
 	m_oldOutput = output;
@@ -61,7 +61,7 @@ MovingAverage::~MovingAverage(void)
 {
 }
 
-float const MovingAverage::update(float const input)
+float MovingAverage::update(float const input)
 {
 	m_oldValue=(m_oldValue*order+input)*divider;
 	return m_oldValue;

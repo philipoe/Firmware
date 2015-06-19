@@ -13,7 +13,7 @@ class HighPass
 	public:
 		HighPass(float const tSample, float const omega);
 		~HighPass(void);
-		float const update(float const input);
+		float update(float const input);
 		int SetGain(float const tSample, float const omega);
 		float Get(void) {return m_oldValue;};
 };
@@ -30,10 +30,10 @@ class LowPass
 
 	public:
 		LowPass(float const tSample, float const omega);
-		float const update(float const input);
+		float update(float const input);
 		int SetGains(float const tSample, float const omega);
 		float Get(void) {return m_oldOutput;};
-		float Set(float newFilteredValue) {m_oldOutput=newFilteredValue;};
+		void Set(float newFilteredValue) {m_oldOutput=newFilteredValue;};
 };
 
 //***********************************************************
@@ -44,7 +44,7 @@ class MovingAverage
 	public:
 		MovingAverage(int initialvalue, int _order);
 		~MovingAverage(void);
-		float const update(float const input);
+		float update(float const input);
 		void Set(float newValue) {m_oldValue=newValue;}
 		float Get(void) {return m_oldValue;};
 
