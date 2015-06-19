@@ -19,12 +19,12 @@
 //*****************************************************************************************
 
 CAS::CAS() :
-	LP_Airspeed(0,0), LP_AccZ(0,0), LP_Yaw(0,0), LP_vZ(0,0), StallStatus(NO_STALL)
+	LP_Airspeed(0,0), LP_Yaw(0,0), LP_vZ(0,0)
 {
 }
 
 CAS::CAS(subscriptions *subs_arg):
-		LP_Airspeed(0,0), LP_AccZ(0,0), LP_Yaw(0,0), LP_vZ(0,0)
+		LP_Airspeed(0,0), LP_Yaw(0,0), LP_vZ(0,0)
 {
 	subs=subs_arg;
 	params=&(subs->aslctrl_params);
@@ -40,7 +40,6 @@ void CAS::CopyUpdatedParams(void)
 	PI_PitchAngle.SetParams(params->CAS_PitchPGain, params->CAS_PitchIGain, params->CAS_PitchRateLim, -params->CAS_PitchRateLim,params->CAS_PitchRateILim,-params->CAS_PitchRateILim, CAS_tSample);
 	PI_PitchTC.SetParams(params->CAS_uElevTurnFF, params->CAS_PitchTCkI, params->CAS_PitchAngleLim, -params->CAS_PitchAngleLim,params->CAS_PitchTCILim,-params->CAS_PitchTCILim, CAS_tSample);
 	LP_Airspeed.SetGains(CAS_tSample,12.57f);
-	LP_AccZ.SetGains(CAS_tSample,12.57f);
 	LP_Yaw.SetGains(CAS_tSample,params->CAS_YawLowPassOmega);
 	LP_vZ.SetGains(CAS_tSample,12.57f);
 }
@@ -125,14 +124,13 @@ float CAS::BankControl(float const &bankRef, float const &roll, float & PGain)
 //*** HIGHER LEVEL CAS CONTROL (HEADING)
 //*****************************************************************************************
 
-int CAS::CASRollPitchControl(float &pref, float &qref, float& rref, float const &RollAngleRef, float const &Roll, float const &PitchAngleRef, float const &Pitch, float const &accZ, aslctrl_data_s *ctrldata, bool bModeChanged)
+int CAS::CASRollPitchControl(float &pref, float &qref, float& rref, float const &RollAngleRef, float const &Roll, float const &PitchAngleRef, float const &Pitch, aslctrl_data_s *ctrldata, bool bModeChanged)
 {
 	//Only control Roll and Pitch Angles to reference values. Leave rest untouched.
 
 	//If mode was changed, reinitialise applicable filters and variables
 	if(bModeChanged) {
 		LP_Airspeed.Set(subs->airspeed.true_airspeed_m_s);
-		LP_AccZ.Set(accZ);
 	}
 
 	LP_Airspeed.update(subs->airspeed.true_airspeed_m_s);
@@ -157,7 +155,6 @@ int CAS::CASRollPitchControl(float &pref, float &qref, float& rref, float const 
 	}
 
 	// Stall protection
-	//STALL PROTECTION: Normal acceleration penalizer
 	if(params->ASLC_StallProt > 0) {
 		//Old Stuff. Don't do anything right now.
 	}

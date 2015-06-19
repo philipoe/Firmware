@@ -138,7 +138,7 @@ int HL::WaypointControl_L1(float &RollAngleRef)
 	return 0;
 }
 
-int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& AirspeedRef, float &hRef, float const &h, float const h_home, float &hRef_t, uint8_t & AltitudeStatus, bool& bEngageSpoilers, const bool bUseRamp, const bool bUseThermalHighEtaMode, const bool bModeChanged)
+int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& AirspeedRef, float &hRef, float const &h, float const h_home, float &hRef_t, bool& bEngageSpoilers, const bool bUseRamp, const bool bUseThermalHighEtaMode, const bool bModeChanged)
 {
 	//Absolute altitude controller
 	//printf("hRef: %7.4f h:%7.4f h_home: %7.4f velw: %7.4f\n", hRef, h, h_home,velw);
@@ -196,16 +196,6 @@ int HL::TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& Airs
 
 	//Limiters. TODO: Add additional checks here.
 	PitchAngleRef=limit1(PitchAngleRef,params->CAS_PitchAngleLim);
-
-	// Set ALTITUDE_STATUS
-	if(hRef_t == hRef) AltitudeStatus = ALTITUDE_OK_LEVELING;
-	else if(hRef_t < hRef) AltitudeStatus = ALTITUDE_OK_CLIMBING;
-	else if(hRef_t > hRef) AltitudeStatus = ALTITUDE_OK_DESCENDING;
-	if(h < hRef_t - 20.0f && PitchAngleRef>params->CAS_PitchAngleLim) {
-		// Check for any large altitude undershoot. We need too increase throttle if we are descending too much!
-		AltitudeStatus = ALTITUDE_WARNING_ALTLOW;
-		RET=-13;
-	}
 
 	return RET;
 }

@@ -577,7 +577,6 @@ struct log_ASLD_s {
 	float uElev;
 	float uThrot;
 	float uThrot2;
-	float aZ;
 	float AirspeedRef;
 	uint8_t bEngageSpoilers;
 
@@ -599,10 +598,6 @@ struct log_ASLD_s {
 	float f_GainSch_Q;
 	float P_kP_GainSch_E;
 	float R_kP_GainSch_E;
-	float qmax;
-	uint8_t StallStatus;
-	uint8_t AltitudeStatus;
-	uint8_t AirspeedCtrlStatus;
 };
 
 #define LOG_EKFS_MSG 107
@@ -746,7 +741,7 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT(ACAS, "Bfffffffffffffff","fM,P_kP,P_kP_M,P_kI,R_kP,R_kP_M,PRate_Lim,PRate_ILim,PTCkI,PTCILim,RRate_Lim,YRate_Lim,P_Lim,R_Lim,uElevTurnFF,Y_LPw"),
 	LOG_FORMAT(AHL1,  "Bffffffffffff","fM,L1_D,L1_P_vMi,L1_P_vN,L1_P_vMa,v_N,v_Mi,v_Ma,hMa,hMi,h_vZcl,h_vZsi,h_LPw"),
 	LOG_FORMAT(AHL2,  "ffffffffffffffffffffff","tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
-	LOG_FORMAT(ASLD,  "QIBfffffffffffffBffffffffffffffffBBB", "t,dt,mode,h,hR,hR_t,P,PR,PR_CT,q,qR,uE,uT,uT2,aZ,TAS_R,bSpoil,Y,YR,R,RR,p,pR,r,rR,uA,uR,Yd_R,Yd,GS_Q,P_kPE,R_kPE,qMax,SP,AltS,vS"),
+	LOG_FORMAT(ASLD,  "QIBffffffffffffBfffffffffffffff", "t,dt,mode,h,hR,hR_t,P,PR,PR_CT,q,qR,uE,uT,uT2,TAS_R,bSpoil,Y,YR,R,RR,p,pR,r,rR,uA,uR,Yd_R,Yd,GS_Q,P_kPE,R_kPE"),
 	LOG_FORMAT(EKFS,  "Qffffffffffffffffffffffff", "t,p1,p2,p3,q1,q2,q3,q4,v1,v2,v3,bg1,bg2,bg3,ba1,ba2,ba3,qff,w1,w2,w3,k,alpha,beta,TAS"),
 	LOG_FORMAT(EKFV,  "Qffffffffffffffffffff", "t,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20"),
 	LOG_FORMAT(MPPT,  "QffffffHHHBBB", "t,Cur1,Cur2,Cur3,Volt1,Volt2,Volt3,PWM1,PWM2,PWM3,Stat1,Stat2,Stat3"),

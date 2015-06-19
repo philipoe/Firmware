@@ -73,7 +73,6 @@ struct aslctrl_data_s {
 	float uElev;
 	float uThrot;
 	float uThrot2;
-	float aZ;
 	float AirspeedRef;
 	bool bEngageSpoilers;
 
@@ -95,10 +94,6 @@ struct aslctrl_data_s {
 	float f_GainSch_Q;
 	float P_kP_GainSch_E;
 	float R_kP_GainSch_E;
-	float qmax;
-	uint8_t StallStatus;
-	uint8_t AltitudeStatus;
-	uint8_t AirspeedCtrlStatus;
 };
 
 /**

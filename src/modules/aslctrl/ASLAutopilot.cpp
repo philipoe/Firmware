@@ -187,7 +187,7 @@ void ASLAutopilot::update()
 
 			//TECS Alt&Airspeed control
 			RET = HLcontrol.TECS_AltAirspeedControl(ctrldata->PitchAngleRef, ctrldata->uThrot, ctrldata->AirspeedRef, ctrldata->hRef,
-					subs.global_pos.alt, subs.home_pos.alt, ctrldata->hRef_t,ctrldata->AltitudeStatus, ctrldata->bEngageSpoilers,bUseAltitudeRamp, bUseThermalHighEtaMode,bReinit);
+					subs.global_pos.alt, subs.home_pos.alt, ctrldata->hRef_t, ctrldata->bEngageSpoilers,bUseAltitudeRamp, bUseThermalHighEtaMode,bReinit);
 			if(params->ASLC_DEBUG==10) printf("RET:%i\n",RET);
 			if(RET != RET_OK && MavlinkSendOK(2)) {
 				mavlink_log_critical(mavlink_fd, "[aslctrl] %s", aslctrl_error_codes[-RET]);
@@ -222,7 +222,7 @@ void ASLAutopilot::update()
 		}
 		// OPTION2 (DEFAULT): Do this using the standard PID controller
 		else {
-			if(RET_OK != CAScontrol.CASRollPitchControl(ctrldata->pRef,ctrldata->qRef,ctrldata->rRef,ctrldata->RollAngleRef,subs.att.roll,ctrldata->PitchAngleRef,subs.att.pitch,ctrldata->aZ, ctrldata, bReinit)) {
+			if(RET_OK != CAScontrol.CASRollPitchControl(ctrldata->pRef,ctrldata->qRef,ctrldata->rRef,ctrldata->RollAngleRef,subs.att.roll,ctrldata->PitchAngleRef,subs.att.pitch, ctrldata, bReinit)) {
 				//Catch errors here
 			}
 		}
@@ -363,7 +363,6 @@ int ASLAutopilot::SetCtrlData(void)
 	ctrldata->h=subs.global_pos.alt;
 	ctrldata->PitchAngle=subs.att.pitch;
 	ctrldata->q=subs.att.pitchspeed;
-	ctrldata->aZ=subs.sensors.accelerometer_m_s2[2]-subs.ekf.x_b_a[2];
 
 	//Lateral loops
 	ctrldata->YawAngle=subs.att.yaw;

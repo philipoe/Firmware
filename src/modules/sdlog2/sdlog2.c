@@ -1862,7 +1862,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 			log_msg.body.log_ASLD.uElev= buf.aslctrl_data.uElev;
 			log_msg.body.log_ASLD.uThrot= buf.aslctrl_data.uThrot;
 			log_msg.body.log_ASLD.uThrot2= buf.aslctrl_data.uThrot2;
-			log_msg.body.log_ASLD.aZ= buf.aslctrl_data.aZ;
 			log_msg.body.log_ASLD.YawAngle= buf.aslctrl_data.YawAngle;
 			log_msg.body.log_ASLD.YawAngleRef= buf.aslctrl_data.YawAngleRef;
 			log_msg.body.log_ASLD.RollAngle= buf.aslctrl_data.RollAngle;
@@ -1880,10 +1879,6 @@ int sdlog2_thread_main(int argc, char *argv[])
 			log_msg.body.log_ASLD.f_GainSch_Q= buf.aslctrl_data.f_GainSch_Q;
 			log_msg.body.log_ASLD.P_kP_GainSch_E= buf.aslctrl_data.P_kP_GainSch_E;
 			log_msg.body.log_ASLD.R_kP_GainSch_E= buf.aslctrl_data.R_kP_GainSch_E;
-			log_msg.body.log_ASLD.qmax= buf.aslctrl_data.qmax;
-			log_msg.body.log_ASLD.StallStatus= buf.aslctrl_data.StallStatus;
-			log_msg.body.log_ASLD.AltitudeStatus= buf.aslctrl_data.AltitudeStatus;
-			log_msg.body.log_ASLD.AirspeedCtrlStatus= buf.aslctrl_data.AirspeedCtrlStatus;
 
 			LOGBUFFER_WRITE_AND_COUNT(ASLD);
 		}
