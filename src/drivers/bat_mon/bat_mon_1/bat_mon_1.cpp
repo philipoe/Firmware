@@ -314,7 +314,7 @@ Bat_mon_1::deviceserialnumber()
 	}
 
 	if (_serialnumber == SERIAL_NUMBER_BAT_MON_1)
-		warnx("Bat_mon_0 board sensor serial number: %d", _serialnumber);
+		warnx("Bat_mon_1 board sensor serial number: %d", _serialnumber);
 	else
 		return -EIO;
 
