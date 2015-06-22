@@ -737,7 +737,7 @@ static const struct log_format_s log_formats[] = {
 	/* ASL messages, ID >= 100(0x64) */
 	// Note: Message labeling abbreviations are given above
 	LOG_FORMAT(ASLC, "QBBBBBBBB","t,CtrlType,GainSch_E,GainSch_Q,StallProt,VelCtrl,OnRCLoss,OvSpdProt,CoordTurn"),
-	LOG_FORMAT(ASAS, "fffffffffffffffffffffffffff","tS,R_kP,P_kP,Y_kP,RDi,PDi,YDi,RYDe,Y_CTFF,Y_CTkP,R_L,P_L,Y_L,Y_LPw,P_LPw,R_LPw,vSL,vSE,RTN,RTMi,RTMa,PTN,PTMi,PTMa,YTN,YTMi,YTMa"),
+	LOG_FORMAT(ASAS, "fffffffffffffffffffffffffff","tS,R_kP,P_kP,Y_kP,RDi,PDi,YDi,RYDe,Y_CTFF,Y_CTkP,R_L,P_L,Y_L,Y_HPw,P_LPw,R_LPw,vSL,vSE,RTN,RTMi,RTMa,PTN,PTMi,PTMa,YTN,YTMi,YTMa"),
 	LOG_FORMAT(ACAS, "Bfffffffffffffff","fM,P_kP,P_kP_M,P_kI,R_kP,R_kP_M,PRate_Lim,PRate_ILim,PTCkI,PTCILim,RRate_Lim,YRate_Lim,P_Lim,R_Lim,uElevTurnFF,Y_LPw"),
 	LOG_FORMAT(AHL1,  "Bffffffffffff","fM,L1_D,L1_P_vMi,L1_P_vN,L1_P_vMa,v_N,v_Mi,v_Ma,hMa,hMi,h_vZcl,h_vZsi,h_LPw"),
 	LOG_FORMAT(AHL2,  "ffffffffffffffffffffff","tc,tct,misr,masr,macr,td,ig,tIL,val,hcfo,scfo,rtc,sw,pd,plmi,plma,thrmi,thrma,thrc,hp,sp,ts"),
