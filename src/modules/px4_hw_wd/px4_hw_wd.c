@@ -54,7 +54,7 @@
 #include <drivers/drv_gpio.h>
 
 
-#define PX4_HW_WD_INTERVAL_US 10000
+#define PX4_HW_WD_INTERVAL_US 50000
 
 static bool thread_should_exit = false;		/**< daemon exit flag 				*/
 static bool thread_running = false;			/**< daemon status flag 			*/
