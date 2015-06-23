@@ -55,6 +55,7 @@ MODULES			+= drivers/airspeed
 #
 MODULES		+= modules/sensors
 MODULES		+= modules/i2c_wd
+MODULES		+= modules/px4_hw_wd
 
 #
 # System commands
