@@ -106,7 +106,7 @@ int px4_hw_wd_main(int argc, char *argv[])
 		thread_should_exit = false;
 		daemon_task = task_spawn_cmd("px4_hw_wd",
 					 SCHED_DEFAULT,
-					 SCHED_PRIORITY_DEFAULT,
+					 SCHED_PRIORITY_MAX - 4,
 					 1024,
 					 px4_hw_wd_thread_main,
 					 (argv) ? (const char **)&argv[2] : (const char **)NULL);
