@@ -545,6 +545,15 @@ SPV1020::ioctl(struct file *filp, int cmd, unsigned long arg)
 		return OK;
 	}
 
+	case MPPTRESET: {
+		if (arg > 2)
+			return -EINVAL;
+		mppt_turn_off((uint8_t) arg);
+		usleep(500000);
+		mppt_turn_on((uint8_t) arg);
+		return OK;
+	}
+
 	case MPPTSETCOMBRIDGE: {
 		conf_I2C_SPI_bridge();
 		return OK;

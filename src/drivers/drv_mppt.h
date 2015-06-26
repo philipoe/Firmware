@@ -83,7 +83,10 @@ ORB_DECLARE(sensor_spv1020);
 /** turn the MPPT on */
 #define MPPTTURNON			_MPPTIOC(2)
 
+/** reset the MPPT */
+#define MPPTRESET			_MPPTIOC(3)
+
 /** set the mppts communication bridge*/
-#define MPPTSETCOMBRIDGE	_MPPTIOC(3)
+#define MPPTSETCOMBRIDGE	_MPPTIOC(4)
 
 #endif /* _DRV_MPPT_H */

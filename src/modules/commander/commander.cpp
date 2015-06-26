@@ -695,7 +695,7 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 			errx(1, "FATAL: No mppt found");
 		}
 		/* reset the corresponding MPPT */
-		ioctl(fd_mppt, MPPTTURNOFF, resetChannel);
+		ioctl(fd_mppt, MPPTRESET, resetChannel);
 		close(fd_mppt);
 
 		answer_command(*cmd, VEHICLE_CMD_RESULT_ACCEPTED);
