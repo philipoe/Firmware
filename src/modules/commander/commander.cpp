@@ -86,6 +86,7 @@
 #include <drivers/drv_led.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_tone_alarm.h>
+#include <drivers/drv_mppt.h>
 
 #include <mavlink/mavlink_log.h>
 #include <systemlib/param/param.h>
@@ -683,6 +684,22 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 	case VEHICLE_CMD_CUSTOM_2:
 	case VEHICLE_CMD_PAYLOAD_PREPARE_DEPLOY:
 	case VEHICLE_CMD_PAYLOAD_CONTROL_DEPLOY:
+	case VEHICLE_CMD_RESET_MPPT:{
+		int resetChannel = (int) cmd->param1;
+		int	fd_mppt;
+
+		fd_mppt = open(SPV1020_DEVICE_PATH, 0);
+
+		if (fd_mppt < 0) {
+			warn("%s", SPV1020_DEVICE_PATH);
+			errx(1, "FATAL: No mppt found");
+		}
+		/* reset the corresponding MPPT */
+		ioctl(fd_mppt, MPPTTURNOFF, resetChannel);
+		close(fd_mppt);
+
+		answer_command(*cmd, VEHICLE_CMD_RESULT_ACCEPTED);
+		}
 		/* ignore commands that handled in low prio loop */
 		break;
 
