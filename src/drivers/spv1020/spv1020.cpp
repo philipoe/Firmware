@@ -70,6 +70,7 @@
 
 #include <drivers/drv_mppt.h>
 
+#define MAX_NUMBER_OF_MPPT_DEVICES		3
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
 # undef ERROR
@@ -86,7 +87,7 @@ class SPV1020 : public device::I2C
 {
 public:
 	SPV1020(int bus);
-	~SPV1020();
+	virtual ~SPV1020();
 
 	virtual int		init();
 
@@ -532,21 +533,21 @@ SPV1020::ioctl(struct file *filp, int cmd, unsigned long arg)
 		}
 
 	case MPPTTURNOFF: {
-		if (arg > 2)
+		if (arg > ((unsigned long) max_mppt_devices-1) )
 			return -EINVAL;
 		mppt_turn_off((uint8_t) arg);
 		return OK;
 	}
 
 	case MPPTTURNON: {
-		if (arg > 2)
+		if (arg > ((unsigned long)max_mppt_devices-1) )
 			return -EINVAL;
 		mppt_turn_on((uint8_t) arg);
 		return OK;
 	}
 
 	case MPPTRESET: {
-		if (arg > 2)
+		if (arg > ((unsigned long)max_mppt_devices-1) )
 			return -EINVAL;
 		mppt_turn_off((uint8_t) arg);
 		usleep(500000);
@@ -624,7 +625,7 @@ SPV1020::mppt_measurement()
 	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
 	_reports[_next_report].timestamp = hrt_absolute_time();
 
-	for(uint8_t mppt_device=0; mppt_device < 3; mppt_device++){
+	for(uint8_t mppt_device=0; mppt_device < MAX_NUMBER_OF_MPPT_DEVICES; mppt_device++){
 		mppt_current[mppt_device] = 0.0f;
 		mppt_voltage[mppt_device] = 0.0f;
 		mppt_pwm[mppt_device]	  = 0;
@@ -1072,7 +1073,7 @@ spv1020_main(int argc, char *argv[])
 	if (!strcmp(argv[1], "start")){
 		if (!strcmp(argv[2], "-d")){
 			unsigned s = strtoul(argv[3], NULL, 10);
-			if (s > 3)
+			if (s > MAX_NUMBER_OF_MPPT_DEVICES)
 				errx(1, "Error the value for the maximal number of the MPPT devices (%d) is out of range (1..3)...exiting.\n ", s);
 			else
 				max_mppt_devices = (uint8_t) s;
