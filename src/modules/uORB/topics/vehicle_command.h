@@ -96,7 +96,7 @@ enum VEHICLE_CMD {
 	VEHICLE_CMD_START_RX_PAIR = 500, /* Starts receiver pairing |0:Spektrum| 0:Spektrum DSM2, 1:Spektrum DSMX|  */
 	VEHICLE_CMD_PAYLOAD_PREPARE_DEPLOY = 30001, /**< Prepare a payload deployment in the flight plan */
 	VEHICLE_CMD_PAYLOAD_CONTROL_DEPLOY = 30002, /**< Control a pre-programmed payload deployment */
-	VEHICLE_CMD_RESET_MPPT = 40001 /**< Perform a MPPT reset  */
+	VEHICLE_CMD_RESET_MPPT = 40001 /**< ASLUAV command: Perform a MPPT reset */
 };
 
 /**
