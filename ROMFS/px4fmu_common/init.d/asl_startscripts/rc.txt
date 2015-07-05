@@ -373,10 +373,12 @@ fi
 # LOGGING
 #####################################################
 
-if [ -d /fs/microsd ]
+if [ -d /fs/microsd -a $OBC == no ]
 then
 	echo "Start sdlog2"
 	sdlog2 start -r 10 -a -b 4 -t
+else
+	echo "Not using sdlog2 because OBC is connected"
 fi
 
 #####################################################
