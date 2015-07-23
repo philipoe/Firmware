@@ -40,7 +40,7 @@ then
 fi
 if [ $AIRPLANE == Techpod ]
 then
-	set MIXER ASL_Techpod
+	set MIXER ASL_TechPod
 	set AIRPLANE_NR_EKF 3
 	param set SENS_BOARD_ROT 8
 fi
