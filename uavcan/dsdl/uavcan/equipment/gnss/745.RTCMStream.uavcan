@@ -1,5 +1,0 @@
-#
-# GNSS RTCM SC-104 protocol raw stream container.
-#
-
-uint8[<=250] data
