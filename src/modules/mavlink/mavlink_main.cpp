@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2012-2014 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2015 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,6 +66,8 @@
 #include <systemlib/err.h>
 #include <systemlib/perf_counter.h>
 #include <systemlib/systemlib.h>
+#include <systemlib/mcu_version.h>
+#include <systemlib/git_version.h>
 #include <geo/geo.h>
 #include <dataman/dataman.h>
 #include <mathlib/mathlib.h>
@@ -90,7 +92,7 @@
 static const int ERROR = -1;
 
 #define DEFAULT_DEVICE_NAME			"/dev/ttyS1"
-#define MAX_DATA_RATE				20000	///< max data rate in bytes/s
+#define MAX_DATA_RATE				1000000	///< max data rate in bytes/s
 #define MAIN_LOOP_DELAY 			10000	///< 100 Hz @ 1000 bytes/s data rate
 #define FLOW_CONTROL_DISABLE_THRESHOLD		40	///< picked so that some messages still would fit it.
 
@@ -113,6 +115,8 @@ extern mavlink_system_t mavlink_system;
 
 static void usage(void);
 
+bool Mavlink::_boot_complete = false;
+
 Mavlink::Mavlink() :
 	_device_name(DEFAULT_DEVICE_NAME),
 	_task_should_exit(false),
@@ -121,6 +125,7 @@ Mavlink::Mavlink() :
 	_mavlink_fd(-1),
 	_task_running(false),
 	_hil_enabled(false),
+	_generate_rc(false),
 	_use_hil_gps(false),
 	_forward_externalsp(false),
 	_is_usb_uart(false),
@@ -131,8 +136,10 @@ Mavlink::Mavlink() :
 	_streams(nullptr),
 	_mission_manager(nullptr),
 	_parameters_manager(nullptr),
+	_mavlink_ftp(nullptr),
 	_mode(MAVLINK_MODE_NORMAL),
 	_channel(MAVLINK_COMM_0),
+	_radio_id(0),
 	_logbuffer {},
 	_total_counter(0),
 	_receive_thread {},
@@ -166,6 +173,7 @@ Mavlink::Mavlink() :
 	_param_initialized(false),
 	_param_system_id(0),
 	_param_component_id(0),
+	_param_radio_id(0),
 	_param_system_type(MAV_TYPE_FIXED_WING),
 	_param_use_hil_gps(0),
 	_param_forward_externalsp(0),
@@ -248,7 +256,9 @@ Mavlink::~Mavlink()
 		} while (_task_running);
 	}
 
-	LL_DELETE(_mavlink_instances, this);
+	if (_mavlink_instances) {
+		LL_DELETE(_mavlink_instances, this);
+	}
 }
 
 void
@@ -483,9 +493,13 @@ void Mavlink::mavlink_update_system(void)
 	if (!_param_initialized) {
 		_param_system_id = param_find("MAV_SYS_ID");
 		_param_component_id = param_find("MAV_COMP_ID");
+		_param_radio_id = param_find("MAV_RADIO_ID");
 		_param_system_type = param_find("MAV_TYPE");
 		_param_use_hil_gps = param_find("MAV_USEHILGPS");
 		_param_forward_externalsp = param_find("MAV_FWDEXTSP");
+
+		/* test param - needs to be referenced, but is unused */
+		(void)param_find("MAV_TEST_PAR");
 	}
 
 	/* update system and component id */
@@ -495,6 +509,7 @@ void Mavlink::mavlink_update_system(void)
 	int32_t component_id;
 	param_get(_param_component_id, &component_id);
 
+	param_get(_param_radio_id, &_radio_id);
 
 	/* only allow system ID and component ID updates
 	 * after reboot - not during operation */
@@ -737,7 +752,7 @@ Mavlink::get_free_tx_buf()
 		if (_last_write_try_time != 0 &&
 		    hrt_elapsed_time(&_last_write_success_time) > 500 * 1000UL &&
 		    _last_write_success_time != _last_write_try_time) {
-			warnx("DISABLING HARDWARE FLOW CONTROL");
+			warnx("Disabling hardware flow control");
 			enable_flow_control(false);
 		}
 	}
@@ -869,6 +884,9 @@ Mavlink::handle_message(const mavlink_message_t *msg)
 	/* handle packet with parameter component */
 	_parameters_manager->handle_message(msg);
 
+	/* handle packet with ftp component */
+	_mavlink_ftp->handle_message(msg);
+
 	if (get_forwarding_on()) {
 		/* forward any messages to other mavlink instances */
 		Mavlink::forward_message(msg, this);
@@ -901,6 +919,47 @@ Mavlink::send_statustext(unsigned char severity, const char *string)
 	logmsg.severity = severity;
 
 	mavlink_logbuffer_write(&_logbuffer, &logmsg);
+}
+
+void Mavlink::send_autopilot_capabilites() {
+	struct vehicle_status_s status;
+
+	MavlinkOrbSubscription *status_sub = this->add_orb_subscription(ORB_ID(vehicle_status));
+
+	if (status_sub->update(&status)) {
+		mavlink_autopilot_version_t msg = {};
+
+		msg.capabilities = MAV_PROTOCOL_CAPABILITY_MISSION_FLOAT;
+		msg.capabilities |= MAV_PROTOCOL_CAPABILITY_PARAM_FLOAT;
+		msg.capabilities |= MAV_PROTOCOL_CAPABILITY_COMMAND_INT;
+		msg.capabilities |= MAV_PROTOCOL_CAPABILITY_FTP;
+		msg.capabilities |= MAV_PROTOCOL_CAPABILITY_FTP;
+		msg.capabilities |= MAV_PROTOCOL_CAPABILITY_SET_ATTITUDE_TARGET;
+		msg.capabilities |= MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_LOCAL_NED;
+		msg.capabilities |= MAV_PROTOCOL_CAPABILITY_SET_ACTUATOR_TARGET;
+		msg.flight_sw_version = 0;
+		msg.middleware_sw_version = 0;
+		msg.os_sw_version = 0;
+		msg.board_version = 0;
+		memcpy(&msg.flight_custom_version, &px4_git_version_binary, sizeof(msg.flight_custom_version));
+		memcpy(&msg.middleware_custom_version, &px4_git_version_binary, sizeof(msg.middleware_custom_version));
+		memset(&msg.os_custom_version, 0, sizeof(msg.os_custom_version));
+		#ifdef CONFIG_CDCACM_VENDORID
+		msg.vendor_id = CONFIG_CDCACM_VENDORID;
+		#else
+		msg.vendor_id = 0;
+		#endif
+		#ifdef CONFIG_CDCACM_PRODUCTID
+		msg.product_id = CONFIG_CDCACM_PRODUCTID;
+		#else
+		msg.product_id = 0;
+		#endif
+		uint32_t uid[3];
+		mcu_unique_id(uid);
+		msg.uid = (((uint64_t)uid[1]) << 32) | uid[2];
+
+		this->send_message(MAVLINK_MSG_ID_AUTOPILOT_VERSION, &msg);
+	}
 }
 
 MavlinkOrbSubscription *Mavlink::add_orb_subscription(const orb_id_t topic, int instance)
@@ -981,7 +1040,7 @@ void
 Mavlink::adjust_stream_rates(const float multiplier)
 {
 	/* do not allow to push us to zero */
-	if (multiplier < 0.01f) {
+	if (multiplier < 0.0005f) {
 		return;
 	}
 
@@ -992,9 +1051,9 @@ Mavlink::adjust_stream_rates(const float multiplier)
 		unsigned interval = stream->get_interval();
 		interval /= multiplier;
 
-		/* allow max ~600 Hz */
+		/* allow max ~2000 Hz */
 		if (interval < 1600) {
-			interval = 1600;
+			interval = 500;
 		}
 
 		/* set new interval */
@@ -1242,6 +1301,8 @@ Mavlink::task_main(int argc, char *argv[])
 				_mode = MAVLINK_MODE_ONBOARD;
 			} else if (strcmp(optarg, "onboard") == 0) {
 				_mode = MAVLINK_MODE_ONBOARD;
+			} else if (strcmp(optarg, "osd") == 0) {
+				_mode = MAVLINK_MODE_OSD;
 			}
 
 			break;
@@ -1361,8 +1422,13 @@ Mavlink::task_main(int argc, char *argv[])
 
 	/* PARAM_VALUE stream */
 	_parameters_manager = (MavlinkParametersManager *) MavlinkParametersManager::new_instance(this);
-	_parameters_manager->set_interval(interval_from_rate(30.0f));
+	_parameters_manager->set_interval(interval_from_rate(120.0f));
 	LL_APPEND(_streams, _parameters_manager);
+
+	/* MAVLINK_FTP stream */
+	_mavlink_ftp = (MavlinkFTP *) MavlinkFTP::new_instance(this);
+	_mavlink_ftp->set_interval(interval_from_rate(80.0f));
+	LL_APPEND(_streams, _mavlink_ftp);
 
 	/* MISSION_STREAM stream, actually sends all MISSION_XXX messages at some rate depending on
 	 * remote requests rate. Rate specified here controls how much bandwidth we will reserve for
@@ -1376,22 +1442,24 @@ Mavlink::task_main(int argc, char *argv[])
 	case MAVLINK_MODE_NORMAL:
 		configure_stream("SYS_STATUS", 1.0f);
 		configure_stream("GPS_GLOBAL_ORIGIN", 0.5f);
-		configure_stream("HIGHRES_IMU", 1.0f);
-		configure_stream("ATTITUDE", 10.0f);
+		configure_stream("HIGHRES_IMU", 2.0f);
+		configure_stream("ATTITUDE", 20.0f);
 		configure_stream("VFR_HUD", 8.0f);
 		configure_stream("GPS_RAW_INT", 1.0f);
 		configure_stream("GLOBAL_POSITION_INT", 3.0f);
 		configure_stream("LOCAL_POSITION_NED", 3.0f);
-		configure_stream("RC_CHANNELS_RAW", 1.0f);
+		configure_stream("RC_CHANNELS_RAW", 4.0f);
 		configure_stream("POSITION_TARGET_GLOBAL_INT", 3.0f);
-		configure_stream("ATTITUDE_TARGET", 3.0f);
+		configure_stream("ATTITUDE_TARGET", 8.0f);
 		configure_stream("DISTANCE_SENSOR", 0.5f);
 		configure_stream("OPTICAL_FLOW_RAD", 5.0f);
 		break;
 
 	case MAVLINK_MODE_ONBOARD:
 		configure_stream("SYS_STATUS", 1.0f);
-		configure_stream("ATTITUDE", 50.0f);
+		configure_stream("ATTITUDE", 250.0f);
+		configure_stream("HIGHRES_IMU", 50.0f);
+		configure_stream("GPS_RAW_INT", 5.0f);
 		configure_stream("GLOBAL_POSITION_INT", 50.0f);
 		configure_stream("LOCAL_POSITION_NED", 30.0f);
 		configure_stream("CAMERA_CAPTURE", 2.0f);
@@ -1400,9 +1468,23 @@ Mavlink::task_main(int argc, char *argv[])
 		configure_stream("POSITION_TARGET_LOCAL_NED", 10.0f);
 		configure_stream("DISTANCE_SENSOR", 10.0f);
 		configure_stream("OPTICAL_FLOW_RAD", 10.0f);
+		configure_stream("RC_CHANNELS_RAW", 20.0f);
 		configure_stream("VFR_HUD", 10.0f);
 		configure_stream("SYSTEM_TIME", 1.0f);
 		configure_stream("TIMESYNC", 10.0f);
+		configure_stream("ACTUATOR_CONTROL_TARGET0", 10.0f);
+		break;
+
+	case MAVLINK_MODE_OSD:
+		configure_stream("SYS_STATUS", 5.0f);
+		configure_stream("ATTITUDE", 25.0f);
+		configure_stream("VFR_HUD", 5.0f);
+		configure_stream("GPS_RAW_INT", 1.0f);
+		configure_stream("GLOBAL_POSITION_INT", 10.0f);
+		configure_stream("ATTITUDE_TARGET", 10.0f);
+		configure_stream("BATTERY_STATUS", 1.0f);
+		configure_stream("SYSTEM_TIME", 1.0f);
+		configure_stream("RC_CHANNELS_RAW", 5.0f);
 		break;
 
 	default:
@@ -1410,10 +1492,12 @@ Mavlink::task_main(int argc, char *argv[])
 	}
 
 	/* set main loop delay depending on data rate to minimize CPU overhead */
-	_main_loop_delay = MAIN_LOOP_DELAY * 1000 / _datarate;
+	_main_loop_delay = (MAIN_LOOP_DELAY * 1000) / _datarate;
 
 	/* now the instance is fully initialized and we can bump the instance count */
 	LL_APPEND(_mavlink_instances, this);
+
+	send_autopilot_capabilites();
 
 	while (!_task_should_exit) {
 		/* main loop */
@@ -1430,9 +1514,55 @@ Mavlink::task_main(int argc, char *argv[])
 			mavlink_update_system();
 		}
 
+		/* radio config check */
+		if (_radio_id != 0 && _rstatus.type == TELEMETRY_STATUS_RADIO_TYPE_3DR_RADIO) {
+			/* request to configure radio and radio is present */
+			FILE *fs = fdopen(_uart_fd, "w");
+			
+			if (fs) {
+				/* switch to AT command mode */
+				usleep(1200000);
+				fprintf(fs, "+++\n");
+				usleep(1200000);
+
+				if (_radio_id > 0) {
+					/* set channel */
+					fprintf(fs, "ATS3=%u\n", _radio_id);
+					usleep(200000);
+				} else {
+					/* reset to factory defaults */
+					fprintf(fs, "AT&F\n");
+					usleep(200000);
+				}
+
+				/* write config */
+				fprintf(fs, "AT&W");
+				usleep(200000);
+
+				/* reboot */
+				fprintf(fs, "ATZ");
+				usleep(200000);
+
+				// XXX NuttX suffers from a bug where
+				// fclose() also closes the fd, not just
+				// the file stream. Since this is a one-time
+				// config thing, we leave the file struct
+				// allocated.
+				//fclose(fs);
+			} else {
+				warnx("open fd %d failed", _uart_fd);
+			}
+
+			/* reset param and save */
+			_radio_id = 0;
+			param_set(_param_radio_id, &_radio_id);
+		}
+
 		if (status_sub->update(&status_time, &status)) {
 			/* switch HIL mode if required */
 			set_hil_enabled(status.hil_state == vehicle_status_s::HIL_STATE_ON);
+
+			set_manual_input_mode_generation(status.rc_input_mode == vehicle_status_s::RC_IN_MODE_GENERATED);
 		}
 
 		/* check for requested subscriptions */
@@ -1620,7 +1750,7 @@ Mavlink::start(int argc, char *argv[])
 	task_spawn_cmd(buf,
 		       SCHED_DEFAULT,
 		       SCHED_PRIORITY_DEFAULT,
-		       2800,
+		       2400,
 		       (main_t)&Mavlink::start_helper,
 		       (char * const *)argv);
 
@@ -1780,6 +1910,10 @@ int mavlink_main(int argc, char *argv[])
 
 	} else if (!strcmp(argv[1], "stream")) {
 		return Mavlink::stream_command(argc, argv);
+
+	} else if (!strcmp(argv[1], "boot_complete")) {
+		Mavlink::set_boot_complete();
+		return 0;
 
 	} else {
 		usage();

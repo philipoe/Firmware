@@ -46,10 +46,21 @@ import argparse
 try:
         import genmsg.template_tools
 except ImportError as e:
-        print("Package empy not installed. Please run 'sudo apt-get install"
-              " python-empy' on a Debian/Ubuntu system, 'sudo pip install"
-              " empy' on a Mac OS system or 'easy_install empy' on"
-              " a Windows system.")
+        print("python import error: ", e)
+        print('''
+Required python packages not installed.
+
+On a Debian/Ubuntu system please run:
+
+  sudo apt-get install python-empy
+  sudo pip install catkin_pkg
+  
+On MacOS please run:
+  sudo pip install empy catkin_pkg
+
+On Windows please run:
+  easy_install empy catkin_pkg
+''')
         exit(1)
 
 __author__ = "Thomas Gubler"
@@ -82,6 +93,30 @@ def convert_dir(inputdir, outputdir, templatedir):
         """
         Converts all .msg files in inputdir to uORB header files
         """
+
+        # Find the most recent modification time in input dir
+        maxinputtime = 0
+        for f in os.listdir(inputdir):
+                fni = os.path.join(inputdir, f)
+                if os.path.isfile(fni):
+                    it = os.path.getmtime(fni)
+                    if it > maxinputtime:
+                        maxinputtime = it;
+
+        # Find the most recent modification time in output dir
+        maxouttime = 0
+        if os.path.isdir(outputdir):
+            for f in os.listdir(outputdir):
+                    fni = os.path.join(outputdir, f)
+                    if os.path.isfile(fni):
+                        it = os.path.getmtime(fni)
+                        if it > maxouttime:
+                            maxouttime = it;
+
+        # Do not generate if nothing changed on the input
+        if (maxinputtime != 0 and maxouttime != 0 and maxinputtime < maxouttime):
+            return False
+
         includepath = incl_default + [':'.join([package, inputdir])]
         for f in os.listdir(inputdir):
                 fn = os.path.join(inputdir, f)
@@ -91,6 +126,8 @@ def convert_dir(inputdir, outputdir, templatedir):
                             outputdir,
                             templatedir,
                             includepath)
+
+        return True
 
 
 def copy_changed(inputdir, outputdir, prefix=''):
@@ -112,14 +149,16 @@ def copy_changed(inputdir, outputdir, prefix=''):
                                 shutil.copy(fni, fno)
                                 print("{0}: new header file".format(f))
                                 continue
-                        # The file exists in inputdir and outputdir
-                        # only copy if contents do not match
-                        if not filecmp.cmp(fni, fno):
-                                shutil.copy(fni, fno)
-                                print("{0}: updated".format(f))
-                                continue
 
-                        print("{0}: unchanged".format(f))
+                        if os.path.getmtime(fni) > os.path.getmtime(fno):
+                                # The file exists in inputdir and outputdir
+                                # only copy if contents do not match
+                                if not filecmp.cmp(fni, fno):
+                                        shutil.copy(fni, fno)
+                                        print("{0}: updated".format(f))
+                                        continue
+
+                        #print("{0}: unchanged".format(f))
 
 
 def convert_dir_save(inputdir, outputdir, templatedir, temporarydir, prefix):
@@ -129,7 +168,6 @@ def convert_dir_save(inputdir, outputdir, templatedir, temporarydir, prefix):
         """
         # Create new headers in temporary output directory
         convert_dir(inputdir, temporarydir, templatedir)
-
         # Copy changed headers from temporary dir to output dir
         copy_changed(temporarydir, outputdir, prefix)
 

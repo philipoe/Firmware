@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2014 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2015 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
  * Mavlink parameters manager implementation.
  *
  * @author Anton Babushkin <anton.babushkin@me.com>
+ * @author Lorenz Meier <lorenz@px4.io>
  */
 
 #include <stdio.h>
@@ -74,7 +75,6 @@ MavlinkParametersManager::handle_message(const mavlink_message_t *msg)
 			    (req_list.target_component == mavlink_system.compid || req_list.target_component == MAV_COMP_ID_ALL)) {
 
 				_send_all_index = 0;
-				_mavlink->send_statustext_info("[pm] sending list");
 			}
 			break;
 		}
@@ -94,7 +94,7 @@ MavlinkParametersManager::handle_message(const mavlink_message_t *msg)
 					/* enforce null termination */
 					name[MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN] = '\0';
 					/* attempt to find parameter, set and send it */
-					param_t param = param_find(name);
+					param_t param = param_find_no_notification(name);
 
 					if (param == PARAM_INVALID) {
 						char buf[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN];
@@ -127,11 +127,21 @@ MavlinkParametersManager::handle_message(const mavlink_message_t *msg)
 					/* enforce null termination */
 					name[MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN] = '\0';
 					/* attempt to find parameter and send it */
-					send_param(param_find(name));
+					send_param(param_find_no_notification(name));
 
 				} else {
 					/* when index is >= 0, send this parameter again */
-					send_param(param_for_index(req_read.param_index));
+					int ret = send_param(param_for_used_index(req_read.param_index));
+
+					if (ret == 1) {
+						char buf[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN];
+						sprintf(buf, "[pm] unknown param ID: %u", req_read.param_index);
+						_mavlink->send_statustext_info(buf);
+					} else if (ret == 2) {
+						char buf[MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN];
+						sprintf(buf, "[pm] failed loading param from storage ID: %u", req_read.param_index);
+						_mavlink->send_statustext_info(buf);
+					}
 				}
 			}
 			break;
@@ -182,21 +192,37 @@ MavlinkParametersManager::handle_message(const mavlink_message_t *msg)
 void
 MavlinkParametersManager::send(const hrt_abstime t)
 {
-	/* send all parameters if requested */
-	if (_send_all_index >= 0) {
-		send_param(param_for_index(_send_all_index));
-		_send_all_index++;
-		if (_send_all_index >= (int) param_count()) {
+	/* send all parameters if requested, but only after the system has booted */
+	if (_send_all_index >= 0 && _mavlink->boot_complete()) {
+
+		/* skip if no space is available */
+		if (_mavlink->get_free_tx_buf() < get_size()) {
+			return;
+		}
+
+		/* look for the first parameter which is used */
+		param_t p;
+		do {
+			/* walk through all parameters, including unused ones */
+			p = param_for_index(_send_all_index);
+			_send_all_index++;
+		} while (p != PARAM_INVALID && !param_used(p));
+
+		if (p != PARAM_INVALID) {
+			send_param(p);
+		}
+
+		if ((p == PARAM_INVALID) || (_send_all_index >= (int) param_count())) {
 			_send_all_index = -1;
 		}
 	}
 }
 
-void
+int
 MavlinkParametersManager::send_param(param_t param)
 {
 	if (param == PARAM_INVALID) {
-		return;
+		return 1;
 	}
 
 	mavlink_param_value_t msg;
@@ -206,11 +232,11 @@ MavlinkParametersManager::send_param(param_t param)
 	 * space during transmission, copy param onto float val_buf
 	 */
 	if (param_get(param, &msg.param_value) != OK) {
-		return;
+		return 2;
 	}
 
-	msg.param_count = param_count();
-	msg.param_index = param_get_index(param);
+	msg.param_count = param_count_used();
+	msg.param_index = param_get_used_index(param);
 
 	/* copy parameter name */
 	strncpy(msg.param_id, param_name(param), MAVLINK_MSG_PARAM_VALUE_FIELD_PARAM_ID_LEN);
@@ -233,4 +259,6 @@ MavlinkParametersManager::send_param(param_t param)
 	}
 
 	_mavlink->send_message(MAVLINK_MSG_ID_PARAM_VALUE, &msg);
+
+	return 0;
 }

@@ -48,7 +48,8 @@ GIT_DESC := $(shell git log -1 --pretty=format:%H)
 ifneq ($(words $(GIT_DESC)),1)
     GIT_DESC := "unknown_git_version"
 endif
-export GIT_DESC
+
+GIT_DESC_SHORT := $(shell echo $(GIT_DESC) | cut -c1-16)
 
 #
 # Canned firmware configurations that we (know how to) build.
@@ -124,7 +125,7 @@ $(STAGED_FIRMWARES): $(IMAGE_DIR)%.px4: $(BUILD_DIR)%.build/firmware.px4
 .PHONY: $(FIRMWARES)
 $(BUILD_DIR)%.build/firmware.px4: config   = $(patsubst $(BUILD_DIR)%.build/firmware.px4,%,$@)
 $(BUILD_DIR)%.build/firmware.px4: work_dir = $(BUILD_DIR)$(config).build/
-$(FIRMWARES): $(BUILD_DIR)%.build/firmware.px4:	checksubmodules generateuorbtopicheaders
+$(FIRMWARES): $(BUILD_DIR)%.build/firmware.px4:	checkgitversion generateuorbtopicheaders checksubmodules
 	@$(ECHO) %%%%
 	@$(ECHO) %%%% Building $(config) in $(work_dir)
 	@$(ECHO) %%%%
@@ -211,10 +212,52 @@ menuconfig:
 	@$(ECHO) ""
 endif
 
-$(NUTTX_SRC): checksubmodules
+$(NUTTX_SRC): checkgitversion checksubmodules
 
 $(UAVCAN_DIR):
 	$(Q) (./Tools/check_submodules.sh)
+
+
+ifeq ($(PX4_TARGET_OS),nuttx)
+# TODO
+# Move the above nuttx specific rules into $(PX4_BASE)makefiles/firmware_nuttx.mk
+endif
+ifeq ($(PX4_TARGET_OS),posix)
+include $(PX4_BASE)makefiles/firmware_posix.mk
+endif
+ifeq ($(PX4_TARGET_OS),posix-arm)
+include $(PX4_BASE)makefiles/firmware_posix.mk
+endif
+ifeq ($(PX4_TARGET_OS),qurt)
+include $(PX4_BASE)makefiles/firmware_qurt.mk
+endif
+
+#
+# Versioning
+#
+
+GIT_VER_FILE = $(PX4_VERSIONING_DIR).build_git_ver
+GIT_HEADER_FILE = $(PX4_VERSIONING_DIR)build_git_version.h
+
+$(GIT_VER_FILE) :
+	$(Q) if [ ! -f $(GIT_VER_FILE) ]; then \
+		$(MKDIR) -p $(PX4_VERSIONING_DIR); \
+		$(ECHO) "" > $(GIT_VER_FILE); \
+	fi
+
+.PHONY: checkgitversion
+checkgitversion: $(GIT_VER_FILE)
+	$(Q) if [ "$(GIT_DESC)" != "$(shell cat $(GIT_VER_FILE))" ]; then \
+		$(ECHO) "/* Auto Magically Generated file */" > $(GIT_HEADER_FILE); \
+		$(ECHO) "/* Do not edit! */" >> $(GIT_HEADER_FILE); \
+		$(ECHO) "#define PX4_GIT_VERSION_STR  \"$(GIT_DESC)\"" >> $(GIT_HEADER_FILE); \
+		$(ECHO) "#define PX4_GIT_VERSION_BINARY 0x$(GIT_DESC_SHORT)" >> $(GIT_HEADER_FILE); \
+		$(ECHO) $(GIT_DESC) > $(GIT_VER_FILE); \
+	fi
+
+#
+# Submodule Checks
+#
 
 .PHONY: checksubmodules
 checksubmodules:
@@ -232,21 +275,20 @@ TOPICS_DIR = $(PX4_BASE)src/modules/uORB/topics
 MULTIPLATFORM_HEADER_DIR = $(PX4_BASE)src/platforms/nuttx/px4_messages
 MULTIPLATFORM_PREFIX = px4_
 TOPICHEADER_TEMP_DIR = $(BUILD_DIR)topics_temporary
+MULTI_TOPICHEADER_TEMP_DIR = $(BUILD_DIR)multi_topics_temporary
 GENMSG_PYTHONPATH = $(PX4_BASE)Tools/genmsg/src
 GENCPP_PYTHONPATH = $(PX4_BASE)Tools/gencpp/src
 
 .PHONY: generateuorbtopicheaders
-generateuorbtopicheaders:
+generateuorbtopicheaders: checksubmodules
 	@$(ECHO) "Generating uORB topic headers"
-	$(Q) (PYTHONPATH=$(GENMSG_PYTHONPATH):$(GENCPP_PYTHONPATH) $(PYTHON) \
+	$(Q) (PYTHONPATH=$(GENMSG_PYTHONPATH):$(GENCPP_PYTHONPATH):$(PYTHONPATH) $(PYTHON) \
 		$(PX4_BASE)Tools/px_generate_uorb_topic_headers.py \
 		-d $(MSG_DIR) -o $(TOPICS_DIR) -e $(UORB_TEMPLATE_DIR) -t $(TOPICHEADER_TEMP_DIR))
 	@$(ECHO) "Generating multiplatform uORB topic wrapper headers"
-	$(Q) (PYTHONPATH=$(GENMSG_PYTHONPATH):$(GENCPP_PYTHONPATH) $(PYTHON) \
+	$(Q) (PYTHONPATH=$(GENMSG_PYTHONPATH):$(GENCPP_PYTHONPATH):$(PYTHONPATH) $(PYTHON) \
 		$(PX4_BASE)Tools/px_generate_uorb_topic_headers.py \
-		-d $(MSG_DIR) -o $(MULTIPLATFORM_HEADER_DIR) -e $(MULTIPLATFORM_TEMPLATE_DIR) -t $(TOPICHEADER_TEMP_DIR) -p $(MULTIPLATFORM_PREFIX))
-# clean up temporary files
-	$(Q) (rm -r $(TOPICHEADER_TEMP_DIR))
+		-d $(MSG_DIR) -o $(MULTIPLATFORM_HEADER_DIR) -e $(MULTIPLATFORM_TEMPLATE_DIR) -t $(MULTI_TOPICHEADER_TEMP_DIR) -p $(MULTIPLATFORM_PREFIX))
 
 #
 # Testing targets
@@ -262,6 +304,10 @@ testbuild:
 tests:	generateuorbtopicheaders
 	$(Q) (mkdir -p $(PX4_BASE)/unittests/build && cd $(PX4_BASE)/unittests/build && cmake .. && $(MAKE) unittests)
 
+.PHONY: format check_format
+check_format:
+	$(Q) (./Tools/check_code_style.sh | sort -n)
+
 #
 # Cleanup targets.  'clean' should remove all built products and force
 # a complete re-compilation, 'distclean' should remove everything
@@ -271,7 +317,10 @@ tests:	generateuorbtopicheaders
 clean:
 	@echo > /dev/null
 	$(Q) $(RMDIR) $(BUILD_DIR)*.build
+	$(Q) $(RMDIR) $(PX4_VERSIONING_DIR)
 	$(Q) $(REMOVE) $(IMAGE_DIR)*.px4
+	$(Q) $(RMDIR) $(TOPICHEADER_TEMP_DIR)
+	$(Q) $(RMDIR) $(MULTI_TOPICHEADER_TEMP_DIR)
 
 .PHONY:	distclean
 distclean: clean

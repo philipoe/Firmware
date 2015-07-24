@@ -56,6 +56,7 @@ MODULES			+= drivers/airspeed
 # Board support modules
 #
 MODULES		+= modules/sensors
+#MODULES		+= drivers/px4flow
 MODULES		+= modules/i2c_wd
 MODULES		+= modules/px4_hw_wd
 
@@ -66,7 +67,6 @@ MODULES		+= systemcmds/mtd
 MODULES		+= systemcmds/mixer
 MODULES		+= systemcmds/param
 MODULES		+= systemcmds/perf
-MODULES		+= systemcmds/preflight_check
 MODULES		+= systemcmds/pwm
 MODULES		+= systemcmds/esc_calib
 MODULES		+= systemcmds/reboot
@@ -91,6 +91,7 @@ MODULES		+= modules/gpio_led
 #MODULES		+= modules/attitude_estimator_ekf
 #MODULES		+= modules/ekf_att_pos_estimator
 #MODULES		+= modules/position_estimator_inav
+#MODULES		+= modules/attitude_estimator_q
 MODULES		+= modules/state_estimator
 
 #

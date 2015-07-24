@@ -46,6 +46,7 @@
 LandDetector::LandDetector() :
 	_landDetectedPub(-1),
 	_landDetected({0, false}),
+	_arming_time(0),
 	_taskShouldExit(false),
 	_taskIsRunning(false)
 {

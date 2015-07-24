@@ -34,6 +34,7 @@
 #pragma once
 
 #include <nuttx/config.h>
+
 #include <uavcan_stm32/uavcan_stm32.hpp>
 #include <drivers/device/device.h>
 #include <systemlib/perf_counter.h>
@@ -47,6 +48,14 @@
 #include "actuators/esc.hpp"
 #include "sensors/sensor_bridge.hpp"
 
+#if defined(USE_FW_NODE_SERVER)
+# include <uavcan/protocol/dynamic_node_id_server/centralized.hpp>
+# include <uavcan/protocol/node_info_retriever.hpp>
+# include <uavcan_posix/basic_file_server_backend.hpp>
+# include <uavcan/protocol/firmware_update_trigger.hpp>
+# include <uavcan/protocol/file_server.hpp>
+#endif
+
 /**
  * @file uavcan_main.hpp
  *
@@ -57,18 +66,40 @@
 
 #define NUM_ACTUATOR_CONTROL_GROUPS_UAVCAN	4
 #define UAVCAN_DEVICE_PATH	"/dev/uavcan/esc"
+#define UAVCAN_NODE_DB_PATH     "/fs/microsd/uavcan.db"
+#define UAVCAN_FIRMWARE_PATH    "/fs/microsd/fw"
+#define UAVCAN_LOG_FILE          UAVCAN_NODE_DB_PATH"/trace.log"
 
 // we add two to allow for actuator_direct and busevent
 #define UAVCAN_NUM_POLL_FDS (NUM_ACTUATOR_CONTROL_GROUPS_UAVCAN+2)
-
 /**
  * A UAVCAN node.
  */
 class UavcanNode : public device::CDev
 {
+	static constexpr unsigned MaxBitRatePerSec   = 1000000;
+	static constexpr unsigned bitPerFrame        = 148;
+	static constexpr unsigned FramePerSecond     = MaxBitRatePerSec / bitPerFrame;
+	static constexpr unsigned FramePerMSecond    = ((FramePerSecond / 1000) + 1);
+
+	static constexpr unsigned PollTimeoutMs      = 10;
+
 	static constexpr unsigned MemPoolSize        = 10752; ///< Refer to the libuavcan manual to learn why
-	static constexpr unsigned RxQueueLenPerIface = 64;
-	static constexpr unsigned StackSize          = 3000;
+
+	/*
+	 * This memory is reserved for uavcan to use for queuing CAN frames.
+	 * At 1Mbit there is approximately one CAN frame every 145 uS.
+	 * The number of buffers sets how long you can go without calling
+	 * node_spin_xxxx. Since our task is the only one running and the
+	 * driver will light the fd when there is a CAN frame we can nun with
+	 * a minimum number of buffers to conserver memory. Each buffer is
+	 * 32 bytes. So 5 buffers costs 160 bytes and gives us a poll rate
+	 * of ~1 mS
+	 *  1000000/200
+	 */
+
+	static constexpr unsigned RxQueueLenPerIface = FramePerMSecond * PollTimeoutMs; // At
+	static constexpr unsigned StackSize          = 3400;
 
 public:
 	typedef uavcan::Node<MemPoolSize> Node;
@@ -82,7 +113,7 @@ public:
 
 	static int	start(uavcan::NodeID node_id, uint32_t bitrate);
 
-	Node&		get_node() { return _node; }
+	Node		&get_node() { return _node; }
 
 	// TODO: move the actuator mixing stuff into the ESC controller class
 	static int	control_callback(uintptr_t handle, uint8_t control_group, uint8_t control_index, float &input);
@@ -94,7 +125,7 @@ public:
 
 	void		print_info();
 
-	static UavcanNode* instance() { return _instance; }
+	static UavcanNode *instance() { return _instance; }
 
 private:
 	void		fill_node_info();
@@ -117,12 +148,22 @@ private:
 	unsigned		_output_count = 0;		///< number of actuators currently available
 
 	static UavcanNode	*_instance;			///< singleton pointer
+
 	Node			_node;				///< library instance
 	pthread_mutex_t		_node_mutex;
 
 	UavcanEscController	_esc_controller;
 
-	List<IUavcanSensorBridge*> _sensor_bridges;		///< List of active sensor bridges
+
+#if defined(USE_FW_NODE_SERVER)
+	static uavcan::dynamic_node_id_server::CentralizedServer *_server_instance;              ///< server singleton pointer
+
+	uavcan_posix::BasicFileSeverBackend _fileserver_backend;
+	uavcan::NodeInfoRetriever  _node_info_retriever;
+	uavcan::FirmwareUpdateTrigger  _fw_upgrade_trigger;
+	uavcan::BasicFileServer        _fw_server;
+#endif
+	List<IUavcanSensorBridge *> _sensor_bridges;		///< List of active sensor bridges
 
 	MixerGroup		*_mixers = nullptr;
 
