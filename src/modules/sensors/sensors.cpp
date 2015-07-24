@@ -2735,22 +2735,13 @@ Sensors::task_main()
 		if (ret) break;
 		ret = adc_init();
 		if (ret) break;
-		////ret = dbaro_init();					// added
-		////if (ret) break;
-		ret = amb_temp_init();
-		if (ret) break;
-		ret = adc121_vspb_init();
-		if (ret) break;
-		ret = adc121_cspb_init();
-		if (ret) break;
-		ret = adc121_cs1_init();
-		if (ret) break;
-		ret = adc121_cs2_init();
-		if (ret) break;
-		ret = mppt_init();
-		if (ret) break;
-		ret = bat_mon_init();
-		if (ret) break;
+		amb_temp_init();
+		adc121_vspb_init();
+		adc121_cspb_init();
+		adc121_cs1_init();
+		adc121_cs2_init();
+		mppt_init();
+		bat_mon_init();
 		break;
 	} while (0);
 
