@@ -109,7 +109,7 @@ int px4_hw_wd_main(int argc, char *argv[])
 					 SCHED_PRIORITY_MAX - 4,
 					 1024,
 					 px4_hw_wd_thread_main,
-					 (argv) ? (const char **)&argv[2] : (const char **)NULL);
+					 (argv) ? (char * const *)&argv[2] : (char * const *)NULL);
 
 		warnx("PX4 HW WD is up and running!\n");
 		exit(0);

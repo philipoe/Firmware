@@ -766,35 +766,26 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 		}
 		break;
 
-	case VEHICLE_CMD_RESET_MPPT: {
+	case vehicle_command_s::VEHICLE_CMD_RESET_MPPT: {
 			int reset_channel = (int) cmd->param1;
 			int	fd_mppt;
 
 			fd_mppt = open(SPV1020_DEVICE_PATH, 0);
 
 			if (fd_mppt < 0)
-				cmd_result = VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
+				cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
 			else {
 				/* reset the corresponding MPPT */
 				if (OK != ioctl(fd_mppt, MPPTRESET, reset_channel))
-					cmd_result = VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
+					cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
 				else
-					cmd_result = VEHICLE_CMD_RESULT_ACCEPTED;
+					cmd_result = vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED;
 			}
 
 			close(fd_mppt);
 		}
 		break;
 
-	case VEHICLE_CMD_PREFLIGHT_REBOOT_SHUTDOWN:
-	case VEHICLE_CMD_PREFLIGHT_CALIBRATION:
-	case VEHICLE_CMD_PREFLIGHT_SET_SENSOR_OFFSETS:
-	case VEHICLE_CMD_PREFLIGHT_STORAGE:
-	case VEHICLE_CMD_CUSTOM_0:
-	case VEHICLE_CMD_CUSTOM_1:
-	case VEHICLE_CMD_CUSTOM_2:
-	case VEHICLE_CMD_PAYLOAD_PREPARE_DEPLOY:
-	case VEHICLE_CMD_PAYLOAD_CONTROL_DEPLOY:
 	case vehicle_command_s::VEHICLE_CMD_PREFLIGHT_REBOOT_SHUTDOWN:
 	case vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION:
 	case vehicle_command_s::VEHICLE_CMD_PREFLIGHT_SET_SENSOR_OFFSETS:

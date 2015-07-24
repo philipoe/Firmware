@@ -669,8 +669,6 @@ Sensors::Sensors() :
 	_diff_pres{},
 	_airspeed{},
 	_rc_parameter_map{},
-	_board_rotation{},
-	_external_mag_rotation{},
 	_param_rc_values{},
 	_board_rotation{},
 	_mag_rotation{},
@@ -1204,10 +1202,6 @@ Sensors::mag_init()
 		ret = ioctl(fd, MAGIOCGEXTERNAL, 0);
 		if (ret < 0)
 			errx(1, "FATAL: unknown if magnetometer is external or onboard");
-		else if (ret == 1)
-			_mag_is_external = true;
-		else
-			_mag_is_external = false;
 
 		warnx("using system mag");
 	}
