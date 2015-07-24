@@ -112,11 +112,6 @@ fi
 # INITIAL BOOTUP
 #####################################################
 
-#
-# Start CDC/ACM serial driver
-#
-sercon
-
 # Try to get an USB console
 #nshterm /dev/ttyACM0 &
 
@@ -184,11 +179,6 @@ if dataman start
 then
 fi
 
-#
-# Start the Commander (needs to be this early for in-air-restarts)
-#
-commander start
-
 #####################################################
 # OUTPUT (PX4IO & HIL) CONFIGURATION
 #####################################################
@@ -249,20 +239,20 @@ then
 	then
 	else
 		# start I2C_WD application and hdim010 pressure sensor
-		i2c_wd start
-		usleep 1000000
-		hdim010 start
+#		i2c_wd start
+#		usleep 1000000
+#		hdim010 start
 	fi
 fi
 
 # start the ambient temperature sensor LM73
-lm73 start
+#lm73 start
 
 # start static barometer 
-if [ $HIL == no ]
-then
-	ms5611 start
-fi
+#if [ $HIL == no ]
+#then
+#	ms5611 start
+#fi
 
 # start power board voltage sensor
 #adc121_vspb start
@@ -350,6 +340,11 @@ if sensors start
 then
 	preflight_check &
 fi
+
+#
+# Start the Commander (needs to be this early for in-air-restarts)
+#
+commander start
 
 #####################################################
 # MAVLINK
