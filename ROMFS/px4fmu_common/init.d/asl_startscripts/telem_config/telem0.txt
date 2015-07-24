@@ -6,7 +6,7 @@ set DEVICE /dev/ttyS1
 if [ $HIL == yes ]
 then
 	echo "[MAVLINK] Instance #0 starting in HIL (Mavlink:Normal) mode"
-	set BAUDRATE 230400
+	set BAUDRATE 921600
 	set DATARATE 10000
 	set MODE normal
 else

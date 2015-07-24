@@ -75,6 +75,18 @@ ORB_DECLARE(sensor_spv1020);
 #define _MPPTIOC(_n)		(_IOC(_MPPTIOCBASE, _n))
 
 /** set the mppt raw current bias term */
-#define MPPTIOCSSCALE	_MPPTIOC(0)
+#define MPPTIOCSSCALE		_MPPTIOC(0)
+
+/** turn the MPPT off */
+#define MPPTTURNOFF			_MPPTIOC(1)
+
+/** turn the MPPT on */
+#define MPPTTURNON			_MPPTIOC(2)
+
+/** reset the MPPT */
+#define MPPTRESET			_MPPTIOC(3)
+
+/** set the mppts communication bridge*/
+#define MPPTSETCOMBRIDGE	_MPPTIOC(4)
 
 #endif /* _DRV_MPPT_H */

@@ -22,6 +22,14 @@ echo "[init] AIRPLANE: " $AIRPLANE
 echo "[init] OBC:      " $OBC
 echo "[init] ************************************************************"
 
+echo ""
+echo "*******************************************************************"
+ver git
+ver bdate
+echo "*******************************************************************"
+echo ""
+
+
 # Do auto-config based on the above parameters
 
 if [ $AIRPLANE == EasyGlider ]
@@ -32,7 +40,7 @@ then
 fi
 if [ $AIRPLANE == Techpod ]
 then
-	set MIXER ASL_Techpod
+	set MIXER ASL_TechPod
 	set AIRPLANE_NR_EKF 3
 	param set SENS_BOARD_ROT 8
 fi
@@ -365,10 +373,12 @@ fi
 # LOGGING
 #####################################################
 
-if [ -d /fs/microsd ]
+if [ -d /fs/microsd -a $OBC == no ]
 then
 	echo "Start sdlog2"
 	sdlog2 start -r 10 -a -b 4 -t
+else
+	echo "Not using sdlog2 because OBC is connected"
 fi
 
 #####################################################

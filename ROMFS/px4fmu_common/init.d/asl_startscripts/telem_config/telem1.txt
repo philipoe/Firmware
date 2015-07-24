@@ -2,7 +2,7 @@
 # Define as custom stream
 
 # Settings
-set BAUDRATE 230400
+set BAUDRATE 921600
 set DATARATE 10000
 set DEVICE /dev/ttyS2
 set MODE custom

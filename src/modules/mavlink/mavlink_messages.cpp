@@ -2349,7 +2349,7 @@ protected:
 			msg.uElev = aslctrl_data.uElev;
 			msg.uThrot = aslctrl_data.uThrot;
 			msg.uThrot2 = aslctrl_data.uThrot2;
-			msg.aZ = aslctrl_data.aZ;
+			msg.aZ = 0.0;
 			msg.AirspeedRef = aslctrl_data.AirspeedRef;
 			msg.YawAngle = aslctrl_data.YawAngle * M_RAD_TO_DEG_F;
 			msg.YawAngleRef = aslctrl_data.YawAngleRef * M_RAD_TO_DEG_F;
@@ -2421,7 +2421,7 @@ protected:
 			mavlink_aslctrl_debug_t msg;
 
 			msg.i32_1 = 0;
-			msg.f_1 = aslctrl_data.qmax;
+			msg.f_1 = 0.0f;
 			msg.f_2 = aslctrl_data.f_GainSch_Q;
 			msg.f_3 = aslctrl_data.P_kP_GainSch_E;
 			msg.f_4 = aslctrl_data.R_kP_GainSch_E;
@@ -2429,7 +2429,7 @@ protected:
 			msg.f_6 = 0.0f;
 			msg.f_7 = 0.0f;
 			msg.f_8 = 0.0f;
-			msg.i8_1 = aslctrl_data.StallStatus;
+			msg.i8_1 = 0;
 			msg.i8_2 = 0;
 
 			_mavlink->send_message(MAVLINK_MSG_ID_ASLCTRL_DEBUG, &msg);

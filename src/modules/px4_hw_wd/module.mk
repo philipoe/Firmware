@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (C) 2012 PX4 Development Team. All rights reserved.
+#   Copyright (C) 2013 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -32,11 +32,10 @@
 ############################################################################
 
 #
-# SPV1020 driver
+# PX4 hadware watchdog function
 #
 
-MODULE_COMMAND		= spv1020
-#MODULE_PRIORITY	= SCHED_PRIORITY_DEFAULT
-MODULE_STACKSIZE	= 1200
-SRCS				= spv1020.cpp
-MAXOPTIMIZATION	 	= -Os
+MODULE_COMMAND	 = px4_hw_wd
+MODULE_STACKSIZE = 1024
+SRCS			 = px4_hw_wd.c
+MAXOPTIMIZATION	 = -Os

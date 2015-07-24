@@ -26,7 +26,7 @@ public:
 	int WaypointControl_L1(float &RollAngleRef);
 
 	//Combined Altitude&Airspeed Controllers
-	int TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& AirspeedRef, float &hRef, float const &h, float const h_home, float &hRef_t, uint8_t & AltitudeStatus, bool& bEngageSpoilers, const bool bUseRamp, const bool bUseThermalHighEtaMode, const bool bModeChanged);
+	int TECS_AltAirspeedControl(float &PitchAngleRef, float& uThrot, float& AirspeedRef, float &hRef, float const &h, float const h_home, float &hRef_t, bool& bEngageSpoilers, const bool bUseRamp, const bool bUseThermalHighEtaMode, const bool bModeChanged);
 	int TECS_Update50Hz(void);
 
 	//Helper functions

@@ -93,6 +93,7 @@
 #include <drivers/drv_led.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_tone_alarm.h>
+#include <drivers/drv_mppt.h>
 
 #include <mavlink/mavlink_log.h>
 #include <systemlib/param/param.h>
@@ -715,6 +716,26 @@ bool handle_command(struct vehicle_status_s *status_local, const struct safety_s
 				res = main_state_transition(status_local, main_state_pre_offboard);
 				status_local->offboard_control_set_by_command = false;
 			}
+		}
+		break;
+
+	case VEHICLE_CMD_RESET_MPPT: {
+			int reset_channel = (int) cmd->param1;
+			int	fd_mppt;
+
+			fd_mppt = open(SPV1020_DEVICE_PATH, 0);
+
+			if (fd_mppt < 0)
+				cmd_result = VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
+			else {
+				/* reset the corresponding MPPT */
+				if (OK != ioctl(fd_mppt, MPPTRESET, reset_channel))
+					cmd_result = VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
+				else
+					cmd_result = VEHICLE_CMD_RESULT_ACCEPTED;
+			}
+
+			close(fd_mppt);
 		}
 		break;
 
@@ -1674,8 +1695,7 @@ int commander_thread_main(int argc, char *argv[])
 
 			} else {
 				if (status.rc_signal_lost) {
-					mavlink_log_critical(mavlink_fd, "RC SIGNAL REGAINED after %llums",
-							     (hrt_absolute_time() - status.rc_signal_lost_timestamp) / 1000);
+					mavlink_log_critical(mavlink_fd, "RC SIGNAL REGAINED after %.2f seconds",(double)(hrt_absolute_time()-status.rc_signal_lost_timestamp)/1.0e6);
 					status_changed = true;
 				}
 			}
@@ -1776,7 +1796,7 @@ int commander_thread_main(int argc, char *argv[])
 
 		} else {
 			if (!status.rc_signal_lost) {
-				mavlink_log_critical(mavlink_fd, "RC SIGNAL LOST (at t=%llums)", hrt_absolute_time() / 1000);
+				mavlink_log_critical(mavlink_fd, "RC SIGNAL LOST at t=%.0f seconds",(double)(hrt_absolute_time())/1.0e6);
 				status.rc_signal_lost = true;
 				status.rc_signal_lost_timestamp = sp_man.timestamp;
 				status_changed = true;

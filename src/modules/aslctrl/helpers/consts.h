@@ -14,10 +14,6 @@ const float RAD2DEG = 180.0f/pi;		//Multiplication is assumed with these constan
 //*** ENUMERATIONS
 //**********************************************************************
 
-enum StallStatusDescriptor {NO_STALL = 0, STALL_WARNING = 1, IN_STALL = 2 , AFTER_STALL = 3};
-enum AltitudeStatusDescriptor {ALTITUDE_OK_LEVELING = 0, ALTITUDE_OK_CLIMBING = 1 , ALTITUDE_OK_DESCENDING = 2,ALTITUDE_WARNING_ALTLOW = 3};
-enum AirspeedCtrlStatusDescriptor {NORMAL_VELCTRL = 0, AGGRESSIVE_VELCTRL = 1};
-
 enum CtrlType {
 	//PID Controllers
 	PID_STD=0,					// PID controller (Standard)

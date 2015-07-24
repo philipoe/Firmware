@@ -70,6 +70,7 @@
 
 #include <drivers/drv_mppt.h>
 
+#define MAX_NUMBER_OF_MPPT_DEVICES		3
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
 # undef ERROR
@@ -86,7 +87,7 @@ class SPV1020 : public device::I2C
 {
 public:
 	SPV1020(int bus);
-	~SPV1020();
+	virtual ~SPV1020();
 
 	virtual int		init();
 
@@ -206,10 +207,16 @@ private:
 	int			mppt_status_read(uint8_t mppt_device);
 
 	/**
-	 * Send a reset command to the SPV1020.    // delete!
+	 * Issue a MPPT turn off command
 	 *
 	 */
-	int			cmd_reset();
+	int			mppt_turn_off(uint8_t mppt_device);
+
+	/**
+	 * Issue a MPPT turn on command
+	 *
+	 */
+	int			mppt_turn_on(uint8_t mppt_device);
 
 	/**
 	 * Configure the I2C to SPI bridge (SC18IS602) to be used for the SPV1020.
@@ -243,9 +250,8 @@ private:
 
 #define CONF_SPI_INTERFACE		0xf0	/* configuration of the 2C/SPI bridge					   */
 
-#define MPPT_SHUT				0x02	/* MPPT device shut-down								   */
+#define MPPT_TURN_OFF			0x02	/* MPPT device turn-off									   */
 #define MPPT_TURN_ON			0x03	/* MPPT device turn-on									   */
-#define MPPT_SHUT				0x02	/* MPPT device shut-down								   */
 #define MPPT_READ_CURRENT		0x04	/* Read current of the MPPT device 					   	   */
 #define MPPT_READ_VOLTAGE		0x05	/* Read input voltage of the MPPT device 				   */
 #define MPPT_READ_PWM			0x06	/* Read pwm of the MPPT device 							   */
@@ -400,7 +406,7 @@ SPV1020::read(struct file *filp, char *buffer, size_t buflen)
 		_measurement_phase = 0;
 		_oldest_report = _next_report = 0;
 
-		/* Take a temperature measurement */
+		/* Take a MPPT measurement */
 
 		if (OK != mppt_measurement()) {
 			ret = -EIO;
@@ -514,13 +520,8 @@ SPV1020::ioctl(struct file *filp, int cmd, unsigned long arg)
 		/* reset the measurement state machine */
 		stop();
 
-		/* free any existing reports */
-		if (_reports != nullptr)
-			delete[] _reports;
-
 		start();
 		return OK;
-		//return -EINVAL;
 
 	case MPPTIOCSSCALE: {
 		/* copy mppt bias */
@@ -530,6 +531,34 @@ SPV1020::ioctl(struct file *filp, int cmd, unsigned long arg)
 		memcpy(&mppt_current_SF_term,_current_cal_term.SF,sizeof(_current_cal_term.SF));
 		return OK;
 		}
+
+	case MPPTTURNOFF: {
+		if (arg > ((unsigned long) max_mppt_devices-1) )
+			return -EINVAL;
+		mppt_turn_off((uint8_t) arg);
+		return OK;
+	}
+
+	case MPPTTURNON: {
+		if (arg > ((unsigned long)max_mppt_devices-1) )
+			return -EINVAL;
+		mppt_turn_on((uint8_t) arg);
+		return OK;
+	}
+
+	case MPPTRESET: {
+		if (arg > ((unsigned long)max_mppt_devices-1) )
+			return -EINVAL;
+		mppt_turn_off((uint8_t) arg);
+		usleep(500000);
+		mppt_turn_on((uint8_t) arg);
+		return OK;
+	}
+
+	case MPPTSETCOMBRIDGE: {
+		conf_I2C_SPI_bridge();
+		return OK;
+	}
 
 	default:
 		break;
@@ -582,8 +611,7 @@ SPV1020::cycle()
 		   &_work,
 		   (worker_t)&SPV1020::cycle_trampoline,
 		   this,
-		   //USEC2TICK(SPV1020_CONVERSION_INTERVAL));  			// temp marked for testing the replacement of SPV1020_CONVERSION_INTERVAL
-		   _measure_ticks);										// SPV1020_CONVERSION_INTERVAL replaced with _measure_ticks for init the rate form sesnors.c
+		   _measure_ticks);
 	}
 }
 
@@ -597,7 +625,7 @@ SPV1020::mppt_measurement()
 	/* this should be fairly close to the end of the conversion, so the best approximation of the time */
 	_reports[_next_report].timestamp = hrt_absolute_time();
 
-	for(uint8_t mppt_device=0; mppt_device < 3; mppt_device++){
+	for(uint8_t mppt_device=0; mppt_device < MAX_NUMBER_OF_MPPT_DEVICES; mppt_device++){
 		mppt_current[mppt_device] = 0.0f;
 		mppt_voltage[mppt_device] = 0.0f;
 		mppt_pwm[mppt_device]	  = 0;
@@ -627,10 +655,10 @@ SPV1020::mppt_measurement()
 
 	}
 
-	memcpy(&_reports[_next_report].current, mppt_current, sizeof(mppt_current));   					/* current report [amp] */
-	memcpy(&_reports[_next_report].voltage, mppt_voltage, sizeof(mppt_voltage));   					/* voltage report [v] 	*/
-	memcpy(&_reports[_next_report].pwm, mppt_pwm, sizeof(mppt_pwm));   								/* voltage report [v] 	*/
-	memcpy(&_reports[_next_report].status, mppt_status, sizeof(mppt_status));  						/* Status vector report */
+	memcpy(&_reports[_next_report].current, mppt_current, sizeof(mppt_current));   			/* current report [amp] */
+	memcpy(&_reports[_next_report].voltage, mppt_voltage, sizeof(mppt_voltage));   			/* voltage report [v] 	*/
+	memcpy(&_reports[_next_report].pwm, mppt_pwm, sizeof(mppt_pwm));   						/* pwm report		 	*/
+	memcpy(&_reports[_next_report].status, mppt_status, sizeof(mppt_status));  				/* Status vector report */
 
 	/* publish it */
 	orb_publish(ORB_ID(sensor_spv1020), _mppt_topic, &_reports[_next_report]);
@@ -812,6 +840,40 @@ SPV1020::mppt_status_read(uint8_t mppt_device)
 }
 
 int
+SPV1020::mppt_turn_off(uint8_t mppt_device)
+{
+	uint8_t cmd[2];
+
+	cmd[0] = (1 << mppt_device) & 0x07;
+	cmd[1] = MPPT_TURN_OFF;
+
+	/* Send turn off command to the MPPT */
+	if (OK != transfer(&cmd[0], 2, nullptr, 0)) {
+		perf_count(_comms_errors);
+		return -EIO;
+	}
+
+	return OK;
+}
+
+int
+SPV1020::mppt_turn_on(uint8_t mppt_device)
+{
+	uint8_t cmd[2];
+
+	cmd[0] = (1 << mppt_device) & 0x07;
+	cmd[1] = MPPT_TURN_ON;
+
+	/* Send turn on command to the MPPT */
+	if (OK != transfer(&cmd[0], 2, nullptr, 0)) {
+		perf_count(_comms_errors);
+		return -EIO;
+	}
+
+	return OK;
+}
+
+int
 SPV1020::conf_I2C_SPI_bridge()
 {
 	/*Change the configuration of the I2C/SPI bridge to:
@@ -978,6 +1040,9 @@ reset()
 	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
 		err(1, "driver poll restart failed");
 
+	if (ioctl(fd, MPPTSETCOMBRIDGE, 0) < 0)
+		err(1, "driver set com bridge failed");
+
 	exit(0);
 }
 
@@ -1008,7 +1073,7 @@ spv1020_main(int argc, char *argv[])
 	if (!strcmp(argv[1], "start")){
 		if (!strcmp(argv[2], "-d")){
 			unsigned s = strtoul(argv[3], NULL, 10);
-			if (s > 3)
+			if (s > MAX_NUMBER_OF_MPPT_DEVICES)
 				errx(1, "Error the value for the maximal number of the MPPT devices (%d) is out of range (1..3)...exiting.\n ", s);
 			else
 				max_mppt_devices = (uint8_t) s;
