@@ -208,8 +208,9 @@ int HL::TECS_Update50Hz(void)
 		R_nb(i, j) = subs->att.R[3*i+j];  // TODO::PX4Merge: Check correctness of indexes!!!!!
 	math::Vector<3> accel_body(subs->sensors.accelerometer_m_s2);
 	math::Vector<3> accel_earth = R_nb * accel_body;
-
-	tecs.update_50hz(subs->global_pos.alt, subs->airspeed.true_airspeed_m_s, R_nb, accel_body, accel_earth);
+	bool in_air_alt_control = (!subs->vstatus.condition_landed &&
+			(subs->vstatus.main_state==vehicle_status_s::MAIN_STATE_AUTO_MISSION));// TODO::PX4Merge:is it only running in AUTO_MISSION mode
+	tecs.update_state(subs->global_pos.alt, subs->airspeed.true_airspeed_m_s, R_nb, accel_body, accel_earth, (subs->global_pos.timestamp>0),in_air_alt_control);
 
 	return 0;
 }
