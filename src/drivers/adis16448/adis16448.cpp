@@ -379,7 +379,7 @@ class ADIS16448_gyro : public device::CDev
 {
 public:
 	ADIS16448_gyro(ADIS16448 *parent, const char *path);
-	~ADIS16448_gyro();
+	virtual ~ADIS16448_gyro();
 
 	virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
@@ -409,7 +409,7 @@ class ADIS16448_mag : public device::CDev
 {
 public:
 	ADIS16448_mag(ADIS16448 *parent, const char *path);
-	~ADIS16448_mag();
+	virtual ~ADIS16448_mag();
 
 	virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
