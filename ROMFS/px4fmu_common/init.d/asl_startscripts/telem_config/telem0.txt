@@ -51,3 +51,7 @@ fi
 # Sleep a bit to give Mavlink time to set up
 usleep 100000
 
+unset DEVICE
+unset BAUDRATE
+unset DATARATE
+unset MODE
