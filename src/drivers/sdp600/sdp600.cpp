@@ -829,7 +829,6 @@ SDP600::res_change(uint8_t res)
 	*/
 
 	uint8_t		cmd = ADV_USER_REG_R;
-	int		result;
 	uint8_t data[3];
 	union {
 		uint8_t	b[3];
@@ -859,10 +858,10 @@ SDP600::res_change(uint8_t res)
 	data[0] = cmd;
 
 	if (OK != transfer(&data[0],3, nullptr, 0)) {
-				perf_count(_comms_errors);
-				return -EIO;
-			}
-	return result;
+		perf_count(_comms_errors);
+		return -EIO;
+	}
+	return OK;
 }
 
 int
@@ -872,7 +871,6 @@ SDP600::scale_correction(bool corr)
 	/* True:  user register set to enable temperature scale/sift correction */
 
 	uint8_t		cmd = USER_REG_R;
-	int		result;
 	uint8_t data[3];
 	union {
 			uint8_t	b[3];
@@ -908,7 +906,7 @@ SDP600::scale_correction(bool corr)
 				perf_count(_comms_errors);
 				return -EIO;
 			}
-	return result;
+	return OK;
 }
 
 bool
