@@ -415,12 +415,3 @@ navigator start
 # CUSTOM ADDONS
 #####################################################
 
-if [ $EXIT_ON_END == yes ]
-then
-	echo "[init] Exit from nsh"
-	exit
-fi
-unset EXIT_ON_END
-
-# Boot is complete, inform MAVLink app(s) that the system is now fully up and running
-mavlink boot_complete
