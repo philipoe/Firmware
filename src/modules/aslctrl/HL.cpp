@@ -35,6 +35,7 @@ void HL::CopyUpdatedParams(void)
 	float HL_tSample=params->SAS_tSample*params->HL_fMult;
 
 	L1Ctrl.set_l1_damping(params->HL_WPL1_Damping);
+	L1Ctrl.set_l1_roll_limit(params->CAS_RollAngleLim);
 	//L1Ctrl.set_l1_period(params->HL_WPL1_Period);
 	LP_Airspeed.SetGains(HL_tSample,1.0f); //1.0 rad/s
 	LP_vZ.SetGains(HL_tSample,1.0f); //1.0 rad/s
@@ -131,8 +132,7 @@ int HL::WaypointControl_L1(float &RollAngleRef)
 
 		L1Ctrl.navigate_waypoints(rtl_pos, rtl_pos, cur_pos, ground_speed);
 	}
-
-	RollAngleRef = limit1(L1Ctrl.nav_roll(), params->CAS_RollAngleLim);
+	RollAngleRef = L1Ctrl.nav_roll();
 
 	if(params->ASLC_DEBUG==10) printf("Roll Angle Ref(unlim):%7.4f \n",(double)L1Ctrl.nav_roll());
 
