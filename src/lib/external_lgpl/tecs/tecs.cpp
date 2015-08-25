@@ -314,7 +314,7 @@ void TECS::_update_throttle(float throttle_cruise, const math::Matrix<3,3> &rotM
 	float SPE_weighting = 2.0f - SKE_weighting;
 
 	// Calculate total energy values
-	_STE_error = (_SPE_dem - _SPE_est)*SPE_weighting + _(SKE_dem - _SKE_est)*SKE_weighting;
+	_STE_error = (_SPE_dem - _SPE_est)*SPE_weighting + (_SKE_dem - _SKE_est)*SKE_weighting;
 	float STEdot_dem = constrain((_SPEdot_dem*SPE_weighting + _SKEdot_dem*SKE_weighting), _STEdot_min, _STEdot_max);
 	_STEdot_error = STEdot_dem - _SPEdot*SPE_weighting - _SKEdot*SKE_weighting;
 
