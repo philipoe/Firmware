@@ -94,6 +94,7 @@ set FMU_MODE serial
 if [ $HIL == yes ]
 then
 	set OUTPUT_MODE hil
+	set GPS no
 else
 	set OUTPUT_MODE io
 fi
