@@ -86,7 +86,7 @@ __EXPORT void weak_function stm32_spiinitialize(void)
 	stm32_gpiowrite(GPIO_SPI_CS_MPU, 1);
 	stm32_gpiowrite(GPIO_SPI_CS_SDCARD, 1);
 	#ifdef PX4_IMU_CONF_ADIS16448
-		stm32_configgpio(GPIO_SPI_CS_ADIS);
+		stm32_gpiowrite(GPIO_SPI_CS_ADIS, 1);
 	#endif
 }
 
@@ -142,7 +142,7 @@ __EXPORT void stm32_spi2select(FAR struct spi_dev_s *dev, enum spi_dev_e devid, 
 		break;
 
 	}
-#endif
+	#endif
 }
 
 __EXPORT uint8_t stm32_spi2status(FAR struct spi_dev_s *dev, enum spi_dev_e devid)

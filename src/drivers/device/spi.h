@@ -162,6 +162,9 @@ protected:
 
 	int	_transfer(uint8_t *send, uint8_t *recv, unsigned len);
 
+#ifdef PX4_IMU_CONF_ADIS16448	
+	int	_transferword(uint16_t *send, uint16_t *recv, unsigned len);
+#endif
 };
 
 } // namespace device

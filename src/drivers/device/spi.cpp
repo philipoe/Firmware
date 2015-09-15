@@ -195,26 +195,38 @@ SPI::_transfer(uint8_t *send, uint8_t *recv, unsigned len)
 int
 SPI::transferword(uint16_t *send, uint16_t *recv, unsigned len)
 {
-	irqstate_t	state(0);
+	int result;
 
 	if ((send == nullptr) && (recv == nullptr))
 		return -EINVAL;
+		
+	LockMode mode = up_interrupt_context() ? LOCK_NONE : locking_mode;
 
 	/* lock the bus as required */
-	if (!up_interrupt_context()) {
-		switch (locking_mode) {
-		default:
-		case LOCK_PREEMPTION:
-			state = irqsave();
-			break;
+	switch (mode) {
+	default:
+	case LOCK_PREEMPTION:
+		{
+			irqstate_t state = irqsave();
+			result = _transferword(send, recv, len);
+			irqrestore(state);
+		}
+		break;
 		case LOCK_THREADS:
 			SPI_LOCK(_dev, true);
+			result = _transferword(send, recv, len);
+			SPI_LOCK(_dev, false);
 			break;
 		case LOCK_NONE:
+			result = _transferword(send, recv, len);
 			break;
-		}
 	}
+	return result;	
+}
 
+int
+SPI::_transferword(uint16_t *send, uint16_t *recv, unsigned len)
+{
 	SPI_SETFREQUENCY(_dev, _frequency);
 	SPI_SETMODE(_dev, _mode);
 	SPI_SETBITS(_dev, 16);							/* 16 bit transfer */
@@ -230,22 +242,9 @@ SPI::transferword(uint16_t *send, uint16_t *recv, unsigned len)
 	/* and clean up */
 	SPI_SELECT(_dev, _device, false);
 
-	if (!up_interrupt_context()) {
-		switch (locking_mode) {
-		default:
-		case LOCK_PREEMPTION:
-			irqrestore(state);
-			break;
-		case LOCK_THREADS:
-			SPI_LOCK(_dev, false);
-			break;
-		case LOCK_NONE:
-			break;
-		}
-	}
-
 	return OK;
 }
+
 #endif
 
 } // namespace device

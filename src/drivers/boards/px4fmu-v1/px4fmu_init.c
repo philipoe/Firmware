@@ -224,12 +224,18 @@ __EXPORT int nsh_archinitialize(void)
 	#ifdef CONFIG_STM32_SPI2
 		spi2 = up_spiinitialize(2);
 		/* Default SPI2 to 1MHz and de-assert the known chip selects. */
-		SPI_SETFREQUENCY(spi2, 10000000);
-		SPI_SETBITS(spi2, 8);
-		SPI_SETMODE(spi2, SPIDEV_MODE3);
-		SPI_SELECT(spi2, PX4_SPIDEV_GYRO, false);
-		SPI_SELECT(spi2, PX4_SPIDEV_ACCEL_MAG, false);
-
+		#ifdef PX4_IMU_CONF_ADIS16448
+			SPI_SETFREQUENCY(spi2, 10000000);
+			SPI_SETBITS(spi2, 8);
+			SPI_SETMODE(spi2, SPIDEV_MODE3);
+			SPI_SELECT(spi2, PX4_SPIDEV_ADIS, false);
+		#else
+			SPI_SETFREQUENCY(spi2, 10000000);
+			SPI_SETBITS(spi2, 8);
+			SPI_SETMODE(spi2, SPIDEV_MODE3);
+			SPI_SELECT(spi2, PX4_SPIDEV_GYRO, false);
+			SPI_SELECT(spi2, PX4_SPIDEV_ACCEL_MAG, false);
+		#endif
 		message("[boot] Initialized SPI port2 (ADC IN12/13 blocked)\n");
 	#else
 		spi2 = NULL;
@@ -237,15 +243,6 @@ __EXPORT int nsh_archinitialize(void)
 		/* no SPI2, use pins for ADC */
 		stm32_configgpio(GPIO_ADC1_IN12);
 		stm32_configgpio(GPIO_ADC1_IN13);	// jumperable to MPU6000 DRDY on some boards
-	#endif
-
-	#ifdef PX4_IMU_CONF_ADIS16448
-		/* Default SPI2 to 1MHz and de-assert the known chip selects. */
-		SPI_SETFREQUENCY(spi2, 10000000);
-		SPI_SETBITS(spi2, 8);
-		SPI_SETMODE(spi2, SPIDEV_MODE3);
-		SPI_SELECT(spi2, PX4_SPIDEV_ADIS, false);
-		message("[boot] Initialized SPI port2 (ADC IN12/13 blocked)\n");
 	#endif
 
 	/* Get the SPI port for the microSD slot */
