@@ -50,7 +50,7 @@ else
 fi
 
 
-if [ -d uavcan ]
+if [ -d src/lib/uavcan ]
 then
 	STATUSRETVAL=$(git submodule summary | grep -A20 -i uavcan | grep "<")
 	if [ -z "$STATUSRETVAL" ]
