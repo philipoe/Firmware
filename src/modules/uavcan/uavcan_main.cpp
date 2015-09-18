@@ -293,9 +293,10 @@ int UavcanNode::start(uavcan::NodeID node_id, uint32_t bitrate)
 	 */
 	stm32_configgpio(GPIO_CAN1_RX);
 	stm32_configgpio(GPIO_CAN1_TX);
-	stm32_configgpio(GPIO_CAN2_RX | GPIO_PULLUP);
-	stm32_configgpio(GPIO_CAN2_TX);
-
+	#ifndef PX4_IMU_CONF_ADIS16448
+		stm32_configgpio(GPIO_CAN2_RX | GPIO_PULLUP);
+		stm32_configgpio(GPIO_CAN2_TX);
+	#endif
 	/*
 	 * CAN driver init
 	 */
