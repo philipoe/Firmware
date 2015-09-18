@@ -412,7 +412,11 @@ adc_main(int argc, char *argv[])
 	if (g_adc == nullptr) {
 #ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 		/* XXX this hardcodes the default channel set for PX4FMUv1 - should be configurable */
-		g_adc = new ADC((1 << 10) | (1 << 11) | (1 << 12) | (1 << 13));
+		g_adc = new ADC((1 << 10) | (1 << 11)
+		#ifndef CONFIG_STM32_SPI2
+			 | (1 << 12) | (1 << 13)
+		#endif
+			);
 #endif
 #ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
 		/* XXX this hardcodes the default channel set for PX4FMUv2 - should be configurable */
