@@ -36,6 +36,8 @@ ASLAutopilot::ASLAutopilot() :
 	ctrldata->timestamp=hrt_absolute_time();
 	params=&subs.aslctrl_params;
 
+	lastTime_MotorOK = hrt_absolute_time();
+
 	bRunOnce=false;
 	initialized=true;
 }
@@ -326,6 +328,20 @@ void ASLAutopilot::update()
 	if(0) {
 		//Throttle channel 2 on AUX
 		subs.actuators.control[CH_AUX] = ctrldata->uThrot2;
+	}
+
+	//******************************************************************************************************************
+	//*** SYSTEM INTEGRITY CHECKS
+	//******************************************************************************************************************
+	// Check 1: Motor functionality
+	if(fabsf(params->IThrotWarn) > 0.01f) {
+		if(fabsf(subs.sensor_power.adc121_cspb_amp) < fabsf(params->IThrotWarn) && ctrldata->uThrot > 0.95f * params->throttle_max) {
+			if(hrt_elapsed_time(&lastTime_MotorOK) > 5000000) {
+				mavlink_log_critical(mavlink_fd, "[aslctrl] Potential motor failure\n")
+				lastTime_MotorOK = hrt_absolute_time();
+			}
+		}
+		else lastTime_MotorOK = hrt_absolute_time();
 	}
 
 	//Debug

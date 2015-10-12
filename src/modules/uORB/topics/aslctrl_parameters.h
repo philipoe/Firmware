@@ -173,6 +173,9 @@ struct aslctrl_parameters_s {
 	float speedrate_p;
 	float throttle_slewrate;
 	float throttle_ILim;
+
+	//System Integrity Checks
+	float IThrotWarn;
 };
 
 /**

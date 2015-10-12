@@ -20,6 +20,7 @@
 #include <uORB/topics/state_estimator_EKF_parameters.h>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/airspeed.h>
+#include <uORB/topics/sensor_power.h>
 
 #include <systemlib/param/param.h>
 #include <poll.h>
@@ -62,6 +63,7 @@ public:
 	struct state_estimator_EKF_parameters_s ekf;
 	struct home_position_s home_pos;
 	struct airspeed_s airspeed;
+	struct sensor_power_s sensor_power;
 
 	//Output
 	struct actuator_controls_s actuators;
@@ -83,6 +85,7 @@ private:
 	int ekf_sub;
 	int home_pos_sub;
 	int airspeed_sub;
+	int sensor_power_sub;
 
 	//Output
 	orb_advert_t actuators_pub, aslctrl_params_pub, aslctrl_data_pub;
