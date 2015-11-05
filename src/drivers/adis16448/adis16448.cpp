@@ -57,6 +57,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include <systemlib/perf_counter.h>
 #include <systemlib/err.h>
@@ -370,6 +371,30 @@ private:
 	  set the gyroscope dynamic range
 	*/
 	void _set_gyro_dyn_range(uint16_t desired_gyro_dyn_range);
+
+#pragma pack(push, 1)
+	/**
+	 * Report conversation with in the ADIS16448, including command byte and interrupt status.
+	 */
+	struct ADISReport {
+		uint16_t		cmd;
+		uint16_t		status;
+		uint16_t		gyro_x;
+		uint16_t		gyro_y;
+		uint16_t		gyro_z;
+		uint16_t		accel_x;
+		uint16_t		accel_y;
+		uint16_t		accel_z;
+		uint16_t		mag_x;
+		uint16_t		mag_y;
+		uint16_t		mag_z;
+		uint16_t		baro;
+		uint16_t		temp;
+	};
+#pragma pack(pop)
+
+	ADIS16448(const ADIS16448&);
+	ADIS16448 operator=(const ADIS16448&);
 };
 
 /**
@@ -379,7 +404,7 @@ class ADIS16448_gyro : public device::CDev
 {
 public:
 	ADIS16448_gyro(ADIS16448 *parent, const char *path);
-	virtual ~ADIS16448_gyro();
+	~ADIS16448_gyro();
 
 	virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
@@ -409,7 +434,7 @@ class ADIS16448_mag : public device::CDev
 {
 public:
 	ADIS16448_mag(ADIS16448 *parent, const char *path);
-	virtual ~ADIS16448_mag();
+	~ADIS16448_mag();
 
 	virtual ssize_t		read(struct file *filp, char *buffer, size_t buflen);
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
@@ -434,6 +459,7 @@ private:
 };
 /** driver 'main' command */
 extern "C" { __EXPORT int adis16448_main(int argc, char *argv[]); }
+
 ADIS16448::ADIS16448(int bus, const char *path_accel, const char *path_gyro, const char *path_mag, spi_dev_e device) :
 	SPI("ADIS16448", path_accel, bus, device, SPIDEV_MODE3, SPI_BUS_SPEED),
 	_gyro(new ADIS16448_gyro(this, path_gyro)),
@@ -480,6 +506,14 @@ ADIS16448::ADIS16448(int bus, const char *path_accel, const char *path_gyro, con
 	// disable debug() calls
 	_debug_enabled = false;
 
+	_device_id.devid_s.devtype = DRV_ACC_DEVTYPE_ADIS16448;
+
+	_gyro->_device_id.devid = _device_id.devid;
+	_gyro->_device_id.devid_s.devtype = DRV_GYR_DEVTYPE_ADIS16448;
+
+	_mag->_device_id.devid = _device_id.devid;
+	_mag->_device_id.devid_s.devtype = DRV_MAG_DEVTYPE_ADIS16448;
+
 	// default gyro scale factors
 	_gyro_scale.x_offset = 0;
 	_gyro_scale.x_scale  = 1.0f;
@@ -514,6 +548,7 @@ ADIS16448::~ADIS16448()
 
 	/* delete the gyro subdriver */
 	delete _gyro;
+	delete _mag;
 
 	/* free any existing reports */
 	if (_gyro_reports != nullptr)
@@ -797,7 +832,7 @@ ADIS16448::read(struct file *filp, char *buffer, size_t buflen)
 			break;
 		transferred++;
 		arp++;
-}
+	}
 
 	/* return the number of bytes transferred */
 	return (transferred * sizeof(accel_report));
@@ -893,7 +928,7 @@ ADIS16448::gyro_read(struct file *filp, char *buffer, size_t buflen)
 			break;
 		transferred++;
 		grp++;
-}
+	}
 
 	/* return the number of bytes transferred */
 	return (transferred * sizeof(gyro_report));
@@ -928,7 +963,7 @@ ADIS16448::mag_read(struct file *filp, char *buffer, size_t buflen)
 			break;
 		transferred++;
 		mrp++;
-}
+	}
 
 	/* return the number of bytes transferred */
 	return (transferred * sizeof(mag_report));
@@ -940,8 +975,7 @@ ADIS16448::ioctl(struct file *filp, int cmd, unsigned long arg)
 	switch (cmd) {
 
 	case SENSORIOCRESET:
-		reset();
-		return OK;
+		return reset();
 
 	case SENSORIOCSPOLLRATE: {
 			switch (arg) {
@@ -1038,8 +1072,8 @@ ADIS16448::ioctl(struct file *filp, int cmd, unsigned long arg)
 		return _sample_rate;
 
 	case ACCELIOCSSAMPLERATE:
-	  _set_sample_rate(arg);
-	  return OK;
+		_set_sample_rate(arg);
+		return OK;
 
 	case ACCELIOCGLOWPASS:
 		return _accel_filter_x.get_cutoff_freq();
@@ -1237,9 +1271,7 @@ ADIS16448::mag_ioctl(struct file *filp, int cmd, unsigned long arg)
 uint8_t
 ADIS16448::read_reg(unsigned reg)
 {
-	uint8_t cmd[2];
-
-	cmd[0] = reg | DIR_READ;
+	uint8_t cmd[2] = { (uint8_t)(reg | DIR_READ), 0};
 
 	transfer(cmd, cmd, sizeof(cmd));
 
@@ -1353,29 +1385,9 @@ ADIS16448::measure_trampoline(void *arg)
 void
 ADIS16448::measure()
 {
-#pragma pack(push, 1)
-	/**
-	 * Report conversation with in the ADIS16448, including command byte and interrupt status.
-	 */
-	struct ADISReport {
-		uint16_t		cmd;
-		uint16_t		status;
-		uint16_t		gyro_x;
-		uint16_t		gyro_y;
-		uint16_t		gyro_z;
-		uint16_t		accel_x;
-		uint16_t		accel_y;
-		uint16_t		accel_z;
-		uint16_t		mag_x;
-		uint16_t		mag_y;
-		uint16_t		mag_z;
-		uint16_t		baro;
-		uint16_t		temp;
-	} adis_report;
-#pragma pack(pop)
 
+	struct ADISReport adis_report;
 	struct Report {
-		int16_t		status;
 		int16_t		gyro_x;
 		int16_t		gyro_y;
 		int16_t		gyro_z;
@@ -1389,19 +1401,6 @@ ADIS16448::measure()
 		int16_t		temp;
 	} report;
 
-	adis_report.status  = 0x0;
-	adis_report.gyro_x 	= 0x0;
-	adis_report.gyro_y 	= 0x0;
-	adis_report.gyro_z 	= 0x0;
-	adis_report.accel_x = 0x0;
-	adis_report.accel_y = 0x0;
-	adis_report.accel_z = 0x0;
-	adis_report.mag_x 	= 0x0;
-	adis_report.mag_y 	= 0x0;
-	adis_report.mag_z 	= 0x0;
-	adis_report.baro 	= 0x0;
-	adis_report.temp 	= 0x0;
-
 	/* start measuring */
 	perf_begin(_sample_perf);
 
@@ -1410,13 +1409,12 @@ ADIS16448::measure()
 	 */
 
 	adis_report.cmd = ((ADIS16448_GLOB_CMD | DIR_READ) << 8) & 0xff00;
-	if (OK != transferword((uint16_t *)&adis_report, ((uint16_t *)&adis_report), 13))
+	if (OK != transferword((uint16_t *)&adis_report, ((uint16_t *)&adis_report), sizeof(adis_report)/sizeof(uint16_t)))
 			return;
 
 	/*
 	 * Convert from big to little endian
 	 */
-
 	report.gyro_x  = (int16_t) adis_report.gyro_x;
 	report.gyro_y  = (int16_t) adis_report.gyro_y;
 	report.gyro_z  = (int16_t) adis_report.gyro_z;
@@ -1654,7 +1652,13 @@ ADIS16448_gyro::read(struct file *filp, char *buffer, size_t buflen)
 int
 ADIS16448_gyro::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
-	return _parent->gyro_ioctl(filp, cmd, arg);
+	switch (cmd) {
+		case DEVIOCGDEVICEID:
+			return (int)CDev::ioctl(filp, cmd, arg);
+			break;
+		default:
+			return _parent->gyro_ioctl(filp, cmd, arg);
+	}
 }
 
 ADIS16448_mag::ADIS16448_mag(ADIS16448 *parent, const char *path) :
@@ -1707,7 +1711,13 @@ ADIS16448_mag::read(struct file *filp, char *buffer, size_t buflen)
 int
 ADIS16448_mag::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
-	return _parent->mag_ioctl(filp, cmd, arg);
+	switch (cmd) {
+		case DEVIOCGDEVICEID:
+			return (int)CDev::ioctl(filp, cmd, arg);
+			break;
+		default:
+			return _parent->mag_ioctl(filp, cmd, arg);
+	}
 }
 
 /**
