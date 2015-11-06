@@ -91,7 +91,7 @@ static const int ERROR = -1;
 class SDP600 : public device::I2C
 {
 public:
-	SDP600(int bus);
+	SDP600(int bus, int address, const char *path);
 	virtual ~SDP600();
 
 	virtual int		init();
@@ -108,7 +108,7 @@ protected:
 	virtual int		probe();
 
 private:
-	SDP600 operator=(const SDP600);
+	SDP600 &operator=(const SDP600 &);
 	SDP600(const SDP600&);
 	struct work_s		_work;
 	unsigned			_measure_ticks;
@@ -122,6 +122,8 @@ private:
 	perf_counter_t		_sample_perf;
 	perf_counter_t		_comms_errors;
 	perf_counter_t		_buffer_overflows;
+
+	int					_class_instance;
 
 	float 				dPressure;
 	float 				temperature;
@@ -252,6 +254,7 @@ private:
 #define SDP600_BUS				PX4_I2C_BUS_EXPANSION
 
 #define SDP600_ADDRESS			0x40    // PX4_I2C_OBDEV_SDP600 	/* SDP600 I2C address   */
+#define SDP_DEVICE_PATH			"/dev/sdp600"
 
 #define USER_REG_W				0xE2	/* write address of the user register */
 #define USER_REG_R				0xE3	/* read address of the user register */
@@ -283,8 +286,8 @@ private:
 extern "C" __EXPORT int sdp600_main(int argc, char *argv[]);
 
 
-SDP600::SDP600(int bus) :
-	I2C("SDP600", AIRSPEED_BASE_DEVICE_PATH, bus, 0, 100000),
+SDP600::SDP600(int bus, int address, const char *path) :
+	I2C("SDP600", path, bus, address, 100000),
 	_work{},
 	_measure_ticks(0),
 	_reports(nullptr),
@@ -293,6 +296,7 @@ SDP600::SDP600(int bus) :
 	_sample_perf(perf_alloc(PC_ELAPSED, "sdp600_read")),
 	_comms_errors(perf_alloc(PC_COUNT, "sdp600_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "sdp600_buffer_overflows")),
+	_class_instance(-1),
 	dPressure(0.0),
 	temperature(-273.15),
 	vddSupply(0.0),
@@ -304,7 +308,7 @@ SDP600::SDP600(int bus) :
 	_diff_pres_scale(1.0f)
 {
 	// enable debug() calls
-	_debug_enabled = true;
+	_debug_enabled = false;
 
 	// work_cancel in the dtor will explode if we don't do this...
 	memset(&_work, 0, sizeof(_work));
@@ -315,19 +319,29 @@ SDP600::~SDP600()
 	/* make sure we are truly inactive */
 	stop();
 
+	if (_class_instance != -1) {
+		unregister_class_devname(AIRSPEED_BASE_DEVICE_PATH, _class_instance);
+	}
+
 	/* free any existing reports */
 	if (_reports != nullptr)
 		delete _reports;
+
+	// free perf counters
+	perf_free(_sample_perf);
+	perf_free(_comms_errors);
+	perf_free(_buffer_overflows);
 }
 
 int
 SDP600::init()
 {
-	int ret = I2C::init();
+	int ret = ERROR;
 
 	/* do I2C init (and probe) first */
-	if (ret != OK)
+	if (I2C::init() != OK) {
 		goto out;
+	}
 
 	/* allocate basic report buffers */
 	_reports = new RingBuffer(2,sizeof(differential_pressure_s));
@@ -335,15 +349,24 @@ SDP600::init()
 	if (_reports == nullptr)
 		goto out;
 
-	/* get a publish handle on the dbaro topic */
-	struct differential_pressure_s drp;
-	measurement();
-	_reports->get(&drp);
-	_dbaro_topic = orb_advertise(ORB_ID(differential_pressure), &drp);
+	/* register alternate interfaces if we have to */
+	_class_instance = register_class_devname(AIRSPEED_BASE_DEVICE_PATH);
 
+	/* publication init */
+	if (_class_instance == CLASS_DEVICE_PRIMARY) {
 
-	if (_dbaro_topic < 0)
-		debug("failed to create sensor_dbaro object");
+		/* advertise sensor topic, measure manually to initialize valid report */
+		struct differential_pressure_s arp;
+		measurement();
+		_reports->get(&arp);
+
+		/* measurement will have generated a report, publish */
+		_dbaro_topic = orb_advertise(ORB_ID(differential_pressure), &arp);
+
+		if (_dbaro_topic < 0) {
+			warnx("uORB started?");
+		}
+	}
 
 	ret = OK;
 out:
@@ -540,6 +563,14 @@ SDP600::ioctl(struct file *filp, int cmd, unsigned long arg)
 		_diff_pres_scale  = s->scale_factor;
 		return OK;
 	}
+
+	case AIRSPEEDIOCGSCALE: {
+		struct airspeed_scale *s = (struct airspeed_scale*)arg;
+		s->offset_pa = _diff_pres_offset;
+		s->scale = 1.0f;
+		s->scale_factor = _diff_pres_scale;
+		return OK;
+		}
 
 	default:
 		/* give it to the superclass */
@@ -1002,7 +1033,7 @@ start()
 		errx(1, "already started");
 
 	/* create the driver */
-	g_dev = new SDP600(SDP600_BUS);
+	g_dev = new SDP600(SDP600_BUS, SDP600_ADDRESS, SDP_DEVICE_PATH);
 
 	if (g_dev == nullptr)
 		goto fail;
@@ -1011,7 +1042,7 @@ start()
 		goto fail;
 
 	/* set the poll rate to default, starts automatic data collection */
-	fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
+	fd = open(SDP_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		goto fail;
@@ -1038,10 +1069,10 @@ test()
 	ssize_t sz;
 	int ret;
 
-	int fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
+	int fd = open(SDP_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
-		err(1, "%s open failed (try 'SDP600 start' if the driver is not running)", AIRSPEED_BASE_DEVICE_PATH);
+		err(1, "%s open failed (try 'SDP600 start' if the driver is not running)", SDP_DEVICE_PATH);
 
 	/* do a simple demand read */
 	sz = read(fd, &report, sizeof(report));
@@ -1097,7 +1128,7 @@ test()
 void
 reset()
 {
-	int fd = open(AIRSPEED_BASE_DEVICE_PATH, O_RDONLY);
+	int fd = open(SDP_DEVICE_PATH, O_RDONLY);
 
 	if (fd < 0)
 		err(1, "failed ");
