@@ -298,6 +298,7 @@ unset GPS
 #
 # Start the Commander (needs to be this early for in-air-restarts)
 #
+usleep 50000 # Magic wait to give airspeed time such that it can pass the preflight check
 commander start
 
 #####################################################
