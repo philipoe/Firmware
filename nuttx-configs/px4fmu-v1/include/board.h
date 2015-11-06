@@ -216,8 +216,8 @@
  * CAN2 is routed to the expansion connector.
  */
 // Disable the can driver, we need the SPI function on this pin (ASL)
-//#define GPIO_CAN2_RX	GPIO_CAN2_RX_1
-//#define GPIO_CAN2_TX	GPIO_CAN2_TX_1
+#define GPIO_CAN2_RX	GPIO_CAN2_RX_1
+#define GPIO_CAN2_TX	GPIO_CAN2_TX_1
 
 /*
  * I2C
