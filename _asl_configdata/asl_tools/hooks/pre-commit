@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+
+import commands
+import datetime
+import imp
+import os
+import platform
+import subprocess
+
+def gandalf():
+    print "                           ,---.\n" \
+        "                          /    |\n" \
+        "                         /     |\n" \
+        "                        /      |\n" \
+        "                       /       |\n" \
+        "                  ___,'        |\n" \
+        "                <  -'          :\n" \
+        "                 `-.__..--'``-,_\_\n" \
+        "                    |o/ <o>` :,.)_`>\n" \
+        "                    :/ `     ||/)\n" \
+        "                    (_.).__,-` |\\\n" \
+        "                    /( `.``   `| :\n" \
+        "                    \'`-.)  `  ; ;\n" \
+        "                    | `       /-<\n" \
+        "                    |     `  /   `.\n" \
+        "    ,-_-..____     /|  `    :__..-'\\\n" \
+        "   /,'-.__\\\\  ``-./ :`      ;       \\\n" \
+        "   `\ `\  `\\\\  \ :  (   `  /  ,   `. \\\n" \
+        "     \` \   \\\\   |  | `   :  :     .\ \\\n" \
+        "      \ `\_  ))  :  ;     |  |      ): :\n" \
+        "     (`-.-'\ ||  |\ \   ` ;  ;       | |\n" \
+        "      \-_   `;;._   ( `  /  /_       | |\n" \
+        "       `-.-.// ,'`-._\__/_,'         ; |\n" \
+        "          \:: :     /     `     ,   /  |\n" \
+        "           || |    (        ,' /   /   |\n" \
+        "           ||                ,'   /    |"
+    return
+
+def darth():
+    print "\n" \
+          "           _.-'~~~~~~`-._\n" \
+          "          /      ||      \\\n" \
+          "         /       ||       \\\n" \
+          "        |        ||        |\n" \
+          "        | _______||_______ |\n" \
+          "        |/ ----- \\/ ----- \\|\n" \
+          "       /  (     )  (     )  \\\n" \
+          "      / \\  ----- () -----  / \\\n" \
+          "     /   \\      /||\\      /   \\\n" \
+          "    /     \\    /||||\\    /     \\\n" \
+          "   /       \\  /||||||\\  /       \\\n" \
+          "  /_        \\o========o/        _\\\n" \
+          "    `--...__|`-._  _.-'|__...--'\n" \
+          "            |    `'    |" \
+          "\n"
+    return
+
+def prevent_commits_to_master():
+               
+    if platform.system() == 'Windows':
+      p1 = subprocess.Popen(["git","branch"], stdout = subprocess.PIPE)
+      p2 = subprocess.Popen(["grep","'*'"], stdin = p1.stdout, stdout = subprocess.PIPE)
+      p1.stdout.close()
+      p3 = subprocess.Popen(["tr","-d","'\n'"], stdin = p2.stdout, stdout = subprocess.PIPE)
+      p2.stdout.close()
+      p4 = subprocess.Popen(["sed","-e","s/* //"], stdin = p3.stdout, stdout = subprocess.PIPE)
+      p3.stdout.close()
+      res,status = p4.communicate()
+      #res = subprocess.check_output(cmd);
+    elif platform.system() == 'Linux':
+      cmd = 'git branch | grep "*" | sed "s/* //"'
+      res,status = commands.getstatusoutput(cmd)
+    else:
+      print "ERROR, your system type could not be detected."
+    
+    if res == 'master':
+        darth()
+        print "\n*** COMMITS DIRECTLY TO MASTER ARE NOT ALLOWED! ***\n\n" \
+            "Please switch to a new branch to commit your changes. Then push this\n" \
+            "branch to github and create a pull request against master on github. See:\n" \
+            " - https://github.com/ethz-asl/px4_asl/blob/master/README.md#guidelines \n" \
+            " - https://github.com/ethz-asl/programming_guidelines/wiki/Code-review-process"
+        exit(1)
+    return
+
+def main():
+    prevent_commits_to_master()
+    
+    exit(0)
+
+if __name__ == "__main__":
+    main()
+
