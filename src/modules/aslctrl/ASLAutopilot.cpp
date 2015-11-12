@@ -547,7 +547,7 @@ int ASLAutopilot::HandleRCLoss(void)
 
 			//Set RTL references
 			ctrldata->RollAngleRef = 12.0f*DEG2RAD;		// Loiter in right-turn circle
-			ctrldata->PitchAngleRef = -3.0f*DEG2RAD;		// Descend slowly
+			ctrldata->PitchAngleRef = 0.0f*DEG2RAD;		// Descend slowly
 			subs.manual_sp.z = 0.0f;					// Deactivate throttle to descend
 			subs.manual_sp.aux2 = 0.0f;					// TODO: This gives problems, does not put throttle to zero. See TF11 TODOs
 			ctrldata->uThrot = 0.0f;
