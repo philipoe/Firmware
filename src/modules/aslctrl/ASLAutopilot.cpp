@@ -36,6 +36,8 @@ ASLAutopilot::ASLAutopilot() :
 	ctrldata->timestamp=hrt_absolute_time();
 	params=&subs.aslctrl_params;
 
+	lastTime_MotorOK = hrt_absolute_time();
+
 	bRunOnce=false;
 	initialized=true;
 }
@@ -328,6 +330,20 @@ void ASLAutopilot::update()
 		subs.actuators.control[CH_AUX] = ctrldata->uThrot2;
 	}
 
+	//******************************************************************************************************************
+	//*** SYSTEM INTEGRITY CHECKS
+	//******************************************************************************************************************
+	// Check 1: Motor functionality
+	if(fabsf(params->IThrotWarn) > 0.01f) {
+		if(fabsf(subs.sensor_power.adc121_cspb_amp) < fabsf(params->IThrotWarn) && ctrldata->uThrot > 0.95f * params->throttle_max) {
+			if(hrt_elapsed_time(&lastTime_MotorOK) > 5000000) {
+				mavlink_log_critical(mavlink_fd, "[aslctrl] Potential motor failure\n")
+				lastTime_MotorOK = hrt_absolute_time();
+			}
+		}
+		else lastTime_MotorOK = hrt_absolute_time();
+	}
+
 	//Debug
 	if ((counter % 20 == 0) && (params->ASLC_DEBUG==1)) {
 		printf("UMIXED actuators[1-6]: %7.4f %7.4f %7.4f %7.4f %7.4f %7.4f\n",
@@ -531,7 +547,7 @@ int ASLAutopilot::HandleRCLoss(void)
 
 			//Set RTL references
 			ctrldata->RollAngleRef = 12.0f*DEG2RAD;		// Loiter in right-turn circle
-			ctrldata->PitchAngleRef = -3.0f*DEG2RAD;		// Descend slowly
+			ctrldata->PitchAngleRef = 0.0f*DEG2RAD;		// Descend slowly
 			subs.manual_sp.z = 0.0f;					// Deactivate throttle to descend
 			subs.manual_sp.aux2 = 0.0f;					// TODO: This gives problems, does not put throttle to zero. See TF11 TODOs
 			ctrldata->uThrot = 0.0f;

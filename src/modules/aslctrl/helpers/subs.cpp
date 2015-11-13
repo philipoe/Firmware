@@ -38,6 +38,7 @@ int subscriptions::init(void)
 	memset(&ekf, 0, sizeof(ekf));
 	memset(&home_pos, 0, sizeof(home_pos));
 	memset(&airspeed, 0, sizeof(airspeed));
+	memset(&sensor_power, 0, sizeof(sensor_power));
 
 	//Inputs
 	/* subscribe */
@@ -53,6 +54,7 @@ int subscriptions::init(void)
 	ekf_sub = orb_subscribe(ORB_ID(state_estimator_EKF_parameters));
 	home_pos_sub = orb_subscribe(ORB_ID(home_position));
 	airspeed_sub = orb_subscribe(ORB_ID(airspeed));
+	sensor_power_sub = orb_subscribe(ORB_ID(sensor_power));
 
 	//Outputs
 	/* publish actuator controls */
@@ -92,6 +94,7 @@ int subscriptions::get_inputs(void)
 	orb_copy(ORB_ID(state_estimator_EKF_parameters), ekf_sub, &ekf);
 	orb_copy(ORB_ID(home_position), home_pos_sub, &home_pos);
 	orb_copy(ORB_ID(airspeed), airspeed_sub, &airspeed);
+	orb_copy(ORB_ID(sensor_power), sensor_power_sub, &sensor_power);
 
 	vehicle_status_s temp=vstatus;
 	orb_copy(ORB_ID(vehicle_status), vstatus_sub, &vstatus);
@@ -348,6 +351,10 @@ int subscriptions::update_aslctrl_params(void)
 	param_get(handle, &(aslctrl_params.throttle_slewrate));
 	handle = param_find("FW_T_ThrILim");
 	param_get(handle, &(aslctrl_params.throttle_ILim));
+
+	// System Integrity checks
+	handle = param_find("SAFE_IThrotWarn");
+	param_get(handle, &(aslctrl_params.IThrotWarn));
 
 	return 0;
 }

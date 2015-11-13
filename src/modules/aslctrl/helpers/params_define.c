@@ -10,14 +10,14 @@
 //*** ASLCTRL GENERAL parameters
 //***************************************************************************
 
-PARAM_DEFINE_INT32(ASLC_DEBUG, 0);				// Enable Output Debugging Info (1=yes, 0=no)
+PARAM_DEFINE_INT32(ASLC_DEBUG, 0);				// Enable Output Debugging Info (0=no debug information, >0 with debug information)
 PARAM_DEFINE_INT32(ASLC_GainSch_E, 0);			// Enable Gain Scheduling on Error (1=yes, 0=no)
 PARAM_DEFINE_INT32(ASLC_GainSch_Q, 0);			// Enable Gain Scheduling on Dynamic Pressure/Airspeed (1=yes, 0=no)
-PARAM_DEFINE_INT32(ASLC_StallProt, 0);			// Enable Gain Scheduling on Error (1=yes, 0=no)
-PARAM_DEFINE_INT32(ASLC_VelCtrl, 0);			// Enable Gain Scheduling on Airspeed (1=yes, 0=no)
-PARAM_DEFINE_INT32(ASLC_OnRCLoss, 0);			// Sets action to take when RC signal is lost
+PARAM_DEFINE_INT32(ASLC_StallProt, 0);			// Enable stall protection (1=yes, 0=no)
+PARAM_DEFINE_INT32(ASLC_VelCtrl, 0);			// Select velocity and altitude controller
+PARAM_DEFINE_INT32(ASLC_OnRCLoss, 2);			// Sets action to take when RC signal is lost
 PARAM_DEFINE_INT32(ASLC_OvSpdProt, 0);			// Activate over-speed protection (0=no, >=1 = yes)
-PARAM_DEFINE_INT32(ASLC_CoordTurn, 0);			// Enable coordinated turns
+PARAM_DEFINE_INT32(ASLC_CoordTurn, 0);			// Enable coordinated turns (1=yes, 0=no)
 
 PARAM_DEFINE_INT32(ASLC_CtrlType, 0);
 // ASLC_CtrlType: IF multiple controllers are implemented, this defines the controller type to use, i.e.
@@ -155,4 +155,7 @@ PARAM_DEFINE_FLOAT(FW_T_HRATE_FF, 0.0f);
 PARAM_DEFINE_FLOAT(FW_T_SRATE_P, 0.05f);
 PARAM_DEFINE_FLOAT(FW_T_THRSLEW, 0.00f);	//Added
 PARAM_DEFINE_FLOAT(FW_T_ThrILim, 0.00f);	//Added
+
+// SYSTEM INTEGRITY CHECKS
+PARAM_DEFINE_FLOAT(SAFE_IThrotWarn, 0.0f);	// Motor failure warning based on an expected motor current. Default is warning off (param = 0.0)
 

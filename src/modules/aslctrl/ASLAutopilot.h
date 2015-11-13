@@ -70,4 +70,6 @@ private:
 
 	int counter;
 	int mavlink_fd;		//A mavlink file descriptor for debugging/user notification
+
+	uint64_t lastTime_MotorOK;
 };

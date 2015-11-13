@@ -2348,73 +2348,6 @@ protected:
 	}
 };
 
-class MavlinkStreamAslctrlDebug : public MavlinkStream
-{
-public:
-	const char *get_name() const
-	{
-		return MavlinkStreamAslctrlDebug::get_name_static();
-	}
-
-	static const char *get_name_static()
-	{
-		return "ASLCTRL_DEBUG";
-	}
-
-	uint8_t get_id()
-	{
-		return MAVLINK_MSG_ID_ASLCTRL_DEBUG;
-	}
-
-	static MavlinkStream *new_instance(Mavlink *mavlink)
-	{
-		return new MavlinkStreamAslctrlDebug(mavlink);
-	}
-
-	unsigned get_size()
-	{
-		return MAVLINK_MSG_ID_ASLCTRL_DEBUG_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
-	}
-
-private:
-	MavlinkOrbSubscription *_aslctrl_data_sub;
-	uint64_t _aslctrl_debug_time;
-
-	/* do not allow top copying this class */
-	MavlinkStreamAslctrlDebug(MavlinkStreamAslctrlDebug &);
-	MavlinkStreamAslctrlDebug& operator = (const MavlinkStreamAslctrlDebug &);
-
-protected:
-	explicit MavlinkStreamAslctrlDebug(Mavlink *mavlink) : MavlinkStream(mavlink),
-		_aslctrl_data_sub(_mavlink->add_orb_subscription(ORB_ID(aslctrl_data))),
-		_aslctrl_debug_time(0)
-	{}
-
-	void send(const hrt_abstime t)
-	{
-		struct aslctrl_data_s aslctrl_data;
-
-		if (_aslctrl_data_sub->update(&_aslctrl_debug_time, &aslctrl_data)) {
-
-			mavlink_aslctrl_debug_t msg;
-
-			msg.i32_1 = 0;
-			msg.f_1 = 0.0f;
-			msg.f_2 = aslctrl_data.f_GainSch_Q;
-			msg.f_3 = aslctrl_data.P_kP_GainSch_E;
-			msg.f_4 = aslctrl_data.R_kP_GainSch_E;
-			msg.f_5 = aslctrl_data.PitchAngleRefCT * M_RAD_TO_DEG_F;
-			msg.f_6 = 0.0f;
-			msg.f_7 = 0.0f;
-			msg.f_8 = 0.0f;
-			msg.i8_1 = 0;
-			msg.i8_2 = 0;
-
-			_mavlink->send_message(MAVLINK_MSG_ID_ASLCTRL_DEBUG, &msg);
-		}
-	}
-};
-
 class MavlinkStreamAslmpptData : public MavlinkStream
 {
 public:
@@ -2714,7 +2647,6 @@ const StreamListItem *streams_list[] = {
 	new StreamListItem(&MavlinkStreamCameraCapture::new_instance, &MavlinkStreamCameraCapture::get_name_static),
 	new StreamListItem(&MavlinkStreamDistanceSensor::new_instance, &MavlinkStreamDistanceSensor::get_name_static),
 	new StreamListItem(&MavlinkStreamAslctrlData::new_instance, &MavlinkStreamAslctrlData::get_name_static),
-	new StreamListItem(&MavlinkStreamAslctrlDebug::new_instance, &MavlinkStreamAslctrlDebug::get_name_static),
 	new StreamListItem(&MavlinkStreamAslmpptData::new_instance, &MavlinkStreamAslmpptData::get_name_static),
 	new StreamListItem(&MavlinkStreamAslpowerData::new_instance, &MavlinkStreamAslpowerData::get_name_static),
 	new StreamListItem(&MavlinkStreamSensBatmonData::new_instance, &MavlinkStreamSensBatmonData::get_name_static),
