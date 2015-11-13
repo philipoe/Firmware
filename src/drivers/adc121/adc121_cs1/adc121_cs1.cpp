@@ -323,8 +323,12 @@ ADC121_CS1::probe_address(uint8_t address)
 	set_address(address);
 
 	/* send reset command */
-	if (OK != current_measurement())
-		return -EIO;
+	uint8_t ptr = CONV_RES_ADD;
+
+	if (OK != transfer(&ptr, 1, nullptr, 2)) {
+			perf_count(_comms_errors);
+			return -EIO;
+		}
 
 	/* Initialization functions: */
 
