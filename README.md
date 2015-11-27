@@ -9,12 +9,12 @@ This repository follows standard PX4 and ASL coding guidelines, most notably a s
 
 ###Branches###
  - stable: Current stable release, flight tested
- - master: Current main release, i.e. under development but bench-tested and thus operational. Direct pushes to master are not possible, so use Pull Requests (PR) to contribute to master (see below!).
+ - master: Current main release, i.e. under development but bench-tested and thus operational. Please do not push directly to master, but use Pull Requests (PR) to contribute to master (see below!).
  - features/MYFEATURENAME: A new feature branch. All new features shall be added like this.
  - fix/MYFIX: A new fix. All new fixes shall be added like this.
 
 ###Commits###
- - Commit Target: Direct commits to master are _NOT allowed_ and will be rejected! Please create a new branch (fix/feature/...), push to github, and create a pull request w.r.t. master. This follows the standard code review process at ASL (see https://github.com/ethz-asl/programming_guidelines/wiki/Code-review-process)
+ - Commit Target: Direct commits to master are _NOT allowed_ ! Please create a new branch (fix/feature/...), push to github, and create a pull request w.r.t. master. This follows the standard code review process at ASL (see https://github.com/ethz-asl/programming_guidelines/wiki/Code-review-process)
  - Commit Message: Please use the "Module: Message" format, where Module is the approximate location or scope of your change (e.g. Mavlink, aslctrl, sensors) and Message is your ordinary message.
  
 ###Other:###
@@ -23,7 +23,6 @@ This repository follows standard PX4 and ASL coding guidelines, most notably a s
  
 ###Installation:###
  - `git clone` this repository (e.g. into ../PX4/Firmware)
- - In the root of cloned folder (e.g. ../PX4/Firmware), do `sh _asl_configdata/git-init.sh`
  - Do the usual `submodule init` and `submodule update` to update your submodules
  
 ###Resources###

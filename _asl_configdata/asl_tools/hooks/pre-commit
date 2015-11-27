@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Warning: This script is only tested for use with GIT bash. It does currently not work with GIT GUIs.
+
 import commands
 import datetime
 import imp
