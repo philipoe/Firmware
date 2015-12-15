@@ -46,6 +46,27 @@ MODULES		+= drivers/px4flow
 MODULES		+= drivers/oreoled
 MODULES		+= drivers/gimbal
 
+MODULES		+= drivers/adis16448
+MODULES		+= drivers/adc121/adc121_cs1
+MODULES		+= drivers/adc121/adc121_cs2
+MODULES		+= drivers/adc121/adc121_cspb
+MODULES		+= drivers/adc121/adc121_vspb
+MODULES		+= drivers/bat_mon
+MODULES		+= drivers/bat_mon/bat_mon_0
+MODULES		+= drivers/bat_mon/bat_mon_1
+MODULES		+= drivers/bat_mon/bat_mon_2
+MODULES		+= drivers/spv1020
+MODULES		+= drivers/sdp600
+MODULES		+= drivers/lm73
+MODULES		+= drivers/hdim010
+MODULES		+= drivers/ledcnt
+
+#
+# Board support modules
+#
+MODULES		+= modules/i2c_wd
+MODULES		+= modules/px4_hw_wd
+
 #
 # System commands
 #
@@ -78,19 +99,22 @@ MODULES 	+= modules/land_detector
 #
 # Too high RAM usage due to static allocations
 #MODULES		+= modules/attitude_estimator_ekf
-MODULES		+= modules/attitude_estimator_q
-MODULES		+= modules/ekf_att_pos_estimator
-MODULES		+= modules/position_estimator_inav
+#MODULES		+= modules/attitude_estimator_q
+#MODULES		+= modules/ekf_att_pos_estimator
+#MODULES		+= modules/position_estimator_inav
+MODULES		+= modules/state_estimator
+
 
 #
 # Vehicle Control
 #
 #MODULES		+= modules/segway # XXX Needs GCC 4.7 fix
-MODULES		+= modules/fw_pos_control_l1
-MODULES		+= modules/fw_att_control
-MODULES		+= modules/mc_att_control
-MODULES		+= modules/mc_pos_control
-MODULES 	+= modules/vtol_att_control
+#MODULES		+= modules/fw_pos_control_l1
+#MODULES		+= modules/fw_att_control
+#MODULES		+= modules/mc_att_control
+#MODULES		+= modules/mc_pos_control
+#MODULES 		+= modules/vtol_att_control
+MODULES		+= modules/aslctrl
 
 #
 # Logging
