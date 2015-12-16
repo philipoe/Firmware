@@ -64,8 +64,8 @@ MODULES		+= drivers/ledcnt
 #
 # Board support modules
 #
-MODULES		+= modules/i2c_wd
-MODULES		+= modules/px4_hw_wd
+#######MODULES		+= modules/i2c_wd
+#######MODULES		+= modules/px4_hw_wd
 
 #
 # System commands

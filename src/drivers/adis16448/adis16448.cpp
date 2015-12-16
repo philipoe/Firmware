@@ -1753,8 +1753,12 @@ start()
 		errx(0, "already started");
 
 	/* create the driver */
-
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 	*g_dev_ptr = new ADIS16448(2, path_accel, path_gyro, path_mag, (spi_dev_e)PX4_SPIDEV_ADIS);
+#endif
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+	*g_dev_ptr = new ADIS16448(PX4_SPI_BUS_EXT, path_accel, path_gyro, path_mag, (spi_dev_e)PX4_SPIDEV_ADIS);
+#endif
 
 	if (*g_dev_ptr == nullptr)
 		goto fail;
