@@ -710,11 +710,17 @@ ADIS16448::probe()
 {
 	uint16_t serial_number;
 
-	/* recognize product serial number */
-	serial_number = (read_reg16(ADIS16334_SERIAL_NUMBER) & 0xfff); /* Ineffectual reading cycles at the beginning (needed) */
-
+	/* retry 5 time to get the ADIS16448 PRODUCT ID number */
+	for (int i = 0; i < 5; i++) {
 	/* recognize product ID */
 	_product = read_reg16(ADIS16448_PRODUCT_ID);
+
+	if (_product != 0)
+		break;
+	}
+
+	/* recognize product serial number */
+	serial_number = (read_reg16(ADIS16334_SERIAL_NUMBER) & 0xfff);
 
 	/* verify product ID */
 	switch (_product) {
