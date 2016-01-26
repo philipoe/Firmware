@@ -37,7 +37,6 @@
 
 MODULE_COMMAND	= adis16448
 
-# XXX seems excessive, check if 2048 is not sufficient
-MODULE_STACKSIZE	 = 4096
+MODULE_STACKSIZE	 = 2048
 SRCS		         = adis16448.cpp
 MAXOPTIMIZATION	 	 = -Os

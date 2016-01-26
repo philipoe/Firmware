@@ -44,7 +44,7 @@
  * @author Julian Oes <julian@px4.io>
  * @author Thomas Gubler <thomas@px4.io>
  * @author Anton Babushkin <anton@px4.io>
- * @author Amir   Melzer <amir.melzer@mavt.ethz.ch>
+ * @author Amir Melzer <amir.melzer@mavt.ethz.ch>
  */
 
 #include <nuttx/config.h>
