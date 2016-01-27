@@ -2,9 +2,9 @@
  *
  *   Copyright (C) 2012 PX4 Development Team. All rights reserved.
  *   Author:
- *           Lorenz Meier <lm@inf.ethz.ch>
- *   		 Stefan Leutenegger <stefan.leutenegger@mavt.ethz.ch>
  *           Amir Melzer <amir.melzer@mavt.ethz.ch>
+ *   		 Stefan Leutenegger <stefan.leutenegger@mavt.ethz.ch>
+ *           Lorenz Meier <lm@inf.ethz.ch>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -146,7 +146,7 @@ static float R_mvel[9]			= {0.25f, 0.0f,  0.0f,
 							   	   0.0f,  0.25f, 0.0f,
 							   	   0.0f,  0.0f,  0.25f};
 
-static float mag_date 			= 2015.6f;							/* Decimal date for calculating the earth's magnetic field */
+static float mag_date 			= 2015.11f;							/* Decimal date for calculating the earth's magnetic field */
 static float TAS[3] 		  	= {0.0f,0.0f,0.0f};					/* True air speed */
 static float B_N[3] 		  	= {0.0f,0.0f,0.0f};					/* Earth's magnetic field vector [nT] */
 
@@ -262,19 +262,14 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 	struct sensor_combined_s *raw;
 	raw = (struct sensor_combined_s *) calloc(1,sizeof(struct sensor_combined_s));
-	//memset(&raw, 0, sizeof(raw));
 	struct vehicle_attitude_s *att;
 	att = (struct vehicle_attitude_s *) calloc(1,sizeof(struct vehicle_attitude_s));
-	//memset(&att, 0, sizeof(att));
 	struct vehicle_control_mode_s *control_mode;
 	control_mode = (struct vehicle_control_mode_s *) calloc(1,sizeof(struct vehicle_control_mode_s));
-	//memset(&control_mode, 0, sizeof(control_mode));
 	struct vehicle_global_position_s *vehicle_global_pos;
 	vehicle_global_pos = (struct vehicle_global_position_s *) calloc(1,sizeof(struct vehicle_global_position_s));
-	//memset(&vehicle_global_pos, 0, sizeof(vehicle_global_pos));
 	struct state_estimator_EKF_parameters_s *ekf_param;
 	ekf_param = (struct state_estimator_EKF_parameters_s *) calloc(1,sizeof(struct state_estimator_EKF_parameters_s));
-	//memset(&ekf_param, 0, sizeof(ekf_param));
 
 	/* initialize parameter handles */
 	struct state_estimator_params ekf_params;
@@ -283,7 +278,7 @@ int state_estimator_thread_main(int argc, char *argv[])
 	parameters_init(&ekf_param_handles);
 	parameters_update(&ekf_param_handles, &ekf_params);									/* Update EKF parameters for the parameter file */
 
-	mag_date   = (float)ekf_params.mag_date_year + ((float)ekf_params.mag_date_month)/10;
+	mag_date   = (float)ekf_params.mag_date_year + ((float)ekf_params.mag_date_month)/12;
 
 	uint64_t last_measurement = 0;
 
@@ -295,7 +290,6 @@ int state_estimator_thread_main(int argc, char *argv[])
 	int sub_raw = orb_subscribe(ORB_ID(sensor_combined));
 
 	/* rate-limit raw data updates to 100Hz */
-	//orb_set_interval(sub_raw, 8);
 	orb_set_interval(sub_raw, 4);
 
 	/* subscribe to param changes */
@@ -369,7 +363,7 @@ int state_estimator_thread_main(int argc, char *argv[])
 	int vehicle_gps_sub = orb_subscribe(ORB_ID(vehicle_gps_position));
 
 	/* wait until GPS signal turns valid, if not succeed deliver the last valid position  */
-	static uint32_t GPS_disappointment_max = 10;												/// <--- increase the GPS_disappointment_max to larger value after debugging !!!!!!
+	static uint32_t GPS_disappointment_max = 10;												//TODO: increase the GPS_disappointment_max to larger value after debugging
 	static uint32_t GPS_disappointment = 0;
 
 	while (gps.fix_type < 3) {
@@ -670,8 +664,6 @@ int state_estimator_thread_main(int argc, char *argv[])
 						sensor_last_timestamp[4] = raw->differential_pressure_timestamp;
 					}
 					dbaro_b = (raw->differential_pressure_pa>0) ? raw->differential_pressure_pa : 0.0f;				/* take only the positive values of the dbaro 			 */
-					//dbaro_b = raw->differential_pressure_pa - dbaro_initial;										/* removed! (remove dbaro constant measurement bias) 	 */
-					//dbaro_b = (dbaro_b>0) ? dbaro_b : 0.0f;														/* removed! (take only the positive values of the dbaro) */
 
 					/* check for new amb_temp measurements */
 					if (sensor_last_timestamp[5] != raw->amb_temp_timestamp) {
@@ -763,8 +755,8 @@ int state_estimator_thread_main(int argc, char *argv[])
 
 					/* GPS position update*/
 					if (update_vect[6] == 1) {
-						gps_pos[0]*=1e-7l*DEG2RAD;														/*Convert to GPS LAT position to rad */
-						gps_pos[1]*=1e-7l*DEG2RAD;														/*Convert to GPS LON position to rad */
+						gps_pos[0]*=1e-7l*DEG2RAD;															/*Convert to GPS LAT position to rad */
+						gps_pos[1]*=1e-7l*DEG2RAD;															/*Convert to GPS LON position to rad */
 						wind_NE[0] = 0.99f*wind_NE[0] + 0.01f*x_state->w[0];								/*Correction for the wind propagation*/
 						wind_NE[1] = 0.99f*wind_NE[1] + 0.01f*x_state->w[1];								/*Correction for the wind propagation*/
 						updatePosition(x_state, P_apost, gps_pos, R_m, GPS_outage, GPS_outage, true);
@@ -787,47 +779,12 @@ int state_estimator_thread_main(int argc, char *argv[])
 						continue;
 					}
 
-					//if (last_data > 0 && raw->timestamp - last_data > 12000) printf("[state estimator] sensor data missed! (%llu)\n", raw->timestamp - last_data);    // temporary comment
-					//last_data = raw->timestamp;
-
 					/* send estimator data data out */
 					att->timestamp = raw->timestamp;
 					att->roll  = euler[0];
 					att->pitch = euler[1];
 					att->yaw   = euler[2];
 
-#if 0
-					printf("State estimator Euler angles (dt,r,p,y):%llu, %3.6f, %3.6f, %3.6f  |", att->timestamp, (double) att->roll, (double) att->pitch, (double) att->yaw );
-					printf("Update: ");
-					(update_vect[2]== 1)? (printf("M")):(printf("_")) ;
-					(update_vect[4]== 1)? (printf("D")):(printf("_")) ;
-					(update_vect[6]== 1)? (printf("P")):(printf("_")) ;
-					(update_vect[7]== 1)? (printf("V")):(printf("_")) ;
-
-					printf("|States:[ %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f  ]|",
-								(double)x_state->p[0],(double)x_state->p[1],(double)x_state->p[2],
-								(double)x_state->q_NS[0],(double)x_state->q_NS[1],(double)x_state->q_NS[2],(double)x_state->q_NS[3],
-								(double)x_state->v_N[0],(double)x_state->v_N[1],(double)x_state->v_N[2],
-								(double)x_state->b_a[0],(double)x_state->b_a[1],(double)x_state->b_a[2],
-								(double)x_state->b_g[0],(double)x_state->b_g[1],(double)x_state->b_g[2],
-								(double)x_state->QFF,
-								(double)x_state->w[0],(double)x_state->w[1],(double)x_state->w[2],
-								(double)x_state->K
-							);
-
-					//printf("|Variance:[ %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f, %3.6f ]|",
-					//							P_apost[0], P_apost[21], P_apost[42], P_apost[63], P_apost[84], P_apost[105], P_apost[126], P_apost[147], P_apost[168], P_apost[189],
-					//							P_apost[210], P_apost[231], P_apost[252], P_apost[273], P_apost[294], P_apost[315], P_apost[336], P_apost[357], P_apost[378], P_apost[399]);
-
-					printf("\n");
-
-					//printf("Update rate: %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| %3.6f| , dt = %3.6f |\n",(double) sensor_update_hz[0],(double) sensor_update_hz[1],(double) sensor_update_hz[2],(double) sensor_update_hz[3],(double) sensor_update_hz[4],(double) sensor_update_hz[5],(double) sensor_update_hz[6],(double) sensor_update_hz[7],(double) dt);  /// delete!!!!!!!!!!
-
-					//printf("dt = %3.6f |\n",(double) dt);  /// delete!!!!!!!!!!
-					printf("dt = %3.6f | %3.6f\n",(double) sensor_update_hz[6], (double) update_vect[6]);  /// delete!!!!!!!!!!
-
-					printf("%d %d %d %d %d %d %d %d\n",update_vect[0],update_vect[1],update_vect[2],update_vect[3],update_vect[4],update_vect[5],update_vect[6],update_vect[7]);  /// delete!!!!!!!!!!
-#endif
 					att->rollspeed  = raw->gyro_rad_s[0] - x_state->b_g[0];			/* x angular velocity with gyro bias deduction */
 					att->pitchspeed = raw->gyro_rad_s[1] - x_state->b_g[1];			/* y angular velocity with gyro bias deduction */
 					att->yawspeed   = raw->gyro_rad_s[2] - x_state->b_g[2];			/* z angular velocity with gyro bias deduction */
