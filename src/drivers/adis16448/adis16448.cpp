@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2012, 2013 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2016 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,9 +36,10 @@
  *
  * Driver for the Analog device ADIS16448 connected via SPI.
  *
+ * @author Amir Melzer <amir.melzer@mavt.ethz.ch>
  * @author Andrew Tridgell
  * @author Pat Hickey
- * @author: Amir Melzer <amir.melzer@mavt.ethz.ch>
+ * @author Lorenz Meier <lm@inf.ethz.ch>
  *
  */
 
@@ -218,7 +219,6 @@ private:
 	struct gyro_scale	_gyro_scale;
 	float				_gyro_range_scale;
 	float				_gyro_range_rad_s;
-	//orb_advert_t		_gyro_topic;
 
 	RingBuffer			*_accel_reports;
 
@@ -226,19 +226,14 @@ private:
 	float				_accel_range_scale;
 	float				_accel_range_m_s2;
 	orb_advert_t		_accel_topic;
-	//orb_id_t			_accel_orb_id;
 	int					_accel_orb_class_instance;
 	int					_accel_class_instance;
-
 
 	RingBuffer			*_mag_reports;
 
 	struct mag_scale	_mag_scale;
 	float				_mag_range_scale;
 	float				_mag_range_mgauss;
-	//orb_advert_t		_mag_topic;
-	//orb_id_t			_mag_orb_id;
-	//int					_mag_class_instance;
 
 	unsigned			_sample_rate;
 	perf_counter_t		_accel_reads;
@@ -418,7 +413,6 @@ protected:
 private:
 	ADIS16448			*_parent;
 	orb_advert_t		_gyro_topic;
-	//orb_id_t			_gyro_orb_id;
 	int					_gyro_orb_class_instance;
 	int					_gyro_class_instance;
 
@@ -448,7 +442,6 @@ protected:
 private:
 	ADIS16448			*_parent;
 	orb_advert_t		_mag_topic;
-	//orb_id_t			_mag_orb_id;
 	int					_mag_orb_class_instance;
 	int					_mag_class_instance;
 
@@ -476,16 +469,12 @@ ADIS16448::ADIS16448(int bus, const char *path_accel, const char *path_gyro, con
 	_accel_range_scale(0.0f),
 	_accel_range_m_s2(0.0f),
 	_accel_topic(-1),
-	//_accel_orb_id(nullptr),
 	_accel_orb_class_instance(-1),
 	_accel_class_instance(-1),
 	_mag_reports(nullptr),
 	_mag_scale{},
 	_mag_range_scale(0.0f),
 	_mag_range_mgauss(0.0f),
-	//_mag_topic(-1),
-	//_mag_orb_id(nullptr),
-	//_mag_class_instance(-1),
 	_sample_rate(100),																			/* Init sampling frequency set to 100Hz */
 	_accel_reads(perf_alloc(PC_COUNT, "adis16448_accel_read")),
 	_gyro_reads(perf_alloc(PC_COUNT, "adis16448_gyro_read")),
@@ -560,9 +549,6 @@ ADIS16448::~ADIS16448()
 
 	if (_accel_class_instance != -1)
 		unregister_class_devname(ACCEL_BASE_DEVICE_PATH, _accel_class_instance);
-
-	//if (_mag_class_instance != -1)
-	//	unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
 
 	/* delete the perf counter */
 	perf_free(_sample_perf);
@@ -1613,7 +1599,6 @@ ADIS16448_gyro::ADIS16448_gyro(ADIS16448 *parent, const char *path) :
 	CDev("ADIS16448_gyro", path),
 	_parent(parent),
 	_gyro_topic(-1),
-	//_gyro_orb_id(nullptr),
 	_gyro_orb_class_instance(-1),
 	_gyro_class_instance(-1)
 {
@@ -1672,7 +1657,6 @@ ADIS16448_mag::ADIS16448_mag(ADIS16448 *parent, const char *path) :
 	CDev("ADIS16448_mag", path),
 	_parent(parent),
 	_mag_topic(-1),
-	//_mag_orb_id(nullptr),
 	_mag_orb_class_instance(-1),
 	_mag_class_instance(-1)
 {
