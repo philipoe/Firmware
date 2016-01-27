@@ -188,12 +188,6 @@ private:
 
 };
 
-/* helper macro for handling report buffer indices */
-//#define INCREMENT(_x, _lim)	do { _x++; if (_x >= _lim) _x = 0; } while(0)
-
-/* helper macro for arithmetic - returns the square of the argument */
-#define POW2(_x)		((_x) * (_x))
-
 /*
  * LM73 internal constants and data structures.
  */
@@ -577,7 +571,7 @@ LM73::temp_measurement()
 			return -EIO;
 			}
 
-	//warnx("measured ambient temperature by the LM73 sensor %3.2f C", (double) temperature);  				// remove display!!!!!!!!
+	//warnx("measured ambient temperature by the LM73 sensor %3.2f C", (double) temperature);  				// remove, use only for debug!
 
 	/* generate a new report */
 	trp.ambient_temperature = temperature;					/* report in °C */

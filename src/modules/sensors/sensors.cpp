@@ -1719,7 +1719,6 @@ Sensors::amb_temp_poll(struct sensor_combined_s &raw)
 		orb_copy(ORB_ID(sensor_lm73), _amb_temp_sub, &amb_temp_report);
 		raw.amb_temp_timestamp = amb_temp_report.timestamp;
 		raw.amb_temp_celcius = amb_temp_report.ambient_temperature; 			// Ambient temperature in degrees celcius
-		//raw.amb_temp_counter++;
 	}
 }
 
