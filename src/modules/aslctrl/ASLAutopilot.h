@@ -43,8 +43,6 @@ public:
 	//int UpdateFilters(const int & counter);
 
 	int HandleRCLoss();
-	int DeMix(void); 			//Demixes Inputs from RC
-	int MixTemp(void); 			//Mixes Autopilot outputs to control surfaces
 	bool OnGround(void);		//Check whether aircraft is on ground
 
 private:
@@ -59,7 +57,7 @@ private:
 
 private:
 	//as per standard on PX4IO, correct ordering to spektrum standard is done in mixer.
-	enum {CH_AIL_R, CH_ELV, CH_RDR, CH_THR_1, CH_FLAPS, CH_AIL_L, CH_AUX, UNUSED2}; //as per standard on PX4IO, correct ordering to
+	enum {CH_AIL_R, CH_ELV, CH_RDR, CH_THR_1, CH_FLAPS, CH_AIL_L, CH_AUX1, CH_AUX2}; //as per standard on PX4IO, correct ordering to
 
 	bool initialized;
 	bool bRunOnce;

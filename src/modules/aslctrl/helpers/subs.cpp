@@ -33,6 +33,7 @@ int subscriptions::init(void)
 	memset(&position_setpoint_triplet, 0, sizeof(position_setpoint_triplet));
 	memset(&manual_sp, 0, sizeof(manual_sp));
 	memset(&actuators, 0, sizeof(actuators));
+	memset(&actuators_zeros, 0, sizeof(actuators_zeros));
 	memset(&param_update, 0, sizeof(param_update));
 	memset(&sensors, 0, sizeof(sensors));
 	memset(&ekf, 0, sizeof(ekf));
@@ -58,10 +59,8 @@ int subscriptions::init(void)
 
 	//Outputs
 	/* publish actuator controls */
-	for (unsigned i = 0; i < actuator_controls_s::NUM_ACTUATOR_CONTROLS; i++) {
-		actuators.control[i] = 0.0f;
-	}
-	actuators_pub = orb_advertise(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, &actuators);
+	actuators_0_pub = orb_advertise(ORB_ID(actuator_controls_0), &actuators_zeros);
+	actuators_1_pub = orb_advertise(ORB_ID(actuator_controls_1), &actuators);
 	aslctrl_params_pub = orb_advertise(ORB_ID(aslctrl_parameters), &aslctrl_params);
 	aslctrl_data_pub = orb_advertise(ORB_ID(aslctrl_data), &aslctrl_data);
 
@@ -385,7 +384,9 @@ int subscriptions::publish_actuator_outputs(void)
 		isfinite(actuators.control[4]) &&
 		isfinite(actuators.control[5]))
 	{
-		orb_publish(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, actuators_pub, &actuators);
+		orb_publish(ORB_ID(actuator_controls_1), actuators_1_pub, &actuators);	// publish the aslctr values
+		orb_publish(ORB_ID(actuator_controls_0), actuators_0_pub, &actuators_zeros);	// publish the 0-value actuator group - triggers PX4IO update
+
 		return 0;
 	}
 	else return -1;
