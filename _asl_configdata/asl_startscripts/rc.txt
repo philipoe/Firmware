@@ -318,7 +318,7 @@ then
 	fi
 fi
 
-if px4io start
+if px4io start nofmu
 then
 	sh /etc/init.d/rc.io
 else
