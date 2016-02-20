@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2012, 2013 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2016 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,9 +36,10 @@
  *
  * Driver for the Analog device ADIS16448 connected via SPI.
  *
+ * @author Amir Melzer <amir.melzer@mavt.ethz.ch>
  * @author Andrew Tridgell
  * @author Pat Hickey
- * @author: Amir Melzer <amir.melzer@mavt.ethz.ch>
+ * @author Lorenz Meier <lm@inf.ethz.ch>
  *
  */
 
@@ -218,7 +219,6 @@ private:
 	struct gyro_scale	_gyro_scale;
 	float				_gyro_range_scale;
 	float				_gyro_range_rad_s;
-	//orb_advert_t		_gyro_topic;
 
 	RingBuffer			*_accel_reports;
 
@@ -226,19 +226,14 @@ private:
 	float				_accel_range_scale;
 	float				_accel_range_m_s2;
 	orb_advert_t		_accel_topic;
-	//orb_id_t			_accel_orb_id;
 	int					_accel_orb_class_instance;
 	int					_accel_class_instance;
-
 
 	RingBuffer			*_mag_reports;
 
 	struct mag_scale	_mag_scale;
 	float				_mag_range_scale;
 	float				_mag_range_mgauss;
-	//orb_advert_t		_mag_topic;
-	//orb_id_t			_mag_orb_id;
-	//int					_mag_class_instance;
 
 	unsigned			_sample_rate;
 	perf_counter_t		_accel_reads;
@@ -418,7 +413,6 @@ protected:
 private:
 	ADIS16448			*_parent;
 	orb_advert_t		_gyro_topic;
-	//orb_id_t			_gyro_orb_id;
 	int					_gyro_orb_class_instance;
 	int					_gyro_class_instance;
 
@@ -448,7 +442,6 @@ protected:
 private:
 	ADIS16448			*_parent;
 	orb_advert_t		_mag_topic;
-	//orb_id_t			_mag_orb_id;
 	int					_mag_orb_class_instance;
 	int					_mag_class_instance;
 
@@ -476,16 +469,12 @@ ADIS16448::ADIS16448(int bus, const char *path_accel, const char *path_gyro, con
 	_accel_range_scale(0.0f),
 	_accel_range_m_s2(0.0f),
 	_accel_topic(-1),
-	//_accel_orb_id(nullptr),
 	_accel_orb_class_instance(-1),
 	_accel_class_instance(-1),
 	_mag_reports(nullptr),
 	_mag_scale{},
 	_mag_range_scale(0.0f),
 	_mag_range_mgauss(0.0f),
-	//_mag_topic(-1),
-	//_mag_orb_id(nullptr),
-	//_mag_class_instance(-1),
 	_sample_rate(100),																			/* Init sampling frequency set to 100Hz */
 	_accel_reads(perf_alloc(PC_COUNT, "adis16448_accel_read")),
 	_gyro_reads(perf_alloc(PC_COUNT, "adis16448_gyro_read")),
@@ -560,9 +549,6 @@ ADIS16448::~ADIS16448()
 
 	if (_accel_class_instance != -1)
 		unregister_class_devname(ACCEL_BASE_DEVICE_PATH, _accel_class_instance);
-
-	//if (_mag_class_instance != -1)
-	//	unregister_class_devname(MAG_DEVICE_PATH, _mag_class_instance);
 
 	/* delete the perf counter */
 	perf_free(_sample_perf);
@@ -710,11 +696,17 @@ ADIS16448::probe()
 {
 	uint16_t serial_number;
 
-	/* recognize product serial number */
-	serial_number = (read_reg16(ADIS16334_SERIAL_NUMBER) & 0xfff); /* Ineffectual reading cycles at the beginning (needed) */
-
+	/* retry 5 time to get the ADIS16448 PRODUCT ID number */
+	for (int i = 0; i < 5; i++) {
 	/* recognize product ID */
 	_product = read_reg16(ADIS16448_PRODUCT_ID);
+
+	if (_product != 0)
+		break;
+	}
+
+	/* recognize product serial number */
+	serial_number = (read_reg16(ADIS16334_SERIAL_NUMBER) & 0xfff);
 
 	/* verify product ID */
 	switch (_product) {
@@ -1607,7 +1599,6 @@ ADIS16448_gyro::ADIS16448_gyro(ADIS16448 *parent, const char *path) :
 	CDev("ADIS16448_gyro", path),
 	_parent(parent),
 	_gyro_topic(-1),
-	//_gyro_orb_id(nullptr),
 	_gyro_orb_class_instance(-1),
 	_gyro_class_instance(-1)
 {
@@ -1666,7 +1657,6 @@ ADIS16448_mag::ADIS16448_mag(ADIS16448 *parent, const char *path) :
 	CDev("ADIS16448_mag", path),
 	_parent(parent),
 	_mag_topic(-1),
-	//_mag_orb_id(nullptr),
 	_mag_orb_class_instance(-1),
 	_mag_class_instance(-1)
 {
@@ -1753,8 +1743,12 @@ start()
 		errx(0, "already started");
 
 	/* create the driver */
-
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 	*g_dev_ptr = new ADIS16448(2, path_accel, path_gyro, path_mag, (spi_dev_e)PX4_SPIDEV_ADIS);
+#endif
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+	*g_dev_ptr = new ADIS16448(PX4_SPI_BUS_EXT, path_accel, path_gyro, path_mag, (spi_dev_e)PX4_SPIDEV_ADIS);
+#endif
 
 	if (*g_dev_ptr == nullptr)
 		goto fail;

@@ -10,6 +10,7 @@
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/actuator_controls_0.h>
+#include <uORB/topics/actuator_controls_1.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_global_position.h>
@@ -67,6 +68,7 @@ public:
 
 	//Output
 	struct actuator_controls_s actuators;
+	struct actuator_controls_s actuators_zeros;
 	struct aslctrl_parameters_s aslctrl_params;
 	struct aslctrl_data_s aslctrl_data;
 
@@ -88,7 +90,7 @@ private:
 	int sensor_power_sub;
 
 	//Output
-	orb_advert_t actuators_pub, aslctrl_params_pub, aslctrl_data_pub;
+	orb_advert_t actuators_0_pub, actuators_1_pub, aslctrl_params_pub, aslctrl_data_pub;
 
 	struct pollfd fds;
 

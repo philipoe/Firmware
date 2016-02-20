@@ -108,14 +108,6 @@ void ASLAutopilot::update()
 	if(ctrldata->aslctrl_mode >= MODE_RCLOSS_MANFAILSAFE && params->ASLC_DEBUG==11) printf("mode: %u, last_mode: %u\n",ctrldata->aslctrl_mode,ctrldata->aslctrl_last_mode);
 
 	//******************************************************************************************************************
-	//*** DEMIX
-	//******************************************************************************************************************
-
-	if(params->DEMIX_Enabled==1) {
-		DeMix();
-	}
-
-	//******************************************************************************************************************
 	//*** MAIN CONTROL LOOP
 	//******************************************************************************************************************
 
@@ -313,22 +305,18 @@ void ASLAutopilot::update()
 	}
 
 	// Step2: Do the actual actuator updates
-	subs.actuators.control[CH_THR_1] = ctrldata->uThrot; 	//Throttle scaling is done in the PX4IO-mixer
-	subs.actuators.control[CH_AIL_R] = ctrldata->uAil;		//Aileron-Differential applied in PX4IO-mixer
+	subs.actuators.control[CH_AIL_L] = ctrldata->uAil;		//Aileron-Differential applied in PX4IO-mixer
 	subs.actuators.control[CH_ELV] = ctrldata->uElev;
 	subs.actuators.control[CH_RDR] = ctrldata->uRud;
-	subs.actuators.control[CH_AIL_L] = ctrldata->uAil;		//Aileron-Differential applied in PX4IO-mixer
+	subs.actuators.control[CH_THR_1] = ctrldata->uThrot;
 
 	//Flaps/Spoilers on CH_FLAPS
-	if((counter%20==0) && (params->ASLC_DEBUG==31)) printf("flap switch: %.3f\n",(double)subs.manual_sp.flaps);
 	if(subs.manual_sp.flaps > 0.5f || ctrldata->bEngageSpoilers) subs.actuators.control[CH_FLAPS] = 1.0f;
 	else if(subs.manual_sp.flaps < -0.5f) subs.actuators.control[CH_FLAPS] = -1.0f;
 	else subs.actuators.control[CH_FLAPS]=0.0f;
 
-	if(0) {
-		//Throttle channel 2 on AUX
-		subs.actuators.control[CH_AUX] = ctrldata->uThrot2;
-	}
+	subs.actuators.control[CH_AIL_R] = ctrldata->uAil;		//Aileron-Differential applied in PX4IO-mixer
+	subs.actuators.control[CH_AUX1] = ctrldata->uThrot;
 
 	//******************************************************************************************************************
 	//*** SYSTEM INTEGRITY CHECKS
@@ -350,14 +338,6 @@ void ASLAutopilot::update()
 				(double)subs.actuators.control[0],(double)subs.actuators.control[1],(double)subs.actuators.control[2],
 				(double)subs.actuators.control[3],(double)subs.actuators.control[4],(double)subs.actuators.control[5]);
 	}
-
-	/////////////////////////////
-	//TEMP ONLY!!
-	if(params->DEMIX_Enabled==1)
-	{
-		MixTemp();
-	}
-	//////////////////////////////
 
 	//Debug
 	if ((counter % 20 == 0) && (params->ASLC_DEBUG==1)) {
@@ -438,49 +418,6 @@ bool MavlinkSendOK(int MsgID)
 	//Checks ok, we can update & send
 	MavlinkMsg_time[MsgID]=hrt_absolute_time();
 	return true;
-}
-
-//DeMixing of the remote inputs, mostly used for senseSoar aircraft
-int ASLAutopilot::DeMix(void)
-{
-	float ch1=subs.manual_sp.y;
-	float ch2=subs.manual_sp.x;
-	float ch4=subs.manual_sp.r;
-	float ch6=subs.manual_sp.aux2;
-
-	//Aileron demixer
-	subs.manual_sp.y=params->DEMIX_F_CH6t1*(ch1+params->DEMIX_CH6t1*ch6);
-
-	//Elevator/Rudder demixer
-	subs.manual_sp.x=params->DEMIX_F_CH2t4*(ch2-params->DEMIX_CH2t4*ch4);
-	subs.manual_sp.r=params->DEMIX_F_CH2t4*(ch2+params->DEMIX_CH2t4*ch4);
-
-	if(params->ASLC_DEBUG!=0) {
-			//printf("ch 1/2/4/6, DMX:uAil, uElev,uRud: %7.4f %7.4f %7.4f %7.4f  ||  %7.4f %7.4f %7.4f\n",ch1,ch2,ch4,ch6,ctrldata->uAil,ctrldata->uElev,ctrldata->uRud);
-	}
-
-	subs.manual_sp.y=limit1(subs.manual_sp.y,1.0f);
-	subs.manual_sp.x=limit1(subs.manual_sp.x,1.0f);
-	subs.manual_sp.r=limit1(subs.manual_sp.r,1.0f);
-
-	return 0;
-}
-
-int ASLAutopilot::MixTemp(void)
-{
-	//Aileron mixer
-	if(ctrldata->uAil>0.0f) { subs.actuators.control[CH_AIL_L] = 0.6f * ctrldata->uAil; }
-	else if (ctrldata->uAil<0.0f) { subs.actuators.control[CH_AIL_R] = 0.6f * ctrldata->uAil; }
-
-	//V-Tail mixer
-	subs.actuators.control[CH_ELV]=(ctrldata->uRud+ctrldata->uElev)/(2.0f*params->DEMIX_F_CH2t4);
-	subs.actuators.control[CH_RDR]=(ctrldata->uRud-ctrldata->uElev)/(2.0f*params->DEMIX_F_CH2t4*params->DEMIX_CH2t4);
-
-	//Throttle mixer
-	subs.actuators.control[CH_THR_1]=ctrldata->uThrot*2.0f-1.0f;
-	subs.actuators.control[CH_AUX]=ctrldata->uThrot2*2.0f-1.0f;
-
-	return 0;
 }
 
 int ASLAutopilot::HandleRCLoss(void)
