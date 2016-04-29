@@ -451,6 +451,7 @@ int ASLAutopilot::HandleRCLoss(void)
 			subs.position_setpoint_triplet.current.alt = subs.home_pos.alt + 100.0f;
 			subs.position_setpoint_triplet.current.lat = subs.home_pos.lat;
 			subs.position_setpoint_triplet.current.lon = subs.home_pos.lon;
+			subs.position_setpoint_triplet.current.valid = true;
 			//printf("RTL alt:%.2f\n",subs.global_pos_set_triplet.current.altitude);
 		}
 		return 0;
