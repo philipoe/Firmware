@@ -114,16 +114,8 @@ int HL::WaypointControl_L1(float &RollAngleRef)
 		math::Vector<2> next_wp = {float(subs->position_setpoint_triplet.current.lat),float(subs->position_setpoint_triplet.current.lon)};
 		if(params->ASLC_DEBUG==10) printf("M5.2: Next WP (x/y): (%7.5f,%7.5f) | ", (double)next_wp(0), (double)next_wp(1));
 
-		if(params->ASLC_DEBUG <27) {
-			L1Ctrl.navigate_loiter(next_wp, cur_pos, subs->position_setpoint_triplet.current.loiter_radius,
+		L1Ctrl.navigate_loiter(next_wp, cur_pos, subs->position_setpoint_triplet.current.loiter_radius,
 					subs->position_setpoint_triplet.current.loiter_direction, ground_speed);
-		}
-		else {
-			//This is a call to ASL/Kostas' modified L1 loitering logic
-			//L1Ctrl.navigate_loiter_adapt(next_wp, cur_pos, subs->position_setpoint_triplet.current.loiter_radius,
-			//					subs->position_setpoint_triplet.current.loiter_direction, ground_speed,subs->att.yaw,subs->position_setpoint_triplet.current.altitude, subs->global_pos.alt);
-		}
-
 	}
 	else {
 		/* RETURN TO LAUNCH (RTL) */
