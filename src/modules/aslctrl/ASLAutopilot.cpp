@@ -430,13 +430,33 @@ int ASLAutopilot::HandleRCLoss(void)
 	//    be executed without initialization values).
 	// 2) IFF we are in the correct mode already, we set all values EVERY TIME because they'd be overwritten otherwise.
 
+	// MANUAL FAILSAFE: Don't do anything (causes PX4 to go into failsafe).
 	if(subs.aslctrl_params.ASLC_OnRCLoss == 0) {
-		// MANUAL FAILSAFE: Don't do anything (causes PX4 to go into failsafe).
-
 		ctrldata->aslctrl_mode = MODE_RCLOSS_MANFAILSAFE;
 		return 1;
 	}
-	else if(subs.aslctrl_params.ASLC_OnRCLoss == 2) {
+
+	// AUTO FAILSAFE
+	if(subs.aslctrl_params.ASLC_OnRCLoss == 3) {
+		if(ctrldata->aslctrl_mode == MODE_AUTO || ctrldata->aslctrl_mode == MODE_RCLOSS_AUTOFAILSAFE) {
+			// IFF already in AUTO or AUTO OnRCLoss failsafe, continue in AUTO as usual despite of RC-loss.
+			if(counter % params->HL_fMult == 0) ctrldata->aslctrl_mode = MODE_RCLOSS_AUTOFAILSAFE;
+			if(ctrldata->aslctrl_mode == MODE_RCLOSS_AUTOFAILSAFE) {
+				// Overwrite switch positions locally here, in order to enter AUTO mode in control loop
+				subs.vstatus.main_state = vehicle_status_s::MAIN_STATE_AUTO_MISSION;
+				subs.manual_sp.posctl_switch = manual_control_setpoint_s::SWITCH_POS_ON;
+			}
+			return 0;
+		}
+		else {
+			// If NOT yet in AUTO, but in some lower state (MAN/SAS/CAS), then perform return to home!
+			if(counter % params->HL_fMult == 0) ctrldata->aslctrl_mode = MODE_RCLOSS_RTHFAILSAFE;
+		}
+	}
+
+	// RETURN-TO-HOME FAILSAFE
+	if(subs.aslctrl_params.ASLC_OnRCLoss == 2
+			|| (subs.aslctrl_params.ASLC_OnRCLoss == 3 && ctrldata->aslctrl_mode == MODE_RCLOSS_RTHFAILSAFE)) {
 		// RTH FAILSAFE: Return-To-Home via auto/waypoint following mode
 
 		if(counter % params->HL_fMult == 0) ctrldata->aslctrl_mode = MODE_RCLOSS_RTHFAILSAFE;
@@ -447,55 +467,41 @@ int ASLAutopilot::HandleRCLoss(void)
 			subs.manual_sp.posctl_switch = manual_control_setpoint_s::SWITCH_POS_ON;
 			//Set RTL references
 			//subs.position_setpoint_triplet.nav_state = NAV_CMD_RETURN_TO_LAUNCH; //TODO check whether this works
-			subs.position_setpoint_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_POSITION;
+			subs.position_setpoint_triplet.current.type = position_setpoint_s::SETPOINT_TYPE_LOITER;
 			subs.position_setpoint_triplet.current.alt = subs.home_pos.alt + 100.0f;
 			subs.position_setpoint_triplet.current.lat = subs.home_pos.lat;
 			subs.position_setpoint_triplet.current.lon = subs.home_pos.lon;
+			subs.position_setpoint_triplet.current.loiter_radius = 100.0f;
+			subs.position_setpoint_triplet.current.loiter_direction = 1.0f;
 			subs.position_setpoint_triplet.current.valid = true;
 			//printf("RTL alt:%.2f\n",subs.global_pos_set_triplet.current.altitude);
 		}
 		return 0;
 	}
-	else if(subs.aslctrl_params.ASLC_OnRCLoss == 3 &&
-		(ctrldata->aslctrl_mode == MODE_AUTO || ctrldata->aslctrl_mode == MODE_RCLOSS_AUTOFAILSAFE)) {
-		// IFF already in AUTO, continue in AUTO as usual despite of RC-loss. Don't change any references (or waypoints).
-		// This might be because it is expected to fly out of range in scheduled BVLOS-operations.
 
-		if(counter % params->HL_fMult == 0) ctrldata->aslctrl_mode = MODE_RCLOSS_AUTOFAILSAFE;
-
-		if(ctrldata->aslctrl_mode == MODE_RCLOSS_AUTOFAILSAFE) {
-			// Overwrite switch positions locally here, in order to enter AUTO mode in control loop
-			subs.vstatus.main_state = vehicle_status_s::MAIN_STATE_AUTO_MISSION;
-			subs.manual_sp.posctl_switch = manual_control_setpoint_s::SWITCH_POS_ON;
-		}
-		return 0;
-	}
-	else {
-		// CAS FAILSAFE: Simple Loitering via CAS.
-		// Note: This is also the default failsafe behaviour if an invalid failsafe setting is detected.
-		if(counter % params->CAS_fMult == 0) {
-			if(subs.aslctrl_params.ASLC_OnRCLoss == 1) ctrldata->aslctrl_mode = MODE_RCLOSS_CASFAILSAFE;
-			else ctrldata->aslctrl_mode=MODE_RCLOSS_ERR;
-		}
-
-		if((ctrldata->aslctrl_mode == MODE_RCLOSS_CASFAILSAFE) || (ctrldata->aslctrl_mode == MODE_RCLOSS_ERR)) {
-			//Overwrite switch positions locally here, in order to enter CAS mode in control loop
-			subs.vstatus.main_state = (main_state_t)MODE_CAS;
-			subs.manual_sp.posctl_switch = manual_control_setpoint_s::SWITCH_POS_ON;
-
-			//Set RTL references
-			ctrldata->RollAngleRef = 12.0f*DEG2RAD;		// Loiter in right-turn circle
-			ctrldata->PitchAngleRef = 0.0f*DEG2RAD;		// Descend slowly
-			subs.manual_sp.z = 0.0f;					// Deactivate throttle to descend
-			subs.manual_sp.aux2 = 0.0f;					// TODO: This gives problems, does not put throttle to zero. See TF11 TODOs
-			ctrldata->uThrot = 0.0f;
-			ctrldata->uThrot2 = 0.0f;
-		}
-		return 0;
+	// CAS (&DEFAULT) FAILSAFE: Simple Loitering via CAS. This is the default failsafe behaviour if an invalid failsafe setting is detected.
+	if(counter % params->CAS_fMult == 0) {
+		if(subs.aslctrl_params.ASLC_OnRCLoss == 1) ctrldata->aslctrl_mode = MODE_RCLOSS_CASFAILSAFE;
+		else ctrldata->aslctrl_mode=MODE_RCLOSS_ERR;
 	}
 
-	//None of the other cases was valid. Return error.
-	return -1;
+	if((ctrldata->aslctrl_mode == MODE_RCLOSS_CASFAILSAFE) || (ctrldata->aslctrl_mode == MODE_RCLOSS_ERR)) {
+		//Overwrite switch positions locally here, in order to enter CAS mode in control loop
+		subs.vstatus.main_state = (main_state_t)MODE_CAS;
+		subs.manual_sp.posctl_switch = manual_control_setpoint_s::SWITCH_POS_ON;
+
+		//Set RTL references
+		ctrldata->RollAngleRef = 12.0f*DEG2RAD;		// Loiter in right-turn circle
+		ctrldata->PitchAngleRef = 0.0f*DEG2RAD;		// Descend slowly
+		subs.manual_sp.z = 0.0f;					// Deactivate throttle to descend
+		subs.manual_sp.aux2 = 0.0f;					// TODO: This gives problems, does not put throttle to zero. See TF11 TODOs
+		ctrldata->uThrot = 0.0f;
+		ctrldata->uThrot2 = 0.0f;
+
+		if(ctrldata->aslctrl_mode == MODE_RCLOSS_CASFAILSAFE) return 0;
+	}
+
+	return -1; // Only reached if there was an error
 }
 
 bool ASLAutopilot::OnGround(void)
