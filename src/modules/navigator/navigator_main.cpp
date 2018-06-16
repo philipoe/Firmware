@@ -854,7 +854,7 @@ Navigator::get_acceptance_radius()
 }
 
 float
-Navigator::get_altitude_acceptance_radius()
+Navigator::get_default_altitude_acceptance()
 {
 	if (!get_vstatus()->is_rotary_wing) {
 		return _param_fw_alt_acceptance_radius.get();

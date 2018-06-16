@@ -109,7 +109,7 @@ MissionFeasibilityChecker::checkRotarywing(const mission_s &mission, float home_
 			const float takeoff_alt = missionitem.altitude_is_relative ? missionitem.altitude : missionitem.altitude - home_alt;
 
 			// check if we should use default acceptance radius
-			float acceptance_radius = _navigator->get_altitude_acceptance_radius();
+			float acceptance_radius = _navigator->get_default_altitude_acceptance();
 
 			// if a specific acceptance radius has been defined, use that one instead
 			if (missionitem.acceptance_radius > NAV_EPSILON_POSITION) {

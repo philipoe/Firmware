@@ -148,7 +148,7 @@ MissionBlock::is_mission_item_reached()
 
 			/* close to waypoint, but altitude error greater than twice acceptance */
 			if ((dist >= 0.0f)
-			    && (dist_z > 2 * _navigator->get_altitude_acceptance_radius())
+			    && (dist_z > 2 * get_altitude_acceptance())
 			    && (dist_xy < 2 * _navigator->get_loiter_radius())) {
 
 				/* SETPOINT_TYPE_POSITION -> SETPOINT_TYPE_LOITER */
@@ -185,7 +185,7 @@ MissionBlock::is_mission_item_reached()
 					    _mission_item.altitude :
 					    (_mission_item.altitude - _navigator->get_home_position()->alt);
 
-			float altitude_acceptance_radius = _navigator->get_altitude_acceptance_radius();
+			float altitude_acceptance_radius = get_altitude_acceptance();
 
 			/* It should be safe to just use half of the takoeff_alt as an acceptance radius. */
 			if (takeoff_alt > 0 && takeoff_alt < altitude_acceptance_radius) {
@@ -201,21 +201,24 @@ MissionBlock::is_mission_item_reached()
 		} else if (_mission_item.nav_cmd == NAV_CMD_TAKEOFF) {
 			/* for takeoff mission items use the parameter for the takeoff acceptance radius */
 			if (dist >= 0.0f && dist <= _navigator->get_acceptance_radius()
-			    && dist_z <= _navigator->get_altitude_acceptance_radius()) {
+			    && dist_z <= get_altitude_acceptance()) {
+
 				_waypoint_position_reached = true;
 			}
 
 		} else if (!_navigator->get_vstatus()->is_rotary_wing &&
 			   (_mission_item.nav_cmd == NAV_CMD_LOITER_UNLIMITED ||
 			    _mission_item.nav_cmd == NAV_CMD_LOITER_TIME_LIMIT)) {
+
 			/* Loiter mission item on a non rotary wing: the aircraft is going to circle the
 			 * coordinates with a radius equal to the loiter_radius field. It is not flying
 			 * through the waypoint center.
 			 * Therefore the item is marked as reached once the system reaches the loiter
 			 * radius (+ some margin). Time inside and turn count is handled elsewhere.
 			 */
-			if (dist >= 0.0f && dist <= _navigator->get_acceptance_radius(fabsf(_mission_item.loiter_radius) * 1.2f)
-			    && dist_z <= _navigator->get_altitude_acceptance_radius()) {
+			if (dist >= 0.0f
+			    && dist <= _navigator->get_acceptance_radius(fabsf(_mission_item.loiter_radius) * 1.2f)
+			    && dist_z <= get_altitude_acceptance()) {
 
 				_waypoint_position_reached = true;
 
@@ -225,7 +228,6 @@ MissionBlock::is_mission_item_reached()
 
 		} else if (!_navigator->get_vstatus()->is_rotary_wing &&
 			   (_mission_item.nav_cmd == NAV_CMD_LOITER_TO_ALT)) {
-
 
 			// NAV_CMD_LOITER_TO_ALT only uses mission item altitude once it's in the loiter
 			//  first check if the altitude setpoint is the mission setpoint
@@ -242,8 +244,9 @@ MissionBlock::is_mission_item_reached()
 						_navigator->get_global_position()->alt,
 						&dist_xy, &dist_z);
 
-				if (dist >= 0.0f && dist <= _navigator->get_acceptance_radius(fabsf(_mission_item.loiter_radius) * 1.2f)
-				    && dist_z <= _navigator->get_altitude_acceptance_radius()) {
+				if (dist >= 0.0f
+				    && dist <= _navigator->get_acceptance_radius(fabsf(_mission_item.loiter_radius) * 1.2f)
+				    && dist_z <= get_altitude_acceptance()) {
 
 					// now set the loiter to the final altitude in the NAV_CMD_LOITER_TO_ALT mission item
 					curr_sp->alt = altitude_amsl;
@@ -251,26 +254,17 @@ MissionBlock::is_mission_item_reached()
 				}
 
 			} else {
-				// Determine altitude acceptance radius. By default, this is taken from the respective parameter.
-				// However, before a landing approach the acceptance radius needs to be tighter: Assume a 30% error
-				// w.r.t. the remaining descent altitude is OK, but enforce min/max values (e.g. min=3m to make
-				// sure that the waypoint can still be reached in case of wrong user input).
-				float alt_accept_rad = _navigator->get_altitude_acceptance_radius();
-				struct position_setpoint_s next_sp = _navigator->get_position_setpoint_triplet()->next;
 
-				if (next_sp.type == position_setpoint_s::SETPOINT_TYPE_LAND && next_sp.valid) {
-					alt_accept_rad = math::constrain(0.3f * (curr_sp->alt - next_sp.alt), 3.0f,
-									 _navigator->get_altitude_acceptance_radius());
-					PX4_INFO("Accept:%5.3f", double(alt_accept_rad));
-				}
-
-				if (dist >= 0.0f && dist <= _navigator->get_acceptance_radius(fabsf(_mission_item.loiter_radius) * 1.2f)
-				    && dist_z <= alt_accept_rad) {
+				if (dist >= 0.0f
+				    && dist <= _navigator->get_acceptance_radius(fabsf(_mission_item.loiter_radius) * 1.2f)
+				    && dist_z <= get_altitude_acceptance()) {
 
 					_waypoint_position_reached = true;
 
 					// set required yaw from bearing to the next mission item
 					if (_mission_item.force_heading) {
+						const position_setpoint_s &next_sp = _navigator->get_position_setpoint_triplet()->next;
+
 						if (next_sp.valid) {
 							_mission_item.yaw = get_bearing_to_next_waypoint(_navigator->get_global_position()->lat,
 									    _navigator->get_global_position()->lon,
@@ -316,7 +310,8 @@ MissionBlock::is_mission_item_reached()
 			}
 
 			if (dist >= 0.0f && dist <= mission_acceptance_radius
-			    && dist_z <= _navigator->get_altitude_acceptance_radius()) {
+			    && dist_z <= get_altitude_acceptance()) {
+
 				_waypoint_position_reached = true;
 			}
 		}
@@ -730,7 +725,7 @@ MissionBlock::mission_apply_limitation(mission_item_s &item)
 }
 
 float
-MissionBlock::get_absolute_altitude_for_item(struct mission_item_s &mission_item) const
+MissionBlock::get_absolute_altitude_for_item(const mission_item_s &mission_item) const
 {
 	if (mission_item.altitude_is_relative) {
 		return mission_item.altitude + _navigator->get_home_position()->alt;
@@ -738,4 +733,41 @@ MissionBlock::get_absolute_altitude_for_item(struct mission_item_s &mission_item
 	} else {
 		return mission_item.altitude;
 	}
+}
+
+float
+MissionBlock::get_altitude_acceptance() const
+{
+	// Determine altitude acceptance radius.
+	// By default, this is taken from the respective parameter.
+	const float alt_accept_default = _navigator->get_default_altitude_acceptance();
+
+	float alt_accept = alt_accept_default;
+
+	if (_navigator->get_vstatus()->is_rotary_wing) {
+		alt_accept = alt_accept_default;
+
+	} else {
+		const position_setpoint_s &curr_sp = _navigator->get_position_setpoint_triplet()->current;
+
+		if (curr_sp.valid) {
+			if (curr_sp.valid == position_setpoint_s::SETPOINT_TYPE_LOITER) {
+
+				const position_setpoint_s &next_sp = _navigator->get_position_setpoint_triplet()->next;
+
+				if (next_sp.valid && next_sp.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
+					// Before a landing approach the acceptance radius needs to be tighter:
+					// Assume a 30% error w.r.t. the remaining descent altitude is OK
+					const float alt_accept_land = 0.3f * (curr_sp.alt - next_sp.alt);
+
+					// enforce min/max values (e.g. min=3m to make
+					// sure that the waypoint can still be reached in case of wrong user input).
+					alt_accept = math::constrain(alt_accept_land, 3.0f, alt_accept_default);
+				}
+			}
+		}
+
+	}
+
+	return alt_accept;
 }

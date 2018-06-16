@@ -186,7 +186,7 @@ public:
 	 *
 	 * @return the distance from the target altitude before considering the waypoint reached
 	 */
-	float		get_altitude_acceptance_radius();
+	float		get_default_altitude_acceptance();
 
 	/**
 	 * Get the cruising speed

@@ -121,7 +121,9 @@ protected:
 
 	float get_time_inside(const struct mission_item_s &item);
 
-	float get_absolute_altitude_for_item(struct mission_item_s &mission_item) const;
+	float get_absolute_altitude_for_item(const mission_item_s &mission_item) const;
+
+	float get_altitude_acceptance() const;
 
 	mission_item_s _mission_item{};
 
